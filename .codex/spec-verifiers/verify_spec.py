@@ -31,6 +31,8 @@ MUTATIONS = (
     "drop-pbi05p-package-ownership", "drift-pbi05p-string-version",
     "drop-pbi05p-no-match-guard", "drop-pbi05p-projection-title", "permit-pbi05p-raw-projection",
     "drop-pbi05p-f04-title", "placeholder-pbi05p-f04-body", "drop-pbi05p-f04-oracle",
+    "drop-pbi05i-analyze-ownership", "drop-pbi05i-no-match-guard",
+    "drop-pbi05i-boundary-title", "drift-pbi05i-threshold", "drop-pbi05i-mutation-title",
 )
 
 def read_state() -> dict:
@@ -482,6 +484,52 @@ def pbi05p_registration_errors(body: str, oracle_exists: bool, implementation_ex
         errors.append("PBI05P-POST-IMPLEMENTATION-GREEN")
     return errors
 
+
+def pbi05i_registration_errors(body: str, oracle_exists: bool, implementation_exists: bool) -> list[str]:
+    ownership = all(value in body for value in (
+        '"packages/readability-core/src/rules/H112.ts"',
+        '"packages/readability-core/test/rules/H112.contract.test.ts"',
+        '"packages/readability-core/src/analyze.ts"', '"packages/readability-core/src/index.ts"',
+        'packages/readability-core/src/analyze.ts: "PBI-02〜05P ownership履歴を維持し、H112 dispatchだけ追加する"',
+        'packages/readability-core/src/index.ts: "PBI-02〜05P ownership履歴を維持し、H112 exportだけ追加する"',
+    ))
+    acceptance = all(value in body for value in (
+        'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi05i.py"',
+        'test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/rules/H112.contract.test.ts"',
+        'exact_test_file: "packages/readability-core/test/rules/H112.contract.test.ts"',
+        'source_file: "packages/readability-core/src/rules/H112.ts"',
+        'exact_dependencies_unchanged: ["@textlint/markdown-to-ast@15.8.0", "sentence-splitter@5.0.1", "textlint-util-to-string@3.3.4"]',
+        'threshold_contract: "actual > 500; 500 non-match; 501 finding with actual=501 threshold=500"',
+        'range_contract: "RNG-001 Paragraph.range; input.slice(start,end)=Paragraph.raw"',
+        'minimum_tests: 13', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 13',
+        '"H112-B01 projected UTF-16 length 500 does not report"',
+        '"H112-P01 projected UTF-16 length 501 reports actual 501 threshold 500"',
+        '"H112-R01 every finding range slices the exact Paragraph raw text"',
+        '"H112-M01 gte document raw and block substitutes each fail a fixture"',
+        'green_signature: "PBI05I_GREEN tests>=13 pass=tests fail=0 required_titles=13"',
+    ))
+    mutation_contract = all(value in body for value in (
+        '"H112-M-GTE"', '"H112-M-DOC"', '"H112-M-RAW"', '"H112-M-BLOCK"',
+    ))
+    errors = []
+    if not ownership:
+        errors.append("PBI05I-OWNERSHIP")
+    if not acceptance or not oracle_exists:
+        errors.append("PBI05I-ACCEPTANCE-ORACLE")
+    if not mutation_contract:
+        errors.append("PBI05I-MUTATION-CONTRACT")
+    if not implementation_exists:
+        registered = all(value in body for value in (
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi05i.py; exit=1; signature=PBI05I_RED missing packages/readability-core/src/rules/H112.ts"',
+            'red_status: "REGISTERED_RED"',
+            'command: "python3 .codex/spec-verifiers/verify_pbi05i.py"', 'exit: 1',
+            'stdout: "PBI05I_RED missing packages/readability-core/src/rules/H112.ts"',
+            'stderr: "<empty>"', 'measured_runs: 2',
+        ))
+        if not registered:
+            errors.append("PBI05I-PRE-IMPLEMENTATION-RED")
+    return errors
+
 def verify(state: dict) -> list[str]:
     m, t, packets, workflow = state["matrix"], state["text"], state["packets"], state["workflow"]
     errors: list[str] = []
@@ -623,6 +671,13 @@ def verify(state: dict) -> list[str]:
                 (ROOT / "packages/readability-core/src/paragraph/project.ts").is_file(),
             ):
                 need(False, error)
+        if pid == "PBI-05I":
+            for error in pbi05i_registration_errors(
+                body,
+                (ROOT / ".codex/spec-verifiers/verify_pbi05i.py").is_file(),
+                (ROOT / "packages/readability-core/src/rules/H112.ts").is_file(),
+            ):
+                need(False, error)
         need(not any(x in body for x in ("TBD", "placeholder", "実装開始時に")), f"PACKET-PLACEHOLDER-{name}")
 
     for gap in range(8, 18):
@@ -699,7 +754,18 @@ def verify(state: dict) -> list[str]:
             for item in workflow.get("phase_history", [])
         )
     )
-    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started, "WORKFLOW-GATE-TRANSITION")
+    pbi05i_delivery_started = (
+        workflow.get("current_phase") == "DA"
+        and workflow.get("gate_type") == "DELIVERY"
+        and workflow.get("active_pbi") == "PBI-05I"
+        and workflow.get("task_packet_ref") == ".codex/task-packets/PBI-05I-h112.md"
+        and any(
+            item.get("phase") == "QGA" and item.get("status") == "APPROVE"
+            and item.get("gate_type") == "DELIVERY" and item.get("active_pbi") == "PBI-05P"
+            for item in workflow.get("phase_history", [])
+        )
+    )
+    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started, "WORKFLOW-GATE-TRANSITION")
     return errors
 
 def apply_mutation(name: str, state: dict) -> None:
@@ -851,6 +917,27 @@ def apply_mutation(name: str, state: dict) -> None:
             "",
             1,
         )
+    elif name in (
+        "drop-pbi05i-analyze-ownership", "drop-pbi05i-no-match-guard",
+        "drop-pbi05i-boundary-title", "drift-pbi05i-threshold", "drop-pbi05i-mutation-title",
+    ):
+        key = next(k for k, body in packets.items() if packet_id(body) == "PBI-05I")
+        if name == "drop-pbi05i-analyze-ownership":
+            packets[key] = packets[key].replace('    - "packages/readability-core/src/analyze.ts"\n', "", 1)
+        elif name == "drop-pbi05i-no-match-guard":
+            packets[key] = packets[key].replace(" --fail-if-no-match", "", 1)
+        elif name == "drop-pbi05i-boundary-title":
+            packets[key] = packets[key].replace(
+                '"H112-B01 projected UTF-16 length 500 does not report", ', "", 1
+            )
+        elif name == "drift-pbi05i-threshold":
+            packets[key] = packets[key].replace(
+                'threshold_contract: "actual > 500; 500 non-match; 501 finding with actual=501 threshold=500"',
+                'threshold_contract: "actual >= 500; 500 finding"',
+                1,
+            )
+        else:
+            packets[key] = packets[key].replace('    - "H112-M-RAW"\n', "", 1)
     else: raise ValueError(name)
 
 def main() -> int:
