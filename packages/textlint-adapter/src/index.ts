@@ -69,7 +69,42 @@ function compareRangeAndRule(
 ): number {
   return left.range.start - right.range.start
     || left.range.end - right.range.end
-    || (left.ruleId < right.ruleId ? -1 : left.ruleId > right.ruleId ? 1 : 0);
+    || compareText(left.ruleId, right.ruleId);
+}
+
+function compareText(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function compareTextArrays(left: readonly string[], right: readonly string[]): number {
+  const sharedLength = Math.min(left.length, right.length);
+  for (let index = 0; index < sharedLength; index += 1) {
+    const compared = compareText(left[index]!, right[index]!);
+    if (compared !== 0) return compared;
+  }
+  return left.length - right.length;
+}
+
+function compareOptionalText(left: string | undefined, right: string | undefined): number {
+  if (left === undefined) return right === undefined ? 0 : -1;
+  if (right === undefined) return 1;
+  return compareText(left, right);
+}
+
+function compareLintFindings(left: Finding, right: Finding): number {
+  return compareRangeAndRule(left, right)
+    || compareText(left.category, right.category)
+    || compareText(left.severity, right.severity)
+    || compareText(left.message, right.message);
+}
+
+function compareSemanticFindings(left: SemanticFinding, right: SemanticFinding): number {
+  return compareRangeAndRule(left, right)
+    || compareText(left.status, right.status)
+    || compareTextArrays(left.evidence, right.evidence)
+    || compareText(left.reason, right.reason)
+    || left.confidence - right.confidence
+    || compareOptionalText(left.suggestedAction, right.suggestedAction);
 }
 
 function copyLintMessage(finding: Finding): LintMessage {
@@ -101,10 +136,8 @@ export function buildValidationReport(
   findings: readonly Finding[],
   semanticFindings: readonly SemanticFinding[],
 ): ValidationReport {
-  const sortedFindings = [...findings].sort(compareRangeAndRule);
-  const sortedSemantic = [...semanticFindings].sort((left, right) =>
-    compareRangeAndRule(left, right)
-    || (left.status < right.status ? -1 : left.status > right.status ? 1 : 0));
+  const sortedFindings = [...findings].sort(compareLintFindings);
+  const sortedSemantic = [...semanticFindings].sort(compareSemanticFindings);
   const lintMessages = Object.freeze(sortedFindings.map(copyLintMessage));
   const semanticNotices = Object.freeze(sortedSemantic.map(copySemanticNotice));
   const exitCode = sortedFindings.some((finding) => finding.category === "deterministic" && finding.severity === "error") ? 1 : 0;

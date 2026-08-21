@@ -78,3 +78,32 @@ test("INT-ORDER-01 report output is canonical for input permutations", () => {
   assert.equal(JSON.stringify(buildValidationReport([h, d], [...semantic].reverse())), expected);
   assert.equal(JSON.stringify(buildValidationReport([d, h], semantic)), expected);
 });
+
+test("INT-ORDER-02 same primary keys use full payload tie-breakers without deduplication", () => {
+  const lintTies = [
+    { ...d, range: { start: 0, end: 2 }, severity: "error" as const, message: "B" },
+    { ...d, range: { start: 0, end: 2 }, severity: "warning" as const, message: "Z" },
+    { ...d, range: { start: 0, end: 2 }, severity: "error" as const, message: "A" },
+    { ...d, range: { start: 0, end: 2 }, severity: "error" as const, message: "A" },
+  ];
+  const semanticTies = [
+    { ruleId: "S203" as const, status: "violation" as const, range: { start: 1, end: 2 }, evidence: ["a"], reason: "A", confidence: 0.2 },
+    { ...semantic[1], evidence: ["b"], reason: "A", confidence: 0.2 },
+    { ...semantic[1], evidence: ["a"], reason: "B", confidence: 0.2 },
+    { ...semantic[1], evidence: ["a"], reason: "A", confidence: 0.8 },
+    { ...semantic[1], evidence: ["a"], reason: "A", confidence: 0.2, suggestedAction: "B" },
+    { ...semantic[1], evidence: ["a"], reason: "A", confidence: 0.2, suggestedAction: "A" },
+    { ...semantic[1], evidence: ["a"], reason: "A", confidence: 0.2, suggestedAction: "A" },
+  ];
+  const forward = buildValidationReport(lintTies, semanticTies);
+  const reversed = buildValidationReport([...lintTies].reverse(), [...semanticTies].reverse());
+  assert.deepEqual(reversed, forward);
+  assert.equal(JSON.stringify(reversed), JSON.stringify(forward));
+  assert.equal(forward.lintMessages.length, lintTies.length);
+  assert.equal(forward.semanticNotices.length, semanticTies.length);
+  assert.deepEqual(forward.lintMessages.map(({ level, message }) => `${level}:${message}`), ["error:A", "error:A", "error:B", "warning:Z"]);
+  assert.deepEqual(forward.semanticNotices.map(({ evidence, reason, confidence, suggestedAction }) =>
+    [evidence.join(","), reason, confidence, suggestedAction ?? ""].join(":")), [
+    "a:A:0.2:", "a:A:0.2:A", "a:A:0.2:A", "a:A:0.2:B", "a:A:0.8:A", "a:B:0.2:A", "b:A:0.2:A",
+  ]);
+});
