@@ -848,7 +848,7 @@ def pbi06b_registration_errors(body: str, oracle_exists: bool, source_exists: bo
         'test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/deterministic/D002.contract.test.ts"',
         'exact_test_file: "packages/readability-core/test/deterministic/D002.contract.test.ts"',
         'unchanged_contract: "PBI-06A verifier hashes for config/types/package/lock remain valid"',
-        'minimum_tests: 10', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 10',
+        'minimum_tests: 11', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 10',
         '"D002-P01 non-NFC combining sequence reports its minimal source range"',
         '"D002-N01 NFC-normalized input does not report"',
         '"D002-B01 emoji-prefixed UTF-16 half-open range reconstructs the combining sequence"',
@@ -856,7 +856,7 @@ def pbi06b_registration_errors(body: str, oracle_exists: bool, source_exists: bo
         '"D002-F01 code-point offsets cannot substitute for UTF-16 code-unit offsets"',
         '"D002-M01 whole-document and normalized-output range mutants fail fixtures"',
         'no_match_guard: "--fail-if-no-match plus exact test file, collected count, pass=tests, fail=0, and all required titles"',
-        'green_signature: "PBI06B_GREEN tests>=10 pass=tests fail=0 required_titles=10"',
+        'green_signature: "PBI06B_GREEN tests>=11 pass=tests fail=0 required_titles=10"',
     ))
     errors = []
     if not ownership:
@@ -875,6 +875,27 @@ def pbi06b_registration_errors(body: str, oracle_exists: bool, source_exists: bo
         ))
         if not registered:
             errors.append("PBI06B-PRE-IMPLEMENTATION-RED")
+        return errors
+    green = all(value in body for value in (
+        'expected_red: null', 'red_status: "CONSUMED_GREEN"',
+        'phase: "PRE_IMPLEMENTATION"',
+        'command: "python3 .codex/spec-verifiers/verify_pbi06b.py"', 'exit: 1',
+        'stdout: "PBI06B_RED missing packages/readability-core/src/rules/D002.ts"',
+        'stderr: "<empty>"', 'measured_runs: 2',
+        'green_transition:', 'exit: 0',
+        'source_file: "packages/readability-core/src/rules/D002.ts"',
+        'analyze_registration: "D002 dispatch with validated NFC normalization and severity"',
+        'public_export: "analyzeD002"',
+        'fixture_contract: "P01/P02, N01/N02/N03, B01/B02, C01, F01, M01, D01 all executable"',
+        'range_contract: "B01/F01 reconstruct minimal source combining sequence with UTF-16 code-unit offsets"',
+        'falsification_contract: "F01 and M01 reject code-point, whole-document, and normalized-output range substitutes"',
+        'unchanged_contract: "verify_pbi06a unchanged hashes for config/types/package/lock all pass"',
+        'minimum_tests: 11', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 10',
+        'signature: "PBI06B_GREEN tests>=11 pass=tests fail=0 required_titles=10"',
+        'initial_da_green: "tests 11; pass 11; fail 0; required_titles 10; DA commit 96a8843"',
+    ))
+    if not green:
+        errors.append("PBI06B-POST-IMPLEMENTATION-GREEN")
     return errors
 
 def verify(state: dict) -> list[str]:

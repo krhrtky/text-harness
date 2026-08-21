@@ -5,7 +5,7 @@
   "active_pbi": "PBI-06B",
   "gate_type": "DELIVERY",
   "strategy_id": "delivery-pbi06b-d002-internal-v1",
-  "iteration": 36,
+  "iteration": 37,
   "task_packet_ref": ".codex/task-packets/PBI-06B-d002.md",
   "phase_history": [
     {
@@ -976,6 +976,25 @@
       ],
       "resume_point": ".codex/task-packets/PBI-06B-d002.md",
       "timestamp": "2026-08-21T21:05:00+09:00"
+    },
+    {
+      "phase": "DA",
+      "status": "PBI_GREEN_REPORTED",
+      "agent": "/root/delivery",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-06B",
+      "decision": "The PBI-06B missing-D002 RED was consumed after internal NFC source-sequence detection, UTF-16 ranges, severity propagation, and falsification contracts became executable",
+      "evidence": [
+        "RED history retained: PBI06B_RED missing packages/readability-core/src/rules/D002.ts; exit 1; stderr empty; reproduced twice",
+        "DA commit 96a8843",
+        "python3 .codex/spec-verifiers/verify_pbi06b.py => PBI06B_GREEN tests=11 pass=11 fail=0 required_titles=10",
+        "D002 source, analyze dispatch, and public export are present",
+        "P01/P02, N01/N02/N03, B01/B02, C01, F01, M01, and D01 contracts are executable",
+        "code-point, whole-document, and normalized-output range substitutes are rejected",
+        "config, types, package manifests, and lockfile retain their inherited hashes"
+      ],
+      "resume_point": ".codex/task-packets/PBI-06B-d002.md",
+      "timestamp": "2026-08-21T21:20:00+09:00"
     }
   ],
   "blocker_history": [
@@ -1053,5 +1072,5 @@
     }
   ],
   "created_at": "2026-08-21T09:39:07+09:00",
-  "updated_at": "2026-08-21T21:05:00+09:00"
+  "updated_at": "2026-08-21T21:20:00+09:00"
 }

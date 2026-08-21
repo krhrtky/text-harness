@@ -50,6 +50,10 @@ assert PBI06A_SPEC and PBI06A_SPEC.loader
 verify_pbi06a = importlib.util.module_from_spec(PBI06A_SPEC)
 PBI06A_SPEC.loader.exec_module(verify_pbi06a)
 PBI06B_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi06b.py"
+PBI06B_SPEC = importlib.util.spec_from_file_location("verify_pbi06b", PBI06B_VERIFIER)
+assert PBI06B_SPEC and PBI06B_SPEC.loader
+verify_pbi06b = importlib.util.module_from_spec(PBI06B_SPEC)
+PBI06B_SPEC.loader.exec_module(verify_pbi06b)
 
 EXPECTED = {
     "drop-h113-falsification": "H113-FALSIFICATION",
@@ -611,14 +615,25 @@ packages:
         for path, expected in verify_pbi06a.UNCHANGED_HASHES.items():
             self.assertEqual(expected, hashlib.sha256((ROOT / path).read_bytes()).hexdigest())
 
-    def test_pbi06b_registered_red_matches_repository_state(self) -> None:
+    def test_pbi06b_green_transition_preserves_registered_red(self) -> None:
         state = verify_spec.read_state()
         packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-06B")
-        self.assertEqual([], verify_spec.pbi06b_registration_errors(packet, PBI06B_VERIFIER.is_file(), False))
-        first = subprocess.run(["python3", str(PBI06B_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
-        second = subprocess.run(["python3", str(PBI06B_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
-        expected = (1, "PBI06B_RED missing packages/readability-core/src/rules/D002.ts\n", "")
-        self.assertEqual(expected, (first.returncode, first.stdout, first.stderr))
-        self.assertEqual(expected, (second.returncode, second.stdout, second.stderr))
+        pre_implementation = packet.replace(
+            "expected_red: null",
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi06b.py; exit=1; signature=PBI06B_RED missing packages/readability-core/src/rules/D002.ts"',
+            1,
+        ).replace('red_status: "CONSUMED_GREEN"', 'red_status: "REGISTERED_RED"', 1)
+        self.assertEqual([], verify_spec.pbi06b_registration_errors(pre_implementation, True, False))
+        self.assertEqual([], verify_spec.pbi06b_registration_errors(packet, PBI06B_VERIFIER.is_file(), True))
+        green = subprocess.run(["python3", str(PBI06B_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        self.assertEqual(0, green.returncode, green.stdout + green.stderr)
+        summary = re.search(r"PBI06B_GREEN tests=(\d+) pass=(\d+) fail=(\d+) required_titles=(\d+)", green.stdout)
+        self.assertIsNotNone(summary)
+        tests, passed, failed, titles = (int(value) for value in summary.groups())
+        self.assertGreaterEqual(tests, 11)
+        self.assertEqual(tests, passed)
+        self.assertEqual(0, failed)
+        self.assertEqual(10, titles)
+        self.assertIsNone(verify_pbi06b.unchanged_error())
 
 if __name__ == "__main__": unittest.main()
