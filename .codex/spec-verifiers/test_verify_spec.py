@@ -271,6 +271,9 @@ EXPECTED = {
     "permit-pbi10-main-before-qga": "PBI10-NATIVE-X64-GATE",
     "skip-pbi10-release-qga": "PBI10-NATIVE-X64-GATE",
     "use-pbi10-main-as-candidate": "PBI10-NATIVE-X64-GATE",
+    "store-pbi10-dynamic-evidence": "PBI10-NATIVE-X64-GATE",
+    "allow-pbi10-post-attestation-commit": "PBI10-NATIVE-X64-GATE",
+    "drop-pbi10-main-workflow-trigger": "PBI10-NATIVE-X64-GATE",
 }
 
 class SpecVerifierTest(unittest.TestCase):

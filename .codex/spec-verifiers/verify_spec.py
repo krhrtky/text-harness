@@ -123,6 +123,8 @@ MUTATIONS = (
     "drop-pbi09-license-before-secret", "drop-pbi10-native-x64-gate",
     "permit-pbi10-main-before-qga", "skip-pbi10-release-qga",
     "use-pbi10-main-as-candidate",
+    "store-pbi10-dynamic-evidence", "allow-pbi10-post-attestation-commit",
+    "drop-pbi10-main-workflow-trigger",
 )
 
 def read_state() -> dict:
@@ -1859,16 +1861,19 @@ def pbi10_native_x64_errors(body: str, oracle_exists: bool, publication_exists: 
         "local Darwin arm64 PBI-09 Greenはnative Linux x64証拠の代替にならない",
         "refs/heads/codex/release-candidateへexact candidate SHAをpre-release CI evidence目的でpushできる",
         "candidate SHAはGitHub Actions ubuntu native X64 runner上のfresh checkout/frozen install/verify:release成功までmainへpush禁止",
+        "native x64動的attestationはrepository commitへ保存しない。authenticated GitHub Actions APIのcandidate tip/run/jobs/artifactをSoTとし、run URL/SHA/OS/arch/fresh/frozen/release/license/NOTICE/securityを直接検証する",
         "candidate evidence Green後に独立RELEASE QGAを行い、APPROVE後だけ同一SHAをmainへpushしてdefault branch mainを確認する",
         "candidate failure/skip/cancel/unknown、evidence不一致時はmainへ昇格せず、同じDAが修正した新SHAをcandidate branchへ再pushして全gateを再実行する",
         'runner: "GitHub Actions ubuntu native X64（emulation/self-reportだけは禁止）"',
         'command_sequence: ["checkout exact candidate SHA", "corepack pnpm install --frozen-lockfile", "pnpm verify:release"]',
-        'required_evidence: ["repository=krhrtky/text-harness", "visibility=public", "license=Apache-2.0", "branch=codex/release-candidate", "remoteCandidateSha=candidateSha", "runner.os=Linux", "runner.arch=X64", "workflow run URL", "log SHA and RUNNER_OS=Linux RUNNER_ARCH=X64", "conclusion=success", "license=PASS", "notice=ABSENT", "security=PASS"]',
+        'workflow_trigger: "push branchesはcodex/release-candidateとmainのexact 2 branch。pull_request併用可。workflow identityはpath=.github/workflows/release-contract.yml/name=Release contract/event=push"',
+        "candidate branch tip、workflow、最新completed candidate push run、jobs、run artifact release-attestationを直接取得し、artifact JSONのrunId/workflowId/headSha/branch/event/Linux/X64/fresh/frozen/release/license/NOTICE/securityをAPI値と双方向照合。取得後commit禁止",
+        "publication.mdは手順/authority/workflow identity/branchだけ、native-x64-release.jsonはschemaVersion1、repository authority、candidate/final branch、workflow path/name/push branches candidate+main/artifact name、attestation required field名だけを保持。candidate SHA/run ID/URL/artifact URL/conclusionを含めない",
         "run missing/cancelled/skipped/failure、arch不一致、SHA不一致、evidence欠落はRELEASE REQUEST_CHANGES",
         '"docs/release-evidence/native-x64-release.json"',
         'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi10.py --stage candidate"',
         'final_acceptance_command: "python3 .codex/spec-verifiers/verify_pbi10.py --stage final"',
-        "releaseQga status=APPROVE+nonempty decisionRef、mainPromotion status=COMPLETE/pushed=true/sha=candidateSha/defaultBranchConfirmed=true",
+        "--stage finalはauthenticated APIでcandidate tip=main tipかつdefault_branch=mainを要求",
         "user承認済みowner=krhrtky/repository=text-harness/visibility=public/license=Apache-2.0/final default branch=main",
     )
     errors = [] if oracle_exists and all(value in body for value in required) else ["PBI10-NATIVE-X64-GATE"]
@@ -3096,6 +3101,14 @@ def apply_mutation(name: str, state: dict) -> None:
             packets[key] = packets[key].replace("candidate evidence Green後に独立RELEASE QGAを行い、APPROVE後だけ同一SHAをmainへpushしてdefault branch mainを確認する", "candidate Green immediately pushes main", 1)
         else:
             packets[key] = packets[key].replace("refs/heads/codex/release-candidateへexact candidate SHA", "refs/heads/mainへcandidate SHA", 1)
+    elif name in ("store-pbi10-dynamic-evidence", "allow-pbi10-post-attestation-commit", "drop-pbi10-main-workflow-trigger"):
+        key = next(k for k, body in packets.items() if packet_id(body) == "PBI-10")
+        if name == "store-pbi10-dynamic-evidence":
+            packets[key] = packets[key].replace("candidate SHA/run ID/URL/artifact URL/conclusionを含めない", "candidate SHA/run ID/URLをcommitする", 1)
+        elif name == "allow-pbi10-post-attestation-commit":
+            packets[key] = packets[key].replace("取得後commit禁止", "取得後にevidence commitを追加する", 1)
+        else:
+            packets[key] = packets[key].replace("push branchesはcodex/release-candidateとmainのexact 2 branch", "push branchesはcodex/release-candidateのみ", 1)
     else: raise ValueError(name)
 
 def main() -> int:

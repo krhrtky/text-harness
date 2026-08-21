@@ -4,8 +4,8 @@
   "current_phase": "DA",
   "active_pbi": "PBI-10",
   "gate_type": "RELEASE",
-  "strategy_id": "release-pbi10-two-stage-candidate-v1",
-  "iteration": 70,
+  "strategy_id": "release-pbi10-external-attestation-v2",
+  "iteration": 71,
   "task_packet_ref": ".codex/task-packets/PBI-10-publication.md",
   "phase_history": [
     {
@@ -1925,6 +1925,26 @@
       ],
       "resume_point": ".codex/task-packets/PBI-10-publication.md",
       "timestamp": "2026-08-22T04:15:00+09:00"
+    },
+    {
+      "phase": "SDA",
+      "status": "SPEC_GAP_RESOLVED_READY_FOR_DA",
+      "agent": "/root/spec_finalize",
+      "gate_type": "RELEASE",
+      "active_pbi": "PBI-10",
+      "task_packet_ref": ".codex/task-packets/PBI-10-publication.md",
+      "decision": "Dynamic candidate SHA and run evidence move from repository commits to authenticated GitHub API and Actions artifacts, eliminating the self-referential final-candidate requirement",
+      "evidence": [
+        "repository publication.md/native-x64-release.json now contain only static authority, branch, workflow identity, artifact name, and attestation field contracts",
+        "candidate SHA is the remote codex/release-candidate branch tip and no repository commit may be added after its attestation is produced",
+        "verify_pbi10 candidate stage directly queries authenticated GitHub repository/branch/workflow/latest completed run/jobs/artifacts APIs and downloads release-attestation",
+        "candidate tip, run head SHA, workflow ID, push event, success, ubuntu-latest job, Linux/X64, fresh checkout, frozen install, verify:release, license/NOTICE/security are cross-checked",
+        "old successful run, branch/SHA drift, artifact run-id drift, attestation tampering, and repository dynamic evidence are rejected",
+        "workflow push trigger must include both codex/release-candidate and main; current DA workflow commit 54833ea has candidate only and requires DA completion without SDA editing product files",
+        "after independent RELEASE APPROVE, final stage queries authenticated API and requires main tip=candidate tip plus default_branch=main"
+      ],
+      "resume_point": ".codex/task-packets/PBI-10-publication.md",
+      "timestamp": "2026-08-22T04:25:00+09:00"
     }
   ],
   "blocker_history": [
@@ -2002,5 +2022,5 @@
     }
   ],
   "created_at": "2026-08-21T09:39:07+09:00",
-  "updated_at": "2026-08-22T04:15:00+09:00"
+  "updated_at": "2026-08-22T04:25:00+09:00"
 }
