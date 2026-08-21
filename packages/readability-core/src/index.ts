@@ -1,4 +1,7 @@
 export { analyze } from "./analyze.ts";
+export { analyzeH101 } from "./rules/H101.ts";
+export { analyzeH103 } from "./rules/H103.ts";
+export { analyzeH104 } from "./rules/H104.ts";
 export { assertReadabilityConfig, validateReadabilityConfig } from "./config/validate.ts";
 export {
   createDeterministicFinding,

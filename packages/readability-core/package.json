@@ -9,6 +9,10 @@
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@textlint/markdown-to-ast": "15.8.0",
+    "sentence-splitter": "5.0.1"
+  },
   "devDependencies": {
     "typescript": "7.0.2"
   }
