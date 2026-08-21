@@ -425,11 +425,11 @@ def pbi05p_registration_errors(body: str, oracle_exists: bool, implementation_ex
         'exact_test_file: "packages/readability-core/test/paragraph/contract.test.ts"',
         'source_file: "packages/readability-core/src/paragraph/project.ts"',
         'public_export: "projectParagraphs"',
-        'minimum_tests: 12', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 12',
+        'minimum_tests: 13', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 12',
         '"P05P-P01 projection removes delimiters link destinations and HTML tags"',
         '"P05P-P02 projection retains visible labels alt inline code and decoded entities"',
         '"P05P-R01 ranges are UTF-16 zero-based half-open and slice raw"',
-        'green_signature: "PBI05P_GREEN tests>=12 pass=tests fail=0 required_titles=12"',
+        'green_signature: "PBI05P_GREEN tests>=13 pass=tests fail=0 required_titles=12"',
     ))
     falsification = all(value in body for value in (
         '"blank-line document split substitute"',
@@ -455,6 +455,24 @@ def pbi05p_registration_errors(body: str, oracle_exists: bool, implementation_ex
         ))
         if not registered:
             errors.append("PBI05P-PRE-IMPLEMENTATION-RED")
+        return errors
+    green = all(value in body for value in (
+        'expected_red: null', 'red_status: "CONSUMED_GREEN"',
+        'phase: "PRE_IMPLEMENTATION"',
+        'command: "python3 .codex/spec-verifiers/verify_pbi05p.py"', 'exit: 1',
+        'stdout: "PBI05P_RED dependency textlint-util-to-string expected 3.3.4"',
+        'stderr: "<empty>"', 'measured_runs: 2',
+        'green_transition:', 'exit: 0',
+        'dependency_contract: "manifest and packages/readability-core lock importer exact 3-key set with versions 15.8.0/5.0.1/3.3.4"',
+        'source_file: "packages/readability-core/src/paragraph/project.ts"',
+        'exact_test_file: "packages/readability-core/test/paragraph/contract.test.ts"',
+        'public_export: "projectParagraphs"',
+        'minimum_tests: 13', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 12',
+        'signature: "PBI05P_GREEN tests>=13 pass=tests fail=0 required_titles=12"',
+        'initial_da_green: "tests 13; pass 13; fail 0; required_titles 12"',
+    ))
+    if not green:
+        errors.append("PBI05P-POST-IMPLEMENTATION-GREEN")
     return errors
 
 def verify(state: dict) -> list[str]:

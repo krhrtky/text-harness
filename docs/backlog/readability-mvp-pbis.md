@@ -46,7 +46,7 @@
   continuity breakを表す必須14 titleを同時に検証する。
 - PBI-05Pは`@textlint/markdown-to-ast@15.8.0`の全Paragraphと`textlint-util-to-string@3.3.4`の
   `StringSource` projectionを共通adapterにする。`textlint-util-to-string`のmanifest/lock差分だけを追加所有し、
-  acceptanceはAST構造・可視text・RNG-001・3つの誤実装substituteを表す12 titleを必須にする。
+  acceptanceは13件以上を収集し、AST構造・可視text・RNG-001・3つの誤実装substituteを表す12 titleを必須にする。
   PBI-03/05のdependency verifierはPBI-05P source成立後だけ認可済み3-keyへ遷移し、それ以外のdirect dependencyを拒否する。
 - PBI-02は`packages/readability-core/package.json`、package `tsconfig.json`、`src/index.ts`を含むcore source/contract test、
   `pnpm-workspace.yaml`新規作成、PBI-02 importer/dependencyに必要な`pnpm-lock.yaml`生成差分を所有する。

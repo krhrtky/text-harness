@@ -40,20 +40,36 @@ task_packet:
     public_export: "projectParagraphs"
     direct_dependency_keys_exact: ["@textlint/markdown-to-ast", "sentence-splitter", "textlint-util-to-string"]
     exact_versions: ["@textlint/markdown-to-ast@15.8.0", "sentence-splitter@5.0.1", "textlint-util-to-string@3.3.4"]
-    minimum_tests: 12
+    minimum_tests: 13
     pass_equals_tests: true
     fail: 0
     required_titles: 12
     required_title_text: ["P05P-S01 list item paragraphs are independent in source order", "P05P-S02 blockquote paragraphs are included", "P05P-X01 header code table and HTML blocks are excluded", "P05P-P01 projection removes delimiters link destinations and HTML tags", "P05P-P02 projection retains visible labels alt inline code and decoded entities", "P05P-R01 ranges are UTF-16 zero-based half-open and slice raw", "P05P-R02 blockquote continuation markers remain in raw range", "P05P-U01 emoji and combining marks preserve UTF-16 ranges", "P05P-F01 blank-line splitting cannot substitute for AST paragraphs", "P05P-F02 raw text cannot substitute for StringSource projection", "P05P-F03 document range cannot substitute for Paragraph range", "P05P-D01 identical input returns deterministic projections"]
-    green_signature: "PBI05P_GREEN tests>=12 pass=tests fail=0 required_titles=12"
-  expected_red: "python3 .codex/spec-verifiers/verify_pbi05p.py; exit=1; signature=PBI05P_RED dependency textlint-util-to-string expected 3.3.4"
-  red_status: "REGISTERED_RED"
-  expected_red_evidence:
+    green_signature: "PBI05P_GREEN tests>=13 pass=tests fail=0 required_titles=12"
+  expected_red: null
+  red_status: "CONSUMED_GREEN"
+  expected_red_history:
+    registration:
+      phase: "PRE_IMPLEMENTATION"
+      command: "python3 .codex/spec-verifiers/verify_pbi05p.py"
+      exit: 1
+      stdout: "PBI05P_RED dependency textlint-util-to-string expected 3.3.4"
+      stderr: "<empty>"
+      measured_runs: 2
+  green_transition:
     command: "python3 .codex/spec-verifiers/verify_pbi05p.py"
-    exit: 1
-    stdout: "PBI05P_RED dependency textlint-util-to-string expected 3.3.4"
-    stderr: "<empty>"
-    measured_runs: 2
+    exit: 0
+    dependency_contract: "manifest and packages/readability-core lock importer exact 3-key set with versions 15.8.0/5.0.1/3.3.4"
+    source_file: "packages/readability-core/src/paragraph/project.ts"
+    exact_test_file: "packages/readability-core/test/paragraph/contract.test.ts"
+    public_export: "projectParagraphs"
+    minimum_tests: 13
+    pass_equals_tests: true
+    fail: 0
+    required_titles: 12
+    signature: "PBI05P_GREEN tests>=13 pass=tests fail=0 required_titles=12"
+  green_history:
+    initial_da_green: "tests 13; pass 13; fail 0; required_titles 12"
   red_registration_gate: "PBI開始時、依存PBI完了後かつ実装変更前に、実在する失敗test command・exit code・完全一致signatureを登録する"
   engineering_constraints: "docs/requirements/engineering-constraints.md"
   falsification:
