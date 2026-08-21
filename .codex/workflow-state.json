@@ -5,7 +5,7 @@
   "active_pbi": "PBI-06C",
   "gate_type": "DELIVERY",
   "strategy_id": "delivery-pbi06c-d003-contract-v1",
-  "iteration": 42,
+  "iteration": 43,
   "task_packet_ref": ".codex/task-packets/PBI-06C-d003.md",
   "phase_history": [
     {
@@ -1158,6 +1158,53 @@
       ],
       "resume_point": ".codex/task-packets/PBI-06C-d003.md",
       "timestamp": "2026-08-21T22:55:00+09:00"
+    },
+    {
+      "phase": "QGA",
+      "status": "SPEC_GAP",
+      "agent": "/root/delivery",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-06C",
+      "decision": "The packet required empty pairs to fail but forbade the existing validator path whose validatePairs currently accepts an empty array",
+      "evidence": [
+        "packages/readability-core/src/config/validate.ts validatePairs rejects malformed entries but accepts []",
+        "PBI-06C previously fixed the inherited config hash and forbade packages/readability-core/src/config/**",
+        "D003:false already provides the distinct rule-disable contract"
+      ],
+      "resume_point": ".codex/task-packets/PBI-06C-d003.md",
+      "timestamp": "2026-08-21T23:00:00+09:00"
+    },
+    {
+      "phase": "SDA",
+      "status": "PREFLIGHT_SPEC_UPDATED",
+      "agent": "/root/spec_finalize",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-06C",
+      "decision": "Authorize the smallest validator and core-contract-test change so public analyze rejects pairs=[] with ConfigurationError exitCode 2 before D003 execution",
+      "evidence": [
+        "owned paths now include config/validate.ts and test/contract/core.contract.test.ts with narrow shared constraints",
+        "types, manifests, and lock remain forbidden and hash-invariant",
+        "pre-state config hash is retained; the post-state exact hash must be recorded at Green",
+        "D003-C02 and allow-empty/wrong-exit mutations make the public analyze contract executable"
+      ],
+      "resume_point": ".codex/task-packets/PBI-06C-d003.md",
+      "timestamp": "2026-08-21T23:05:00+09:00"
+    },
+    {
+      "phase": "DA",
+      "status": "READY_FOR_IMPLEMENTATION",
+      "agent": null,
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-06C",
+      "task_packet_ref": ".codex/task-packets/PBI-06C-d003.md",
+      "decision": "Implement D003 plus the narrow empty-pairs validation change and public analyze ConfigurationError exitCode 2 contract test",
+      "evidence": [
+        "python3 .codex/spec-verifiers/verify_pbi06c.py => PBI06C_RED missing packages/readability-core/src/rules/D003.ts; exit 1; stderr empty; reproduced twice",
+        "post acceptance runs exact D003 and core contract files and requires tests>=31, pass=tests, fail=0, required titles 13",
+        "D003-C02 proves pairs=[] fails before analysis; D003:false remains the only disable path"
+      ],
+      "resume_point": ".codex/task-packets/PBI-06C-d003.md",
+      "timestamp": "2026-08-21T23:10:00+09:00"
     }
   ],
   "blocker_history": [
@@ -1235,5 +1282,5 @@
     }
   ],
   "created_at": "2026-08-21T09:39:07+09:00",
-  "updated_at": "2026-08-21T22:55:00+09:00"
+  "updated_at": "2026-08-21T23:10:00+09:00"
 }

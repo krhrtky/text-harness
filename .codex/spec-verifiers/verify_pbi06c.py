@@ -10,6 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = Path("packages/readability-core/src/rules/D003.ts")
 TEST = Path("packages/readability-core/test/deterministic/D003.contract.test.ts")
+CONFIG_TEST = Path("packages/readability-core/test/contract/core.contract.test.ts")
 REQUIRED_TITLES = (
     "D003-P01 known mismatched close reports the closing bracket",
     "D003-P02 unclosed opener reports the opening bracket",
@@ -20,6 +21,7 @@ REQUIRED_TITLES = (
     "D003-B02 nested mismatch reports exact UTF-16 half-open closing range",
     "D003-B03 default error and explicit warning severity are preserved",
     "D003-C01 custom pairs are honored and invalid D003 config is rejected",
+    "D003-C02 empty pairs fail before analysis with ConfigurationError exit 2",
     "D003-F01 Markdown code spans and blocks are excluded",
     "D003-M01 unknown-close unclosed-opener nesting and range mutants fail fixtures",
     "D003-D01 identical input and config are deterministic",
@@ -27,7 +29,7 @@ REQUIRED_TITLES = (
 TEST_COMMAND = (
     "mise", "x", "node@24.19.0", "--", "corepack", "pnpm",
     "--filter", "@text-harness/readability-core", "--fail-if-no-match",
-    "exec", "node", "--test", "test/deterministic/D003.contract.test.ts",
+    "exec", "node", "--test", "test/deterministic/D003.contract.test.ts", "test/contract/core.contract.test.ts",
 )
 
 
@@ -38,12 +40,12 @@ def inherited_contract_error() -> str | None:
         return "dependency-oracle-unavailable"
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    errors = module.unchanged_errors()
+    errors = [error for error in module.unchanged_errors() if error != "packages/readability-core/src/config/validate.ts"]
     return ",".join(errors) if errors else None
 
 
 def main() -> int:
-    for required in (SOURCE, TEST):
+    for required in (SOURCE, TEST, CONFIG_TEST):
         if not (ROOT / required).is_file():
             print(f"PBI06C_RED missing {required}")
             return 1
@@ -72,7 +74,7 @@ def main() -> int:
     }
     tests, passed, failed = totals.get("tests", -1), totals.get("pass", -1), totals.get("fail", -1)
     titles = sum(title in plain for title in REQUIRED_TITLES)
-    if tests < 12 or passed != tests or failed != 0 or titles != len(REQUIRED_TITLES):
+    if tests < 31 or passed != tests or failed != 0 or titles != len(REQUIRED_TITLES):
         print(f"PBI06C_FAIL tests={tests} pass={passed} fail={failed} required_titles={titles}/{len(REQUIRED_TITLES)}")
         return 1
     print(f"PBI06C_GREEN tests={tests} pass={passed} fail=0 required_titles={len(REQUIRED_TITLES)}")

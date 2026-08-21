@@ -52,6 +52,8 @@ MUTATIONS = (
     "drop-pbi06c-analyze-ownership", "drop-pbi06c-no-match-guard",
     "drop-pbi06c-falsification-title", "drop-pbi06c-ascii-pair",
     "weaken-pbi06c-range", "permit-pbi06c-external-dependency",
+    "drop-pbi06c-config-ownership", "drop-pbi06c-empty-pairs-title",
+    "permit-pbi06c-empty-pairs", "drop-pbi06c-config-transition",
 )
 
 def read_state() -> dict:
@@ -958,36 +960,43 @@ def pbi06c_registration_errors(body: str, oracle_exists: bool, source_exists: bo
         '    - "packages/readability-core/test/deterministic/D003.contract.test.ts"',
         '    - "packages/readability-core/src/analyze.ts"',
         '    - "packages/readability-core/src/index.ts"',
+        '    - "packages/readability-core/src/config/validate.ts"',
+        '    - "packages/readability-core/test/contract/core.contract.test.ts"',
         'packages/readability-core/src/analyze.ts: "既存D001/D002/H dispatchを維持し、validated D003 pairs/severityをanalyzeD003へ渡すcaseだけ追加する"',
         'packages/readability-core/src/index.ts: "既存public exportsを維持し、analyzeD003 exportだけ追加する"',
+        'packages/readability-core/src/config/validate.ts: "validatePairsへpairs=[]の早期ConfigurationErrorだけを追加し、default pairsと他rule validationを維持する"',
+        'packages/readability-core/test/contract/core.contract.test.ts: "public analyzeへD003 pairs=[]を渡したConfigurationErrorとexitCode=2のcontract testだけを追加する"',
     ))
     contract = all(value in body for value in (
         'DEC-007 default pairsはexactly （）「」『』【】[]で、ASCII ]は既知closeとして扱う',
         'input_contract: "（本文] with DEC-007 default pairs （）「」『』【】[]"',
-        'config_contract: "{ruleId:D003, pairs?:readonly [string,string][], severity?:error|warning}; omitted pairs use exact DEC-007 defaults; empty/malformed pairs and unknown fields are rejected by existing validator"',
+        'config_contract: "public analyze(input,{rules:{D003:{ruleId:D003,pairs:[]}}}) throws ConfigurationError with exitCode=2 before rule execution; omitted pairs use exact DEC-007 defaults; malformed pairs and unknown fields are rejected; D003:false is the only disable contract"',
+        'config_hash_transition_contract: "pre-state config/validate.ts sha256=1ba8045cf518f846a436423fa4b1c725597a385f96121969b9d6721655a5724b; post-state exact hash is recorded only after Green while behavioral empty-pairs oracle is mandatory; types/package/lock hashes remain fixed"',
         'oracle_contract: "（本文] reports exactly known mismatched close ]; unclosed opener reports its opener; unexpected close reports itself; [本文] and correctly nested mixed default pairs report zero"',
         'nesting_contract: "LIFO stack; a mismatched known close reports that close at its source position and cannot be reclassified as an unknown character or only an unclosed opener"',
         'range_contract: "RNG-001 UTF-16 zero-based half-open one-bracket range; （本文] reports [3,4) and input.slice(3,4)=]; start/end boundary fixtures reconstruct the reported opener or close"',
         'severity_contract: "omitted=>error; explicit error|warning preserved exactly"',
         'markdown_contract: "inline/fenced/indented code brackets are excluded and break prose stack continuity"',
         'external_dependency_contract: "PBI-06 decision INTERNAL/PBI-06C; package manifests and lockfile unchanged"',
-        'mutations: ["D003-M-DROP-ASCII-PAIR", "D003-M-UNKNOWN-CLOSE", "D003-M-UNCLOSED-ONLY", "D003-M-FIFO-NESTING", "D003-M-WHOLE-RANGE", "D003-M-INCLUDE-CODE"]',
+        'mutations: ["D003-M-DROP-ASCII-PAIR", "D003-M-UNKNOWN-CLOSE", "D003-M-UNCLOSED-ONLY", "D003-M-FIFO-NESTING", "D003-M-WHOLE-RANGE", "D003-M-INCLUDE-CODE", "D003-M-ALLOW-EMPTY-PAIRS", "D003-M-EMPTY-PAIRS-WRONG-EXIT"]',
     ))
     acceptance = all(value in body for value in (
         'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi06c.py"',
-        'test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/deterministic/D003.contract.test.ts"',
-        'exact_test_file: "packages/readability-core/test/deterministic/D003.contract.test.ts"',
-        'minimum_tests: 12', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 12',
+        'test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/deterministic/D003.contract.test.ts test/contract/core.contract.test.ts"',
+        'exact_test_files: ["packages/readability-core/test/deterministic/D003.contract.test.ts", "packages/readability-core/test/contract/core.contract.test.ts"]',
+        'empty_pairs_oracle: "public analyze with D003 pairs=[] throws ConfigurationError and error.exitCode===2 before D003 execution"',
+        'minimum_tests: 31', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 13',
         '"D003-P01 known mismatched close reports the closing bracket"',
         '"D003-N01 balanced ASCII square brackets do not report"',
         '"D003-B01 correctly nested mixed pairs do not report"',
         '"D003-B02 nested mismatch reports exact UTF-16 half-open closing range"',
         '"D003-B03 default error and explicit warning severity are preserved"',
         '"D003-C01 custom pairs are honored and invalid D003 config is rejected"',
+        '"D003-C02 empty pairs fail before analysis with ConfigurationError exit 2"',
         '"D003-F01 Markdown code spans and blocks are excluded"',
         '"D003-M01 unknown-close unclosed-opener nesting and range mutants fail fixtures"',
-        'no_match_guard: "--fail-if-no-match plus exact test file, collected count, pass=tests, fail=0, and all required titles"',
-        'green_signature: "PBI06C_GREEN tests>=12 pass=tests fail=0 required_titles=12"',
+        'no_match_guard: "--fail-if-no-match plus both exact test files, collected count, pass=tests, fail=0, and all required titles"',
+        'green_signature: "PBI06C_GREEN tests>=31 pass=tests fail=0 required_titles=13"',
     ))
     errors = []
     if not ownership:
@@ -1647,6 +1656,8 @@ def apply_mutation(name: str, state: dict) -> None:
         "drop-pbi06c-analyze-ownership", "drop-pbi06c-no-match-guard",
         "drop-pbi06c-falsification-title", "drop-pbi06c-ascii-pair",
         "weaken-pbi06c-range", "permit-pbi06c-external-dependency",
+        "drop-pbi06c-config-ownership", "drop-pbi06c-empty-pairs-title",
+        "permit-pbi06c-empty-pairs", "drop-pbi06c-config-transition",
     ):
         key = next(k for k, body in packets.items() if packet_id(body) == "PBI-06C")
         if name == "drop-pbi06c-analyze-ownership":
@@ -1659,12 +1670,20 @@ def apply_mutation(name: str, state: dict) -> None:
             packets[key] = packets[key].replace("exactly （）「」『』【】[]", "exactly （）「」『』【】", 1)
         elif name == "weaken-pbi06c-range":
             packets[key] = packets[key].replace("reports [3,4) and input.slice(3,4)=]", "reports an unspecified range", 1)
-        else:
+        elif name == "permit-pbi06c-external-dependency":
             packets[key] = packets[key].replace(
                 "PBI-06 decision INTERNAL/PBI-06C; package manifests and lockfile unchanged",
                 "external dependency permitted",
                 1,
             )
+        elif name == "drop-pbi06c-config-ownership":
+            packets[key] = packets[key].replace('    - "packages/readability-core/src/config/validate.ts"\n', "", 1)
+        elif name == "drop-pbi06c-empty-pairs-title":
+            packets[key] = packets[key].replace(', "D003-C02 empty pairs fail before analysis with ConfigurationError exit 2"', "", 1)
+        elif name == "permit-pbi06c-empty-pairs":
+            packets[key] = packets[key].replace("throws ConfigurationError with exitCode=2", "returns zero findings", 1)
+        else:
+            packets[key] = packets[key].replace("post-state exact hash is recorded only after Green", "post-state hash is not recorded", 1)
     else: raise ValueError(name)
 
 def main() -> int:

@@ -152,6 +152,10 @@ EXPECTED = {
     "drop-pbi06c-ascii-pair": "PBI06C-RULE-CONTRACT",
     "weaken-pbi06c-range": "PBI06C-RULE-CONTRACT",
     "permit-pbi06c-external-dependency": "PBI06C-RULE-CONTRACT",
+    "drop-pbi06c-config-ownership": "PBI06C-OWNERSHIP",
+    "drop-pbi06c-empty-pairs-title": "PBI06C-ACCEPTANCE-ORACLE",
+    "permit-pbi06c-empty-pairs": "PBI06C-RULE-CONTRACT",
+    "drop-pbi06c-config-transition": "PBI06C-RULE-CONTRACT",
 }
 
 class SpecVerifierTest(unittest.TestCase):
