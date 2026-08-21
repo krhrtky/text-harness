@@ -44,6 +44,7 @@ PBI06_SPEC = importlib.util.spec_from_file_location("verify_pbi06", PBI06_VERIFI
 assert PBI06_SPEC and PBI06_SPEC.loader
 verify_pbi06 = importlib.util.module_from_spec(PBI06_SPEC)
 PBI06_SPEC.loader.exec_module(verify_pbi06)
+PBI06A_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi06a.py"
 
 EXPECTED = {
     "drop-h113-falsification": "H113-FALSIFICATION",
@@ -114,6 +115,11 @@ EXPECTED = {
     "drift-pbi06-license": "PBI06-EVIDENCE-SCHEMA",
     "drift-pbi06-maint-command": "PBI06-EVIDENCE-SCHEMA",
     "drift-pbi06-integrity": "PBI06-EVIDENCE-SCHEMA",
+    "drop-pbi06a-analyze-ownership": "PBI06A-OWNERSHIP",
+    "drop-pbi06a-no-match-guard": "PBI06A-ACCEPTANCE-ORACLE",
+    "drop-pbi06a-falsification-title": "PBI06A-ACCEPTANCE-ORACLE",
+    "weaken-pbi06a-range": "PBI06A-RULE-CONTRACT",
+    "permit-pbi06a-external-dependency": "PBI06A-RULE-CONTRACT",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -569,5 +575,15 @@ packages:
                 ["package.json"],
                 verify_pbi06.runtime_dependency_errors(temporary_root, {dependency: "0" * 64}),
             )
+
+    def test_pbi06a_registered_red_matches_repository_state(self) -> None:
+        state = verify_spec.read_state()
+        packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-06A")
+        self.assertEqual([], verify_spec.pbi06a_registration_errors(packet, PBI06A_VERIFIER.is_file(), False))
+        first = subprocess.run(["python3", str(PBI06A_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        second = subprocess.run(["python3", str(PBI06A_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        expected = (1, "PBI06A_RED missing packages/readability-core/src/rules/D001.ts\n", "")
+        self.assertEqual(expected, (first.returncode, first.stdout, first.stderr))
+        self.assertEqual(expected, (second.returncode, second.stdout, second.stderr))
 
 if __name__ == "__main__": unittest.main()

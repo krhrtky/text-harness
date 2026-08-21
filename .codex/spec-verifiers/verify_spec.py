@@ -39,6 +39,8 @@ MUTATIONS = (
     "drop-pbi06-rule-id", "drop-pbi06-required-title", "drop-pbi06-runtime-hash",
     "drift-pbi06-version", "drift-pbi06-package", "drift-pbi06-license",
     "drift-pbi06-maint-command", "drift-pbi06-integrity",
+    "drop-pbi06a-analyze-ownership", "drop-pbi06a-no-match-guard",
+    "drop-pbi06a-falsification-title", "weaken-pbi06a-range", "permit-pbi06a-external-dependency",
 )
 
 def read_state() -> dict:
@@ -738,6 +740,58 @@ def pbi06_registration_errors(
         errors.append("PBI06-POST-IMPLEMENTATION-GREEN")
     return errors
 
+
+def pbi06a_registration_errors(body: str, oracle_exists: bool, source_exists: bool) -> list[str]:
+    ownership = all(value in body for value in (
+        '    - "packages/readability-core/src/rules/D001.ts"',
+        '    - "packages/readability-core/test/deterministic/D001.contract.test.ts"',
+        '    - "packages/readability-core/src/analyze.ts"',
+        '    - "packages/readability-core/src/index.ts"',
+        'packages/readability-core/src/analyze.ts: "既存H dispatchを維持し、validated D001 style/severityをanalyzeD001へ渡すcaseだけ追加する"',
+        'packages/readability-core/src/index.ts: "既存public exportsを維持し、analyzeD001 exportだけ追加する"',
+    ))
+    contract = all(value in body for value in (
+        'input_contract: "これは仕様です。これは仕様である。"',
+        'config_contract: "{ruleId:D001, style:consistent|desu-masu|da-dearu, severity?:error|warning}; unknown/missing/invalid fields are rejected by existing config validator"',
+        'oracle_contract: "consistent example reports exactly second sentence これは仕様である。; fixed style reports each opposite classifiable sentence; uniform/unclassifiable input reports zero"',
+        'range_contract: "RNG-001 UTF-16 zero-based half-open complete offending sentence; example [8,17) and input.slice(8,17)=これは仕様である。"',
+        'severity_contract: "omitted=>error; explicit error|warning preserved exactly"',
+        'external_dependency_contract: "PBI-06 decision INTERNAL/PBI-06A; package manifests and lockfile unchanged"',
+        'mutations: ["D001-M-BASELINE", "D001-M-RANGE", "D001-M-QUOTE"]',
+    ))
+    acceptance = all(value in body for value in (
+        'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi06a.py"',
+        'test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/deterministic/D001.contract.test.ts"',
+        'exact_test_file: "packages/readability-core/test/deterministic/D001.contract.test.ts"',
+        'minimum_tests: 11', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 11',
+        '"D001-P01 consistent style reports the second mixed da-dearu sentence"',
+        '"D001-N01 uniform classifiable sentences do not report"',
+        '"D001-B01 UTF-16 half-open range slices the complete offending sentence"',
+        '"D001-B02 default error and explicit warning severity are preserved"',
+        '"D001-F01 quotation-internal sentence endings do not create false style mixing"',
+        '"D001-M01 baseline majority range and quotation mutants each fail a fixture"',
+        'no_match_guard: "--fail-if-no-match plus exact test file, collected count, pass=tests, fail=0, and all required titles"',
+        'green_signature: "PBI06A_GREEN tests>=11 pass=tests fail=0 required_titles=11"',
+    ))
+    errors = []
+    if not ownership:
+        errors.append("PBI06A-OWNERSHIP")
+    if not contract:
+        errors.append("PBI06A-RULE-CONTRACT")
+    if not acceptance or not oracle_exists:
+        errors.append("PBI06A-ACCEPTANCE-ORACLE")
+    if not source_exists:
+        registered = all(value in body for value in (
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi06a.py; exit=1; signature=PBI06A_RED missing packages/readability-core/src/rules/D001.ts"',
+            'red_status: "REGISTERED_RED"',
+            'command: "python3 .codex/spec-verifiers/verify_pbi06a.py"', 'exit: 1',
+            'stdout: "PBI06A_RED missing packages/readability-core/src/rules/D001.ts"',
+            'stderr: "<empty>"', 'measured_runs: 2',
+        ))
+        if not registered:
+            errors.append("PBI06A-PRE-IMPLEMENTATION-RED")
+    return errors
+
 def verify(state: dict) -> list[str]:
     m, t, packets, workflow = state["matrix"], state["text"], state["packets"], state["workflow"]
     errors: list[str] = []
@@ -902,6 +956,13 @@ def verify(state: dict) -> list[str]:
                 if (ROOT / "docs/decision-evidence/deterministic-qualification.json").is_file() else None,
             ):
                 need(False, error)
+        if pid == "PBI-06A":
+            for error in pbi06a_registration_errors(
+                body,
+                (ROOT / ".codex/spec-verifiers/verify_pbi06a.py").is_file(),
+                (ROOT / "packages/readability-core/src/rules/D001.ts").is_file(),
+            ):
+                need(False, error)
         need(not any(x in body for x in ("TBD", "placeholder", "実装開始時に")), f"PACKET-PLACEHOLDER-{name}")
 
     for gap in range(8, 18):
@@ -1011,7 +1072,18 @@ def verify(state: dict) -> list[str]:
             for item in workflow.get("phase_history", [])
         )
     )
-    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started or pbi05j_delivery_started or pbi06_delivery_started, "WORKFLOW-GATE-TRANSITION")
+    pbi06a_delivery_started = (
+        workflow.get("current_phase") == "DA"
+        and workflow.get("gate_type") == "DELIVERY"
+        and workflow.get("active_pbi") == "PBI-06A"
+        and workflow.get("task_packet_ref") == ".codex/task-packets/PBI-06A-d001.md"
+        and any(
+            item.get("phase") == "QGA" and item.get("status") == "APPROVE"
+            and item.get("gate_type") == "DELIVERY" and item.get("active_pbi") == "PBI-06"
+            for item in workflow.get("phase_history", [])
+        )
+    )
+    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started or pbi05j_delivery_started or pbi06_delivery_started or pbi06a_delivery_started, "WORKFLOW-GATE-TRANSITION")
     return errors
 
 def apply_mutation(name: str, state: dict) -> None:
@@ -1244,6 +1316,25 @@ def apply_mutation(name: str, state: dict) -> None:
             packets[key] = packets[key].replace(
                 "sha512-KrchADHw1/LZ/tAQ2XwL/XdUhunKCvlNmwgp+6hdyzuWX7uojOkDdJWWV0KAN4XWsK6Te5w/SZcYwQ7X6i3B0A==",
                 "TAMPERED",
+                1,
+            )
+    elif name in (
+        "drop-pbi06a-analyze-ownership", "drop-pbi06a-no-match-guard",
+        "drop-pbi06a-falsification-title", "weaken-pbi06a-range", "permit-pbi06a-external-dependency",
+    ):
+        key = next(k for k, body in packets.items() if packet_id(body) == "PBI-06A")
+        if name == "drop-pbi06a-analyze-ownership":
+            packets[key] = packets[key].replace('    - "packages/readability-core/src/analyze.ts"\n', "", 1)
+        elif name == "drop-pbi06a-no-match-guard":
+            packets[key] = packets[key].replace(" --fail-if-no-match", "", 1)
+        elif name == "drop-pbi06a-falsification-title":
+            packets[key] = packets[key].replace('"D001-F01 quotation-internal sentence endings do not create false style mixing", ', "", 1)
+        elif name == "weaken-pbi06a-range":
+            packets[key] = packets[key].replace("[8,17)", "whole document", 1)
+        else:
+            packets[key] = packets[key].replace(
+                "PBI-06 decision INTERNAL/PBI-06A; package manifests and lockfile unchanged",
+                "external dependency permitted",
                 1,
             )
     else: raise ValueError(name)
