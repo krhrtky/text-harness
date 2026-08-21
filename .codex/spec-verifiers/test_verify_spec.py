@@ -61,6 +61,11 @@ PBI06F_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi06f.py"
 PBI06G_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi06g.py"
 PBI06H_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi06h.py"
 PBI07_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi07.py"
+PBI08_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi08.py"
+PBI08_SPEC = importlib.util.spec_from_file_location("verify_pbi08", PBI08_VERIFIER)
+assert PBI08_SPEC and PBI08_SPEC.loader
+verify_pbi08 = importlib.util.module_from_spec(PBI08_SPEC)
+PBI08_SPEC.loader.exec_module(verify_pbi08)
 
 EXPECTED = {
     "drop-h113-falsification": "H113-FALSIFICATION",
@@ -223,6 +228,14 @@ EXPECTED = {
     "drop-pbi07-green-hash": "PBI07-POST-IMPLEMENTATION-GREEN",
     "swap-pbi07-s203-body-meaning": "PBI07-RULE-HASH-S203",
     "append-pbi07-s204-forbidden-instruction": "PBI07-FORBIDDEN-INSTRUCTION",
+    "drop-pbi08-cli-ownership": "PBI08-OWNERSHIP",
+    "drop-pbi08-no-match-guard": "PBI08-ACCEPTANCE-ORACLE",
+    "merge-pbi08-result-types": "PBI08-INTEGRATION-CONTRACT",
+    "semantic-pbi08-exit1": "PBI08-INTEGRATION-CONTRACT",
+    "permit-pbi08-semantic-severity": "PBI08-INTEGRATION-CONTRACT",
+    "permit-pbi08-network": "PBI08-INTEGRATION-CONTRACT",
+    "drop-pbi08-invalid-cli-title": "PBI08-ACCEPTANCE-ORACLE",
+    "drop-pbi08-red-signature": "PBI08-PRE-IMPLEMENTATION-RED",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -944,5 +957,27 @@ test("D002-B03 multi-mark combining sequence reports exact source range", () => 
         self.assertEqual(14, titles)
         self.assertEqual(32, cases)
         self.assertEqual(2, eval_rules)
+
+    def test_pbi08_registered_red_and_contract_mutations(self) -> None:
+        state = verify_spec.read_state()
+        packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-08")
+        self.assertEqual([], verify_spec.pbi08_registration_errors(packet, PBI08_VERIFIER.is_file(), False))
+        first = subprocess.run(["python3", str(PBI08_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        second = subprocess.run(["python3", str(PBI08_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        expected = "PBI08_RED missing packages/textlint-adapter/schema/validation-report.schema.json\n"
+        self.assertEqual((1, expected, ""), (first.returncode, first.stdout, first.stderr))
+        self.assertEqual((first.returncode, first.stdout, first.stderr), (second.returncode, second.stdout, second.stderr))
+
+    def test_pbi08_schema_oracle_rejects_cross_contamination(self) -> None:
+        range_schema = {"type": "object", "additionalProperties": False, "required": ["start", "end"], "properties": {"start": {"type": "integer", "minimum": 0}, "end": {"type": "integer", "minimum": 1}}}
+        lint = {"type": "object", "additionalProperties": False, "required": ["ruleId", "category", "range", "message", "level"], "properties": {"ruleId": {"type": "string"}, "category": {"enum": ["deterministic", "heuristic"]}, "range": range_schema, "message": {"type": "string"}, "level": {"enum": ["error", "warning"]}}}
+        semantic = {"type": "object", "additionalProperties": False, "required": ["ruleId", "status", "range", "evidence", "reason", "confidence", "level"], "properties": {"ruleId": {"type": "string"}, "status": {"enum": ["violation", "no_violation", "uncertain"]}, "range": range_schema, "evidence": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}, "reason": {"type": "string"}, "confidence": {"type": "number", "minimum": 0, "maximum": 1}, "level": {"const": "notice"}}}
+        schema = {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": False, "required": ["schemaVersion", "exitCode", "lintMessages", "semanticNotices"], "properties": {"schemaVersion": {"const": "1.0.0"}, "exitCode": {"enum": [0, 1]}, "lintMessages": {"type": "array", "items": lint}, "semanticNotices": {"type": "array", "items": semantic}}}
+        self.assertEqual([], verify_pbi08.schema_errors(schema))
+        semantic["properties"]["severity"] = {"enum": ["error"]}
+        self.assertIn("cross-contamination", verify_pbi08.schema_errors(schema))
+        semantic["properties"].pop("severity")
+        semantic["properties"]["confidence"].pop("maximum")
+        self.assertIn("confidence", verify_pbi08.schema_errors(schema))
 
 if __name__ == "__main__": unittest.main()

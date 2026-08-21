@@ -1,12 +1,12 @@
 {
   "id": "wf-readability-mvp-20260821",
   "request": "Readability Engineering System要求の実現、setup/upgrade支援、反証必須の完了判定、public GitHub repositoryへのpush",
-  "current_phase": "QGA",
-  "active_pbi": "PBI-07",
+  "current_phase": "DA",
+  "active_pbi": "PBI-08",
   "gate_type": "DELIVERY",
-  "strategy_id": "delivery-pbi07-canonical-rule-oracle-v2",
-  "iteration": 59,
-  "task_packet_ref": ".codex/task-packets/PBI-07-semantic-skill.md",
+  "strategy_id": "delivery-pbi08-separated-integration-v1",
+  "iteration": 60,
+  "task_packet_ref": ".codex/task-packets/PBI-08-semantic-eval.md",
   "phase_history": [
     {
       "phase": "SDA",
@@ -1635,6 +1635,41 @@
       ],
       "resume_point": ".codex/task-packets/PBI-07-semantic-skill.md",
       "timestamp": "2026-08-22T02:05:00+09:00"
+    },
+    {
+      "phase": "QGA",
+      "status": "APPROVE",
+      "agent": "/root/spec_qga",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-07",
+      "task_packet_ref": ".codex/task-packets/PBI-07-semantic-skill.md",
+      "decision": "PBI-07 delivery approved after canonical rule hashes and instruction-aware forbidden-output oracle closed the review gap",
+      "evidence": [
+        "DA commit 23f5bb8",
+        "SDA oracle commit 11245c38ee919df1c754b42ce3ff8acf96d39008",
+        "python3 .codex/spec-verifiers/verify_pbi07.py => PBI07_GREEN tests=14 pass=14 fail=0 required_titles=14 fixture_cases=32 eval_rules=2",
+        "independent QGA decision supplied by orchestrator: APPROVE"
+      ],
+      "resume_point": ".codex/task-packets/PBI-08-semantic-eval.md",
+      "timestamp": "2026-08-22T02:10:00+09:00"
+    },
+    {
+      "phase": "DA",
+      "status": "READY_FOR_IMPLEMENTATION",
+      "agent": "/root/spec_finalize",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-08",
+      "task_packet_ref": ".codex/task-packets/PBI-08-semantic-eval.md",
+      "decision": "PBI-08 starts with a measured missing-report-schema RED and an explicit D/H versus Semantic integration boundary",
+      "evidence": [
+        "python3 .codex/spec-verifiers/verify_pbi08.py => exit 1; PBI08_RED missing packages/textlint-adapter/schema/validation-report.schema.json; stderr empty; reproduced twice",
+        "D/H lintMessages and Semantic semanticNotices remain separate public/report/schema types",
+        "only deterministic error causes exit1; H and all Semantic statuses stay non-failing; invalid CLI input is exit2 without partial stdout",
+        "four exact integration tests, 14 titles, three fixtures, canonical ordering, schema, CLI, E2E, and credential-free CI are required",
+        "root/workspace/lock/core/PBI-07 artifacts remain outside PBI-08 ownership"
+      ],
+      "resume_point": ".codex/task-packets/PBI-08-semantic-eval.md",
+      "timestamp": "2026-08-22T02:15:00+09:00"
     }
   ],
   "blocker_history": [
@@ -1712,5 +1747,5 @@
     }
   ],
   "created_at": "2026-08-21T09:39:07+09:00",
-  "updated_at": "2026-08-22T02:05:00+09:00"
+  "updated_at": "2026-08-22T02:15:00+09:00"
 }

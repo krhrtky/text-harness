@@ -101,6 +101,10 @@ MUTATIONS = (
     "drop-pbi07-green-falsification", "drop-pbi07-green-eval",
     "drop-pbi07-green-hash",
     "swap-pbi07-s203-body-meaning", "append-pbi07-s204-forbidden-instruction",
+    "drop-pbi08-cli-ownership", "drop-pbi08-no-match-guard",
+    "merge-pbi08-result-types", "semantic-pbi08-exit1",
+    "permit-pbi08-semantic-severity", "permit-pbi08-network",
+    "drop-pbi08-invalid-cli-title", "drop-pbi08-red-signature",
 )
 
 def read_state() -> dict:
@@ -1626,6 +1630,50 @@ def pbi07_registration_errors(body: str, oracle_exists: bool, skill_exists: bool
     if not green: errors.append("PBI07-POST-IMPLEMENTATION-GREEN")
     return errors
 
+def pbi08_registration_errors(body: str, oracle_exists: bool, schema_exists: bool) -> list[str]:
+    ownership = all(value in body for value in (
+        '    - "packages/textlint-adapter/package.json"', '    - "packages/textlint-adapter/src/index.ts"',
+        '    - "packages/textlint-adapter/src/cli.ts"', '    - "packages/textlint-adapter/schema/validation-report.schema.json"',
+        '    - "packages/textlint-adapter/test/integration/report.contract.test.ts"',
+        '    - "packages/textlint-adapter/test/integration/cli.contract.test.ts"',
+        '    - "packages/textlint-adapter/test/integration/e2e.contract.test.ts"',
+        '    - "packages/textlint-adapter/test/integration/ci.contract.test.ts"',
+        '    - ".github/workflows/integration-contract.yml"',
+    ))
+    contract = all(value in body for value in (
+        'D/H FindingとSemanticFindingはpublic type、report field、JSON Schemaで分離',
+        'D errorだけがexit 1', '入力・契約・CLI usage不正だけexit 2',
+        'SemanticNoticeはruleId/status/range/evidence/reason/confidence/suggestedAction?をlosslessに保持しlevel=notice固定。severity/error/autofix/rewriteを持たない',
+        'type_contract: "ValidationReport schemaVersion=1.0.0, exitCode 0|1, lintMessages:LintMessage[], semanticNotices:SemanticNotice[]',
+        'exit_contract: "AC-INT-01: D error + H warning + Semantic violation => exit1 solely because of D; removing D => exit0; semantic status/confidence cannot affect exit; invalid CLI payload/usage => process exit2 with no partial report"',
+        'schema_contract: "JSON Schema draft 2020-12, additionalProperties=false recursively; separate lintMessages and semanticNotices required; semantic severity/error/autofix/rewrite forbidden; lint status/evidence/confidence forbidden',
+        'ci_contract: ".github/workflows/integration-contract.yml pull_request required candidate, permissions contents:read, Node24.19.0, exact PBI-08 verifier, no secrets/API/network/live model"',
+        'external_dependency_contract: "runtime/dev dependency追加なし; root/workspace/core/package lock and textlint-adapter tsconfig unchanged',
+    ))
+    acceptance = all(value in body for value in (
+        'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi08.py"',
+        '--filter @text-harness/textlint-adapter --fail-if-no-match',
+        'minimum_tests: 14', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 14', 'fixture_count: 3',
+        '"INT-CLI-03 invalid Semantic severity exits two without partial stdout"',
+        '"INT-F01 Semantic violation cannot be promoted to lint error"',
+        'no_match_guard: "exact package filter with --fail-if-no-match, exact four test files, tests>=14, pass=tests, fail=0, all 14 titles, exact three fixtures, schema/CLI/workflow presence, and independent runtime behavior probe"',
+        'green_signature: "PBI08_GREEN tests>=14 pass=tests fail=0 required_titles=14 fixtures=3 probe=PASS"',
+    ))
+    errors: list[str] = []
+    if not ownership: errors.append("PBI08-OWNERSHIP")
+    if not contract: errors.append("PBI08-INTEGRATION-CONTRACT")
+    if not acceptance or not oracle_exists: errors.append("PBI08-ACCEPTANCE-ORACLE")
+    if not schema_exists:
+        registered = all(value in body for value in (
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi08.py; exit=1; signature=PBI08_RED missing packages/textlint-adapter/schema/validation-report.schema.json"',
+            'red_status: "REGISTERED_RED"', 'phase: "PRE_IMPLEMENTATION"',
+            'command: "python3 .codex/spec-verifiers/verify_pbi08.py"', 'exit: 1',
+            'stdout: "PBI08_RED missing packages/textlint-adapter/schema/validation-report.schema.json"',
+            'stderr: "<empty>"', 'measured_runs: 2',
+        ))
+        if not registered: errors.append("PBI08-PRE-IMPLEMENTATION-RED")
+    return errors
+
 def verify(state: dict) -> list[str]:
     m, t, packets, workflow = state["matrix"], state["text"], state["packets"], state["workflow"]
     errors: list[str] = []
@@ -1883,6 +1931,13 @@ def verify(state: dict) -> list[str]:
                 (ROOT / "skills/readability-review/SKILL.md").is_file(),
             ):
                 need(False, error)
+        if pid == "PBI-08":
+            for error in pbi08_registration_errors(
+                body,
+                (ROOT / ".codex/spec-verifiers/verify_pbi08.py").is_file(),
+                (ROOT / "packages/textlint-adapter/schema/validation-report.schema.json").is_file(),
+            ):
+                need(False, error)
         need(not any(x in body for x in ("TBD", "placeholder", "実装開始時に")), f"PACKET-PLACEHOLDER-{name}")
 
     for gap in range(8, 18):
@@ -2102,7 +2157,18 @@ def verify(state: dict) -> list[str]:
             for item in workflow.get("phase_history", [])
         )
     )
-    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started or pbi05j_delivery_started or pbi06_delivery_started or pbi06a_delivery_started or pbi06b_delivery_started or pbi06c_delivery_started or pbi06d_delivery_started or pbi06e_delivery_started or pbi06f_delivery_started or pbi06g_delivery_started or pbi06h_delivery_started or pbi07_delivery_started or pbi07_qga_ready, "WORKFLOW-GATE-TRANSITION")
+    pbi08_delivery_started = (
+        workflow.get("current_phase") == "DA"
+        and workflow.get("gate_type") == "DELIVERY"
+        and workflow.get("active_pbi") == "PBI-08"
+        and workflow.get("task_packet_ref") == ".codex/task-packets/PBI-08-semantic-eval.md"
+        and any(
+            item.get("phase") == "QGA" and item.get("status") == "APPROVE"
+            and item.get("gate_type") == "DELIVERY" and item.get("active_pbi") == "PBI-07"
+            for item in workflow.get("phase_history", [])
+        )
+    )
+    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started or pbi05j_delivery_started or pbi06_delivery_started or pbi06a_delivery_started or pbi06b_delivery_started or pbi06c_delivery_started or pbi06d_delivery_started or pbi06e_delivery_started or pbi06f_delivery_started or pbi06g_delivery_started or pbi06h_delivery_started or pbi07_delivery_started or pbi07_qga_ready or pbi08_delivery_started, "WORKFLOW-GATE-TRANSITION")
     return errors
 
 def apply_mutation(name: str, state: dict) -> None:
@@ -2674,6 +2740,29 @@ def apply_mutation(name: str, state: dict) -> None:
                 "",
                 1,
             )
+    elif name in (
+        "drop-pbi08-cli-ownership", "drop-pbi08-no-match-guard",
+        "merge-pbi08-result-types", "semantic-pbi08-exit1",
+        "permit-pbi08-semantic-severity", "permit-pbi08-network",
+        "drop-pbi08-invalid-cli-title", "drop-pbi08-red-signature",
+    ):
+        key = next(k for k, body in packets.items() if packet_id(body) == "PBI-08")
+        if name == "drop-pbi08-cli-ownership":
+            packets[key] = packets[key].replace('    - "packages/textlint-adapter/src/cli.ts"\n', "", 1)
+        elif name == "drop-pbi08-no-match-guard":
+            packets[key] = packets[key].replace(" --fail-if-no-match", "", 1)
+        elif name == "merge-pbi08-result-types":
+            packets[key] = packets[key].replace("lintMessages:LintMessage[], semanticNotices:SemanticNotice[]", "results:(LintMessage|SemanticNotice)[]", 1)
+        elif name == "semantic-pbi08-exit1":
+            packets[key] = packets[key].replace("semantic status/confidence cannot affect exit", "semantic violation produces exit1", 1)
+        elif name == "permit-pbi08-semantic-severity":
+            packets[key] = packets[key].replace("semantic severity/error/autofix/rewrite forbidden", "semantic severity allowed", 1)
+        elif name == "permit-pbi08-network":
+            packets[key] = packets[key].replace("no secrets/API/network/live model", "network/live model permitted", 1)
+        elif name == "drop-pbi08-invalid-cli-title":
+            packets[key] = packets[key].replace(', "INT-CLI-03 invalid Semantic severity exits two without partial stdout"', "", 1)
+        else:
+            packets[key] = packets[key].replace("signature=PBI08_RED missing", "removed=PBI08_RED missing", 1)
     else: raise ValueError(name)
 
 def main() -> int:
