@@ -69,6 +69,8 @@ EXPECTED = {
     "drop-pbi05-analyze-ownership": "PBI05-OWNERSHIP",
     "drop-pbi05-no-match-guard": "PBI05-ACCEPTANCE-ORACLE",
     "drop-pbi05-required-title": "PBI05-ACCEPTANCE-ORACLE",
+    "drop-pbi05-continuity-title": "PBI05-ACCEPTANCE-ORACLE",
+    "permit-pbi05-bridge": "PBI05-CONTINUITY-CONTRACT",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -240,7 +242,7 @@ packages:
         )
         self.assertIsNotNone(summary)
         tests, passed, failed, titles = (int(value) for value in summary.groups())
-        self.assertGreaterEqual(tests, 12)
+        self.assertGreaterEqual(tests, 18)
         self.assertEqual(tests, passed)
         self.assertEqual(0, failed)
         self.assertEqual(12, titles)
@@ -336,6 +338,6 @@ packages:
         self.assertGreaterEqual(tests, 12)
         self.assertEqual(tests, passed)
         self.assertEqual(0, failed)
-        self.assertEqual(8, titles)
+        self.assertEqual(14, titles)
 
 if __name__ == "__main__": unittest.main()

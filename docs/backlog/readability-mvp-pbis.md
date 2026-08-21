@@ -41,8 +41,9 @@
   internal H102/H106/H107_TOKEN/H108_TOKENを持つ。oracleはartifact、runtime依存不在、exact 4 test file、
   tests 12件以上、全件pass、fail 0、必須12 titleを同時に検証する。
 - PBI-05はPBI-04のinternal analyzer labelを再利用し、H107/H108を別々のexact contract test fileで検証する。
-  `package.json`とlockfileは変更せず、acceptanceは`--fail-if-no-match`、2 test file、12件以上の収集、
-  全件pass、fail 0、2文境界・3文発火・label完全一致反証・RNG-001 rangeを表す必須8 titleを同時に検証する。
+  `package.json`とlockfileは変更せず、acceptanceは`--fail-if-no-match`、2 test file、18件以上の収集、
+  全件pass、fail 0、2文境界・3文発火・label完全一致反証・RNG-001 range・fenced/indented code・Paragraphの
+  continuity breakを表す必須14 titleを同時に検証する。
 - PBI-02は`packages/readability-core/package.json`、package `tsconfig.json`、`src/index.ts`を含むcore source/contract test、
   `pnpm-workspace.yaml`新規作成、PBI-02 importer/dependencyに必要な`pnpm-lock.yaml`生成差分を所有する。
   PBI-01が作成したroot `package.json`は変更せず、lockfileのPBI-01 ownership履歴も保持する。

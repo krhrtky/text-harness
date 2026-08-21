@@ -27,6 +27,7 @@ MUTATIONS = (
     "pbi04-empty-evidence-entry", "pbi04-string-evidence",
     "pbi04-evaluated-at-conflict", "pbi04-toolchain-missing", "pbi04-toolchain-drift",
     "drop-pbi05-analyze-ownership", "drop-pbi05-no-match-guard", "drop-pbi05-required-title",
+    "drop-pbi05-continuity-title", "permit-pbi05-bridge",
 )
 
 def read_state() -> dict:
@@ -344,21 +345,33 @@ def pbi05_registration_errors(body: str, oracle_exists: bool, implementation_exi
         '"packages/readability-core/package.json", "pnpm-lock.yaml"',
         'sentence-splitter@5.0.1と@textlint/markdown-to-ast@15.8.0の既存exact runtime dependenciesを変更しない',
     ))
+    continuity = (
+        'fenced code、indented code、Paragraph境界はH107/H108のactive runを必ず分断し、境界前後の同一labelをbridgeしない'
+        in body
+    )
     acceptance = all(value in body for value in (
         'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi05.py"',
         'test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/heuristic/H107.contract.test.ts test/heuristic/H108.contract.test.ts"',
         'exact_test_files: ["packages/readability-core/test/heuristic/H107.contract.test.ts", "packages/readability-core/test/heuristic/H108.contract.test.ts"]',
-        'minimum_tests: 12', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 8',
+        'minimum_tests: 18', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 14',
         '"H107-P01 three identical leading labels report actual 3 threshold 2"',
         '"H108-P01 three identical terminal labels report actual 3 threshold 2"',
+        '"H107-C01 fenced code blocks break leading-label continuity"',
+        '"H107-C02 indented code blocks break leading-label continuity"',
+        '"H107-C03 paragraph boundaries break leading-label continuity"',
+        '"H108-C01 fenced code blocks break terminal-label continuity"',
+        '"H108-C02 indented code blocks break terminal-label continuity"',
+        '"H108-C03 paragraph boundaries break terminal-label continuity"',
         'dependency_contract: "manifest and packages/readability-core lock importer direct dependency sets remain exactly @textlint/markdown-to-ast@15.8.0 and sentence-splitter@5.0.1"',
-        'green_signature: "PBI05_GREEN tests>=12 pass=tests fail=0 required_titles=8"',
+        'green_signature: "PBI05_GREEN tests>=18 pass=tests fail=0 required_titles=14"',
     ))
     errors = []
     if not ownership:
         errors.append("PBI05-OWNERSHIP")
     if not dependency:
         errors.append("PBI05-DEPENDENCY-CONTRACT")
+    if not continuity:
+        errors.append("PBI05-CONTINUITY-CONTRACT")
     if not acceptance or not oracle_exists:
         errors.append("PBI05-ACCEPTANCE-ORACLE")
     if not implementation_exists:
@@ -380,10 +393,11 @@ def pbi05_registration_errors(body: str, oracle_exists: bool, implementation_exi
         'stderr: "<empty>"', 'measured_runs: 2',
         'green_transition:', 'exit: 0',
         'exact_test_files: ["packages/readability-core/test/heuristic/H107.contract.test.ts", "packages/readability-core/test/heuristic/H108.contract.test.ts"]',
-        'minimum_tests: 12', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 8',
+        'minimum_tests: 18', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 14',
         'dependency_contract: "manifest and lock importer retain the exact two direct runtime dependencies and versions"',
-        'signature: "PBI05_GREEN tests>=12 pass=tests fail=0 required_titles=8"',
+        'signature: "PBI05_GREEN tests>=18 pass=tests fail=0 required_titles=14"',
         'initial_da_green: "tests 12; pass 12; fail 0; required_titles 8"',
+        'qga_continuity_fix_green: "tests 18; pass 18; fail 0; required_titles 14"',
     ))
     if not green:
         errors.append("PBI05-POST-IMPLEMENTATION-GREEN")
@@ -668,16 +682,25 @@ def apply_mutation(name: str, state: dict) -> None:
             packets[key] = packets[key].replace('    toolchain_exact: "node=24.19.0; pnpm=11.22.0"\n', "", 1)
         else:
             packets[key] = packets[key].replace("node=24.19.0; pnpm=11.22.0", "node=24.18.0; pnpm=11.22.0", 1)
-    elif name in ("drop-pbi05-analyze-ownership", "drop-pbi05-no-match-guard", "drop-pbi05-required-title"):
+    elif name in (
+        "drop-pbi05-analyze-ownership", "drop-pbi05-no-match-guard", "drop-pbi05-required-title",
+        "drop-pbi05-continuity-title", "permit-pbi05-bridge",
+    ):
         key = next(k for k, body in packets.items() if packet_id(body) == "PBI-05")
         if name == "drop-pbi05-analyze-ownership":
             packets[key] = packets[key].replace(', "packages/readability-core/src/analyze.ts"', "", 1)
         elif name == "drop-pbi05-no-match-guard":
             packets[key] = packets[key].replace(" --fail-if-no-match", "", 1)
-        else:
+        elif name == "drop-pbi05-required-title":
             packets[key] = packets[key].replace(
                 '"H108-P01 three identical terminal labels report actual 3 threshold 2", ', "", 1
             )
+        elif name == "drop-pbi05-continuity-title":
+            packets[key] = packets[key].replace(
+                '"H107-C01 fenced code blocks break leading-label continuity", ', "", 1
+            )
+        else:
+            packets[key] = packets[key].replace("active runを必ず分断し", "active runをbridgeし", 1)
     else: raise ValueError(name)
 
 def main() -> int:

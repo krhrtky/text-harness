@@ -24,8 +24,14 @@ REQUIRED_TITLES = (
     "H108-P01 three identical terminal labels report actual 3 threshold 2",
     "H108-F01 different morphology labels do not repeat",
     "H108-R01 range spans the repeated three-sentence run",
+    "H107-C01 fenced code blocks break leading-label continuity",
+    "H107-C02 indented code blocks break leading-label continuity",
+    "H107-C03 paragraph boundaries break leading-label continuity",
+    "H108-C01 fenced code blocks break terminal-label continuity",
+    "H108-C02 indented code blocks break terminal-label continuity",
+    "H108-C03 paragraph boundaries break terminal-label continuity",
 )
-MINIMUM_TESTS = 12
+MINIMUM_TESTS = 18
 TEST_COMMAND = (
     "mise", "x", "node@24.19.0", "--", "corepack", "pnpm",
     "--filter", "@text-harness/readability-core", "--fail-if-no-match",
