@@ -52,3 +52,36 @@ test("H107 excludes fenced and indented code sentences", () => {
   const input = "また、一です。また、二です。\n\n```text\nまた、三です。\n```\n\n    また、四です。";
   assert.deepEqual(analyze(input, config), []);
 });
+
+test("H107-C01 fenced code blocks break leading-label continuity", () => {
+  const before = "また、一です。また、二です。";
+  const code = "```text\nまた、コードです。\n```";
+  const afterOne = "また、三です。";
+  assert.deepEqual(analyze(`${before}\n\n${code}\n\n${afterOne}`, config), []);
+
+  const afterRun = "また、三です。また、四です。また、五です。";
+  const input = `${before}\n\n${code}\n\n${afterRun}`;
+  const findings = analyze(input, config);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0]?.actual, 3);
+  assert.equal(input.slice(findings[0]!.range.start, findings[0]!.range.end), afterRun);
+  assert.equal(input.slice(findings[0]!.range.start, findings[0]!.range.end).includes("```"), false);
+});
+
+test("H107-C02 indented code blocks break leading-label continuity", () => {
+  const before = "また、一です。また、二です。";
+  const code = "    また、コードです。";
+  const afterOne = "また、三です。";
+  assert.deepEqual(analyze(`${before}\n\n${code}\n\n${afterOne}`, config), []);
+
+  const afterRun = "また、三です。また、四です。また、五です。";
+  const input = `${before}\n\n${code}\n\n${afterRun}`;
+  const findings = analyze(input, config);
+  assert.equal(findings.length, 1);
+  assert.equal(input.slice(findings[0]!.range.start, findings[0]!.range.end), afterRun);
+  assert.equal(input.slice(findings[0]!.range.start, findings[0]!.range.end).includes("コード"), false);
+});
+
+test("H107-C03 paragraph boundaries break leading-label continuity", () => {
+  assert.deepEqual(analyze("また、一です。また、二です。\n\nまた、三です。", config), []);
+});

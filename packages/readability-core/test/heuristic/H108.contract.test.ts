@@ -51,3 +51,36 @@ test("H108 excludes code sentences and is deterministic", () => {
   assert.deepEqual(baseline, []);
   for (let index = 0; index < 20; index += 1) assert.deepEqual(analyze(input, config), baseline);
 });
+
+test("H108-C01 fenced code blocks break terminal-label continuity", () => {
+  const before = "一を確認します。二を確認します。";
+  const code = "```text\nコードを確認します。\n```";
+  const afterOne = "三を確認します。";
+  assert.deepEqual(analyze(`${before}\n\n${code}\n\n${afterOne}`, config), []);
+
+  const afterRun = "三を確認します。四を確認します。五を確認します。";
+  const input = `${before}\n\n${code}\n\n${afterRun}`;
+  const findings = analyze(input, config);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0]?.actual, 3);
+  assert.equal(input.slice(findings[0]!.range.start, findings[0]!.range.end), afterRun);
+  assert.equal(input.slice(findings[0]!.range.start, findings[0]!.range.end).includes("```"), false);
+});
+
+test("H108-C02 indented code blocks break terminal-label continuity", () => {
+  const before = "一を確認します。二を確認します。";
+  const code = "    コードを確認します。";
+  const afterOne = "三を確認します。";
+  assert.deepEqual(analyze(`${before}\n\n${code}\n\n${afterOne}`, config), []);
+
+  const afterRun = "三を確認します。四を確認します。五を確認します。";
+  const input = `${before}\n\n${code}\n\n${afterRun}`;
+  const findings = analyze(input, config);
+  assert.equal(findings.length, 1);
+  assert.equal(input.slice(findings[0]!.range.start, findings[0]!.range.end), afterRun);
+  assert.equal(input.slice(findings[0]!.range.start, findings[0]!.range.end).includes("コード"), false);
+});
+
+test("H108-C03 paragraph boundaries break terminal-label continuity", () => {
+  assert.deepEqual(analyze("一を確認します。二を確認します。\n\n三を確認します。", config), []);
+});
