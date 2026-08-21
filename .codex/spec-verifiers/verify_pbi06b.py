@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -10,6 +11,19 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = Path("packages/readability-core/src/rules/D002.ts")
 TEST = Path("packages/readability-core/test/deterministic/D002.contract.test.ts")
+FIXTURE = Path("packages/readability-core/test/deterministic/fixtures/D002.json")
+CANONICAL_FIXTURE = {
+    "schemaVersion": 1,
+    "codeExclusion": {
+        "codeOnly": "`か\u3099`\n\n```text\nか\u3099\n```\n\n    か\u3099",
+        "prose": "本文か\u3099",
+        "proseExpectedRange": {"start": 2, "end": 4},
+    },
+    "multiMark": {
+        "input": "か\u3099\u0301",
+        "expectedRange": {"start": 0, "end": 3},
+    },
+}
 REQUIRED_TITLES = (
     "D002-P01 non-NFC combining sequence reports its minimal source range",
     "D002-P02 each separated non-NFC sequence reports independently",
@@ -67,6 +81,81 @@ def substantive_oracle_errors(test_source: str, rule_source: str) -> list[str]:
     return errors
 
 
+def test_fixture_oracle_errors(test_source: str) -> list[str]:
+    errors = []
+    common = (
+        'readFileSync(new URL("./fixtures/D002.json", import.meta.url))',
+        "const fixtures = JSON.parse",
+    )
+    if any(fragment not in test_source for fragment in common):
+        errors.append("fixture-loader")
+    n03_title = 'test("D002-N03 Markdown code spans and blocks are excluded"'
+    n03_block = test_source.split(n03_title, 1)[1].split("\ntest(", 1)[0] if n03_title in test_source else ""
+    if (
+        "fixtures.codeExclusion.codeOnly" not in n03_block
+        or "analyze(" not in n03_block
+        or "assert.deepEqual" not in n03_block
+        or "assert.ok(true)" in n03_block
+    ):
+        errors.append("N03-fixture-runner")
+    b03_title = 'test("D002-B03 multi-mark combining sequence reports exact source range"'
+    b03_block = test_source.split(b03_title, 1)[1].split("\ntest(", 1)[0] if b03_title in test_source else ""
+    b03_fragments = (
+        "const input = fixtures.multiMark.input;",
+        "const [finding] = analyze(input, config());",
+        "fixtures.multiMark.expectedRange",
+        "input.slice(finding!.range.start, finding!.range.end)",
+    )
+    if "assert.ok(true)" in b03_block or any(fragment not in b03_block for fragment in b03_fragments):
+        errors.append("B03-fixture-runner")
+    return errors
+
+
+def probe_contract_errors(value: object) -> list[str]:
+    if not isinstance(value, dict):
+        return ["probe-object"]
+    expected = {
+        "codeOnlyCount": 0,
+        "proseCount": 1,
+        "proseRange": {"start": 2, "end": 4},
+        "proseSlice": "か\u3099",
+        "multiCount": 1,
+        "multiRange": {"start": 0, "end": 3},
+        "multiSlice": "か\u3099\u0301",
+    }
+    return [] if value == expected else ["behavior-mismatch"]
+
+
+def run_behavioral_probe() -> tuple[list[str], str]:
+    cases = json.dumps(CANONICAL_FIXTURE, ensure_ascii=False)
+    script = f'''import {{ analyzeD002 }} from "./src/index.ts";
+const fixtures = {cases};
+const run = (input) => analyzeD002(input, "NFC", "error");
+const codeOnly = run(fixtures.codeExclusion.codeOnly);
+const prose = run(fixtures.codeExclusion.prose);
+const multi = run(fixtures.multiMark.input);
+console.log("PBI06B_PROBE " + JSON.stringify({{
+  codeOnlyCount: codeOnly.length,
+  proseCount: prose.length,
+  proseRange: prose[0]?.range,
+  proseSlice: prose[0] ? fixtures.codeExclusion.prose.slice(prose[0].range.start, prose[0].range.end) : null,
+  multiCount: multi.length,
+  multiRange: multi[0]?.range,
+  multiSlice: multi[0] ? fixtures.multiMark.input.slice(multi[0].range.start, multi[0].range.end) : null,
+}}));'''
+    command = (
+        "mise", "x", "node@24.19.0", "--", "corepack", "pnpm",
+        "--filter", "@text-harness/readability-core", "--fail-if-no-match",
+        "exec", "node", "--input-type=module", "--eval", script,
+    )
+    result = subprocess.run(command, cwd=ROOT, text=True, capture_output=True)
+    output = result.stdout + result.stderr
+    match = re.search(r"^PBI06B_PROBE (\{.*\})$", output, re.MULTILINE)
+    if result.returncode != 0 or match is None:
+        return [f"probe-exit-{result.returncode}"], output
+    return probe_contract_errors(json.loads(match.group(1))), output
+
+
 def main() -> int:
     for required in (SOURCE, TEST):
         if not (ROOT / required).is_file():
@@ -84,6 +173,18 @@ def main() -> int:
     if 'export { analyzeD002 } from "./rules/D002.ts"' not in index:
         print("PBI06B_FAIL public export missing D002")
         return 1
+    probe_errors, probe_output = run_behavioral_probe()
+    if probe_errors:
+        print(probe_output, end="" if not probe_output or probe_output.endswith("\n") else "\n")
+        print("PBI06B_FAIL independent_probe " + ",".join(probe_errors))
+        return 1
+    if not (ROOT / FIXTURE).is_file():
+        print(f"PBI06B_RED missing {FIXTURE}")
+        return 1
+    fixture_value = json.loads((ROOT / FIXTURE).read_text())
+    if fixture_value != CANONICAL_FIXTURE:
+        print("PBI06B_FAIL fixture_contract")
+        return 1
     test_source = (ROOT / TEST).read_text()
     substantive = substantive_oracle_errors(test_source, (ROOT / SOURCE).read_text())
     if "B03-title" in substantive:
@@ -91,6 +192,10 @@ def main() -> int:
         return 1
     if substantive:
         print("PBI06B_FAIL substantive_oracle " + ",".join(substantive))
+        return 1
+    fixture_oracle = test_fixture_oracle_errors(test_source)
+    if fixture_oracle:
+        print("PBI06B_FAIL fixture_test_oracle " + ",".join(fixture_oracle))
         return 1
     result = subprocess.run(TEST_COMMAND, cwd=ROOT, text=True, capture_output=True)
     output = result.stdout + result.stderr

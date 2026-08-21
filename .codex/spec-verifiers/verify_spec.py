@@ -48,6 +48,7 @@ MUTATIONS = (
     "drop-pbi06b-n03-title", "placeholder-pbi06b-n03-body",
     "drop-pbi06b-multimark-title", "placeholder-pbi06b-multimark-body",
     "drop-pbi06b-multimark-range", "drop-pbi06b-combining-plus",
+    "drop-pbi06b-runtime-probe", "pbi06b-plain-input-n03", "pbi06b-fabricated-b03-finding",
 )
 
 def read_state() -> dict:
@@ -832,6 +833,7 @@ def pbi06b_registration_errors(body: str, oracle_exists: bool, source_exists: bo
     ownership = all(value in body for value in (
         '    - "packages/readability-core/src/rules/D002.ts"',
         '    - "packages/readability-core/test/deterministic/D002.contract.test.ts"',
+        '    - "packages/readability-core/test/deterministic/fixtures/D002.json"',
         '    - "packages/readability-core/src/analyze.ts"',
         '    - "packages/readability-core/src/index.ts"',
         'packages/readability-core/src/analyze.ts: "既存D001/H dispatchを維持し、validated D002 normalization/severityをanalyzeD002へ渡すcaseだけ追加する"',
@@ -848,6 +850,11 @@ def pbi06b_registration_errors(body: str, oracle_exists: bool, source_exists: bo
         'N03: "title exact; body constructs Markdown code span/block/indented code containing decomposedGa and asserts analyze(input,config()) deep-equals []"',
         'B03: "title exact; body constructs U+304B U+3099 U+0301 input, asserts range {start:0,end:3}, and asserts range slice equals complete input"',
         'implementation: "D002 COMBINING_SEQUENCE requires one base followed by one-or-more marks; deleting the trailing quantifier plus is rejected"',
+        'path: "packages/readability-core/test/deterministic/fixtures/D002.json"',
+        'schema: "exact schemaVersion=1; codeExclusion.codeOnly/prose/proseExpectedRange; multiMark.input/expectedRange; no extra keys"',
+        'canonical_values: "codeOnly contains inline/fenced/indented U+304B U+3099; prose=本文 plus U+304B U+3099 range[2,4); multiMark=U+304B U+3099 U+0301 range[0,3)"',
+        'independent_runtime_probe_contract: "verify_pbi06b invokes public analyzeD002 through pnpm TS runner without importing or reading D002.contract.test.ts; codeOnly=>0, prose=>1/range[2,4)/exact slice, multiMark=>1/range[0,3)/exact slice"',
+        'fixture_test_runner_contract: "D002.contract.test.ts loads fixtures/D002.json; N03 passes fixtures.codeExclusion.codeOnly to real analyze; B03 passes fixtures.multiMark.input to real analyze and asserts fixture expectedRange plus source slice; plain-input N03 and fabricated-finding B03 are forbidden"',
     ))
     acceptance = all(value in body for value in (
         'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi06b.py"',
@@ -893,6 +900,16 @@ def pbi06b_registration_errors(body: str, oracle_exists: bool, source_exists: bo
         ))
         if not qga_red:
             errors.append("PBI06B-QGA-FIX-RED")
+        return errors
+    if 'red_status: "REGISTERED_RED_QGA_FIX_2"' in body:
+        qga_red = all(value in body for value in (
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi06b.py; exit=1; signature=PBI06B_RED missing packages/readability-core/test/deterministic/fixtures/D002.json"',
+            'qga_fix_2_expected_red:', 'phase: "PRE_FIX_IMPLEMENTATION"',
+            'stdout: "PBI06B_RED missing packages/readability-core/test/deterministic/fixtures/D002.json"',
+            'stderr: "<empty>"', 'measured_runs: 2',
+        ))
+        if not qga_red:
+            errors.append("PBI06B-QGA-FIX-2-RED")
         return errors
     green = all(value in body for value in (
         'expected_red: null', 'red_status: "CONSUMED_GREEN"',
@@ -1499,6 +1516,7 @@ def apply_mutation(name: str, state: dict) -> None:
         "drop-pbi06b-n03-title", "placeholder-pbi06b-n03-body",
         "drop-pbi06b-multimark-title", "placeholder-pbi06b-multimark-body",
         "drop-pbi06b-multimark-range", "drop-pbi06b-combining-plus",
+        "drop-pbi06b-runtime-probe", "pbi06b-plain-input-n03", "pbi06b-fabricated-b03-finding",
     ):
         key = next(k for k, body in packets.items() if packet_id(body) == "PBI-06B")
         if name == "drop-pbi06b-analyze-ownership":
@@ -1527,8 +1545,14 @@ def apply_mutation(name: str, state: dict) -> None:
             packets[key] = packets[key].replace("asserts range {start:0,end:3}", "uses assert.ok(true)", 1)
         elif name == "drop-pbi06b-multimark-range":
             packets[key] = packets[key].replace("reports [0,3)", "reports an unspecified range", 1)
-        else:
+        elif name == "drop-pbi06b-combining-plus":
             packets[key] = packets[key].replace("one-or-more marks", "exactly one mark", 1)
+        elif name == "drop-pbi06b-runtime-probe":
+            packets[key] = packets[key].replace("without importing or reading D002.contract.test.ts", "delegates to D002.contract.test.ts", 1)
+        elif name == "pbi06b-plain-input-n03":
+            packets[key] = packets[key].replace("N03 passes fixtures.codeExclusion.codeOnly to real analyze", "N03 passes a plain input to analyze", 1)
+        else:
+            packets[key] = packets[key].replace("B03 passes fixtures.multiMark.input to real analyze", "B03 fabricates a finding object", 1)
     else: raise ValueError(name)
 
 def main() -> int:

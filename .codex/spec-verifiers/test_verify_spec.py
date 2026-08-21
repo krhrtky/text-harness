@@ -142,6 +142,9 @@ EXPECTED = {
     "placeholder-pbi06b-multimark-body": "PBI06B-RULE-CONTRACT",
     "drop-pbi06b-multimark-range": "PBI06B-RULE-CONTRACT",
     "drop-pbi06b-combining-plus": "PBI06B-RULE-CONTRACT",
+    "drop-pbi06b-runtime-probe": "PBI06B-RULE-CONTRACT",
+    "pbi06b-plain-input-n03": "PBI06B-RULE-CONTRACT",
+    "pbi06b-fabricated-b03-finding": "PBI06B-RULE-CONTRACT",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -621,31 +624,35 @@ packages:
         for path, expected in verify_pbi06a.UNCHANGED_HASHES.items():
             self.assertEqual(expected, hashlib.sha256((ROOT / path).read_bytes()).hexdigest())
 
-    def test_pbi06b_qga_fix_green_preserves_red_and_substantive_oracles(self) -> None:
+    def test_pbi06b_independent_probe_and_fixture_red_contract(self) -> None:
         state = verify_spec.read_state()
         packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-06B")
         pre_implementation = packet.replace(
-            "expected_red: null",
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi06b.py; exit=1; signature=PBI06B_RED missing packages/readability-core/test/deterministic/fixtures/D002.json"',
             'expected_red: "python3 .codex/spec-verifiers/verify_pbi06b.py; exit=1; signature=PBI06B_RED missing packages/readability-core/src/rules/D002.ts"',
             1,
-        ).replace('red_status: "CONSUMED_GREEN"', 'red_status: "REGISTERED_RED"', 1)
+        ).replace('red_status: "REGISTERED_RED_QGA_FIX_2"', 'red_status: "REGISTERED_RED"', 1)
         self.assertEqual([], verify_spec.pbi06b_registration_errors(pre_implementation, True, False))
         pre_qga_fix = packet.replace(
-            "expected_red: null",
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi06b.py; exit=1; signature=PBI06B_RED missing packages/readability-core/test/deterministic/fixtures/D002.json"',
             'expected_red: "python3 .codex/spec-verifiers/verify_pbi06b.py; exit=1; signature=PBI06B_RED missing_required_title D002-B03 multi-mark combining sequence reports exact source range"',
             1,
-        ).replace('red_status: "CONSUMED_GREEN"', 'red_status: "REGISTERED_RED_QGA_FIX"', 1)
+        ).replace('red_status: "REGISTERED_RED_QGA_FIX_2"', 'red_status: "REGISTERED_RED_QGA_FIX"', 1)
         self.assertEqual([], verify_spec.pbi06b_registration_errors(pre_qga_fix, True, True))
         self.assertEqual([], verify_spec.pbi06b_registration_errors(packet, PBI06B_VERIFIER.is_file(), True))
-        green = subprocess.run(["python3", str(PBI06B_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
-        self.assertEqual(0, green.returncode, green.stdout + green.stderr)
-        summary = re.search(r"PBI06B_GREEN tests=(\d+) pass=(\d+) fail=(\d+) required_titles=(\d+)", green.stdout)
-        self.assertIsNotNone(summary)
-        tests, passed, failed, titles = (int(value) for value in summary.groups())
-        self.assertGreaterEqual(tests, 12)
-        self.assertEqual(tests, passed)
-        self.assertEqual(0, failed)
-        self.assertEqual(12, titles)
+        first = subprocess.run(["python3", str(PBI06B_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        second = subprocess.run(["python3", str(PBI06B_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        expected = (1, "PBI06B_RED missing packages/readability-core/test/deterministic/fixtures/D002.json\n", "")
+        self.assertEqual(expected, (first.returncode, first.stdout, first.stderr))
+        self.assertEqual(expected, (second.returncode, second.stdout, second.stderr))
+        probe_errors, _ = verify_pbi06b.run_behavioral_probe()
+        self.assertEqual([], probe_errors)
+        self.assertEqual([], verify_pbi06b.probe_contract_errors({
+            "codeOnlyCount": 0, "proseCount": 1, "proseRange": {"start": 2, "end": 4},
+            "proseSlice": "か\u3099", "multiCount": 1, "multiRange": {"start": 0, "end": 3},
+            "multiSlice": "か\u3099\u0301",
+        }))
+        self.assertIn("behavior-mismatch", verify_pbi06b.probe_contract_errors({"codeOnlyCount": 1}))
         self.assertIsNone(verify_pbi06b.unchanged_error())
         test_source = (ROOT / verify_pbi06b.TEST).read_text()
         rule_source = (ROOT / verify_pbi06b.SOURCE).read_text()
@@ -670,6 +677,26 @@ packages:
         ))
         self.assertIn("combining-sequence-plus", verify_pbi06b.substantive_oracle_errors(
             future, rule_source.replace("\\p{M}+", "\\p{M}", 1)
+        ))
+        fixture_runner = '''
+import { readFileSync } from "node:fs";
+const fixtures = JSON.parse(readFileSync(new URL("./fixtures/D002.json", import.meta.url)));
+test("D002-N03 Markdown code spans and blocks are excluded", () => {
+  assert.deepEqual(analyze(fixtures.codeExclusion.codeOnly, config()), []);
+});
+test("D002-B03 multi-mark combining sequence reports exact source range", () => {
+  const input = fixtures.multiMark.input;
+  const [finding] = analyze(input, config());
+  assert.deepEqual(finding?.range, fixtures.multiMark.expectedRange);
+  assert.equal(input.slice(finding!.range.start, finding!.range.end), input);
+});
+'''
+        self.assertEqual([], verify_pbi06b.test_fixture_oracle_errors(fixture_runner))
+        self.assertIn("N03-fixture-runner", verify_pbi06b.test_fixture_oracle_errors(
+            fixture_runner.replace("fixtures.codeExclusion.codeOnly", "decomposedGa", 1)
+        ))
+        self.assertIn("B03-fixture-runner", verify_pbi06b.test_fixture_oracle_errors(
+            fixture_runner.replace("const [finding] = analyze(input, config());", "const finding = { range: fixtures.multiMark.expectedRange };", 1)
         ))
 
 if __name__ == "__main__": unittest.main()
