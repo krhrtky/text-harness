@@ -108,6 +108,10 @@ MUTATIONS = (
     "drop-pbi08-order02-title", "weaken-pbi08-tie-order",
     "permit-pbi08-dedupe", "weaken-pbi08-byte-identity",
     "drop-pbi08-order03-title", "drop-pbi08-status-order-invariant",
+    "drop-pbi09-readme-ownership", "drop-pbi09-license-hash",
+    "weaken-pbi09-notice-scope", "drop-pbi09-security-zero",
+    "drop-pbi09-update-command", "drop-pbi09-required-title",
+    "permit-pbi09-broken-link", "drop-pbi09-red-signature",
 )
 
 def read_state() -> dict:
@@ -1737,6 +1741,53 @@ def pbi08_registration_errors(body: str, oracle_exists: bool, schema_exists: boo
     if not green: errors.append("PBI08-POST-IMPLEMENTATION-GREEN")
     return errors
 
+def pbi09_registration_errors(body: str, oracle_exists: bool, readme_exists: bool) -> list[str]:
+    ownership = all(value in body for value in (
+        '    - "README.md"', '    - "LICENSE"', '    - "SECURITY.md"', '    - "CONTRIBUTING.md"', '    - "CHANGELOG.md"',
+        '    - "NOTICE"', '    - "package.json"', '    - "scripts/verify-release.mjs"',
+        '    - "tests/release/docs.contract.test.mjs"', '    - "tests/release/license.contract.test.mjs"',
+        '    - "tests/release/security.contract.test.mjs"', '    - "tests/release/commands.contract.test.mjs"',
+        '    - "docs/release-evidence/release-input.json"', '    - "docs/release-evidence/dependency-license-scan.json"',
+        '    - "docs/release-evidence/security-scan.json"', '    - ".github/workflows/release-contract.yml"',
+    ))
+    contract = all(value in body for value in (
+        'owner=krhrtky,name=text-harness,visibility=public,license=Apache-2.0,defaultBranch=main',
+        'SHA-256 cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30',
+        'Copyright 2026 krhrtky', 'MIT=72,Apache-2.0=2,BSD-2-Clause=2',
+        'unique_notice_sha256: ["f5c708b59114507b8b27b48181b6883d106bbca0c1634bbee45b5e344237b66b"]',
+        'distributable retention obligation=0。root NOTICEは不在を正',
+        'secret scan findings=0とdependency audit unresolved high=0/critical=0',
+        'install_command: "scripts/text-harness-setup --install"',
+        'update_command: "git pull --ff-only origin main && scripts/text-harness-setup --upgrade --from <previous-release-tag>"',
+        'release_input_contract: "sorted SHA-256 over package.json,pnpm-lock.yaml,pnpm-workspace.yaml,packages/readability-core/**,packages/textlint-adapter/**,skills/readability-review/** excluding node_modules and generated release docs; exact path list and per-path hashes in release-input.json"',
+        'link_contract: "README/SECURITY/CONTRIBUTING/CHANGELOGのrelative linkはtracked targetへ解決',
+        'security_contract: "tracked-files secret scanとpnpm audit --audit-level highのcommand/toolchain/evaluatedAt/releaseInputSha256を保存し、secret/high/critical各0。scan skip/unknown/stale inputはFAIL"',
+    ))
+    acceptance = all(value in body for value in (
+        'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi09.py"',
+        'minimum_tests: 12', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 12',
+        '"REL-DOC-01 README has exact install update usage and CLI commands"',
+        '"REL-LIC-04 dev-only duplicate TypeScript notices produce no distributable root NOTICE"',
+        '"REL-SEC-02 dependency audit has zero unresolved high or critical"',
+        '"REL-CI-01 release contract CI is exact least-privilege and credential-free"',
+        'red_signature: "PBI09_RED missing README.md"',
+        'no_match_guard: "exact four test files, tests>=12, pass=tests, fail=0, all 12 titles, README/LICENSE/community docs/three JSON evidence/workflow/script presence, package commands exact, links/commands/hashes/runtime scan oracle"',
+        'green_signature: "PBI09_GREEN tests>=12 pass=tests fail=0 required_titles=12 links=PASS commands=PASS license=PASS notice=ABSENT security=PASS"',
+    ))
+    errors: list[str] = []
+    if not ownership: errors.append("PBI09-OWNERSHIP")
+    if not contract: errors.append("PBI09-RELEASE-CONTRACT")
+    if not acceptance or not oracle_exists: errors.append("PBI09-ACCEPTANCE-ORACLE")
+    if not readme_exists:
+        registered = all(value in body for value in (
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi09.py; exit=1; signature=PBI09_RED missing README.md"',
+            'red_status: "REGISTERED_RED"', 'phase: "PRE_IMPLEMENTATION"',
+            'command: "python3 .codex/spec-verifiers/verify_pbi09.py"', 'exit: 1',
+            'stdout: "PBI09_RED missing README.md"', 'stderr: "<empty>"', 'measured_runs: 2',
+        ))
+        if not registered: errors.append("PBI09-PRE-IMPLEMENTATION-RED")
+    return errors
+
 def verify(state: dict) -> list[str]:
     m, t, packets, workflow = state["matrix"], state["text"], state["packets"], state["workflow"]
     errors: list[str] = []
@@ -2001,6 +2052,13 @@ def verify(state: dict) -> list[str]:
                 (ROOT / "packages/textlint-adapter/schema/validation-report.schema.json").is_file(),
             ):
                 need(False, error)
+        if pid == "PBI-09":
+            for error in pbi09_registration_errors(
+                body,
+                (ROOT / ".codex/spec-verifiers/verify_pbi09.py").is_file(),
+                (ROOT / "README.md").is_file(),
+            ):
+                need(False, error)
         need(not any(x in body for x in ("TBD", "placeholder", "実装開始時に")), f"PACKET-PLACEHOLDER-{name}")
 
     for gap in range(8, 18):
@@ -2231,7 +2289,13 @@ def verify(state: dict) -> list[str]:
             for item in workflow.get("phase_history", [])
         )
     )
-    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started or pbi05j_delivery_started or pbi06_delivery_started or pbi06a_delivery_started or pbi06b_delivery_started or pbi06c_delivery_started or pbi06d_delivery_started or pbi06e_delivery_started or pbi06f_delivery_started or pbi06g_delivery_started or pbi06h_delivery_started or pbi07_delivery_started or pbi07_qga_ready or pbi08_delivery_started, "WORKFLOW-GATE-TRANSITION")
+    pbi09_delivery_started = (
+        workflow.get("current_phase") == "DA" and workflow.get("gate_type") == "DELIVERY"
+        and workflow.get("active_pbi") == "PBI-09"
+        and workflow.get("task_packet_ref") == ".codex/task-packets/PBI-09-release-evidence.md"
+        and any(item.get("phase") == "QGA" and item.get("status") == "APPROVE" and item.get("active_pbi") == "PBI-08" for item in workflow.get("phase_history", []))
+    )
+    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started or pbi05j_delivery_started or pbi06_delivery_started or pbi06a_delivery_started or pbi06b_delivery_started or pbi06c_delivery_started or pbi06d_delivery_started or pbi06e_delivery_started or pbi06f_delivery_started or pbi06g_delivery_started or pbi06h_delivery_started or pbi07_delivery_started or pbi07_qga_ready or pbi08_delivery_started or pbi09_delivery_started, "WORKFLOW-GATE-TRANSITION")
     return errors
 
 def apply_mutation(name: str, state: dict) -> None:
@@ -2845,6 +2909,29 @@ def apply_mutation(name: str, state: dict) -> None:
             packets[key] = packets[key].replace("byte-identical canonical JSONを返す", "output orderは未規定", 1)
         else:
             packets[key] = packets[key].replace('    red_signature: "PBI08_RED missing packages/textlint-adapter/schema/validation-report.schema.json"\n', "", 1)
+    elif name in (
+        "drop-pbi09-readme-ownership", "drop-pbi09-license-hash",
+        "weaken-pbi09-notice-scope", "drop-pbi09-security-zero",
+        "drop-pbi09-update-command", "drop-pbi09-required-title",
+        "permit-pbi09-broken-link", "drop-pbi09-red-signature",
+    ):
+        key = next(k for k, body in packets.items() if packet_id(body) == "PBI-09")
+        if name == "drop-pbi09-readme-ownership":
+            packets[key] = packets[key].replace('    - "README.md"\n', "", 1)
+        elif name == "drop-pbi09-license-hash":
+            packets[key] = packets[key].replace("cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30", "removed", 1)
+        elif name == "weaken-pbi09-notice-scope":
+            packets[key] = packets[key].replace("distributable retention obligation=0。root NOTICEは不在を正", "NOTICE scope unknown", 1)
+        elif name == "drop-pbi09-security-zero":
+            packets[key] = packets[key].replace("secret scan findings=0とdependency audit unresolved high=0/critical=0", "security result unknown", 1)
+        elif name == "drop-pbi09-update-command":
+            packets[key] = packets[key].replace('  update_command: "git pull --ff-only origin main && scripts/text-harness-setup --upgrade --from <previous-release-tag>"\n', "", 1)
+        elif name == "drop-pbi09-required-title":
+            packets[key] = packets[key].replace('"REL-LIC-04 dev-only duplicate TypeScript notices produce no distributable root NOTICE"', '"REL-LIC-04-REMOVED"')
+        elif name == "permit-pbi09-broken-link":
+            packets[key] = packets[key].replace("relative linkはtracked targetへ解決", "relative link may be broken", 1)
+        else:
+            packets[key] = packets[key].replace('    red_signature: "PBI09_RED missing README.md"\n', "", 1)
     else: raise ValueError(name)
 
 def main() -> int:

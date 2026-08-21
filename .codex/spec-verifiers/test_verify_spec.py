@@ -66,6 +66,7 @@ PBI08_SPEC = importlib.util.spec_from_file_location("verify_pbi08", PBI08_VERIFI
 assert PBI08_SPEC and PBI08_SPEC.loader
 verify_pbi08 = importlib.util.module_from_spec(PBI08_SPEC)
 PBI08_SPEC.loader.exec_module(verify_pbi08)
+PBI09_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi09.py"
 
 EXPECTED = {
     "drop-h113-falsification": "H113-FALSIFICATION",
@@ -242,6 +243,14 @@ EXPECTED = {
     "weaken-pbi08-byte-identity": "PBI08-INTEGRATION-CONTRACT",
     "drop-pbi08-order03-title": "PBI08-ACCEPTANCE-ORACLE",
     "drop-pbi08-status-order-invariant": "PBI08-INTEGRATION-CONTRACT",
+    "drop-pbi09-readme-ownership": "PBI09-OWNERSHIP",
+    "drop-pbi09-license-hash": "PBI09-RELEASE-CONTRACT",
+    "weaken-pbi09-notice-scope": "PBI09-RELEASE-CONTRACT",
+    "drop-pbi09-security-zero": "PBI09-RELEASE-CONTRACT",
+    "drop-pbi09-update-command": "PBI09-RELEASE-CONTRACT",
+    "drop-pbi09-required-title": "PBI09-ACCEPTANCE-ORACLE",
+    "permit-pbi09-broken-link": "PBI09-RELEASE-CONTRACT",
+    "drop-pbi09-red-signature": "PBI09-ACCEPTANCE-ORACLE",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -1018,5 +1027,14 @@ test("D002-B03 multi-mark combining sequence reports exact source range", () => 
         semantic["properties"].pop("severity")
         semantic["properties"]["confidence"].pop("maximum")
         self.assertIn("confidence", verify_pbi08.schema_errors(schema))
+
+    def test_pbi09_registered_red_is_reproducible(self) -> None:
+        state = verify_spec.read_state()
+        packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-09")
+        self.assertEqual([], verify_spec.pbi09_registration_errors(packet, PBI09_VERIFIER.is_file(), False))
+        first = subprocess.run(["python3", str(PBI09_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        second = subprocess.run(["python3", str(PBI09_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        self.assertEqual((1, "PBI09_RED missing README.md\n", ""), (first.returncode, first.stdout, first.stderr))
+        self.assertEqual((first.returncode, first.stdout, first.stderr), (second.returncode, second.stdout, second.stderr))
 
 if __name__ == "__main__": unittest.main()

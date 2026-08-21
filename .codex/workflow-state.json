@@ -2,11 +2,11 @@
   "id": "wf-readability-mvp-20260821",
   "request": "Readability Engineering System要求の実現、setup/upgrade支援、反証必須の完了判定、public GitHub repositoryへのpush",
   "current_phase": "DA",
-  "active_pbi": "PBI-08",
+  "active_pbi": "PBI-09",
   "gate_type": "DELIVERY",
-  "strategy_id": "delivery-pbi08-status-order-green-v5",
-  "iteration": 64,
-  "task_packet_ref": ".codex/task-packets/PBI-08-semantic-eval.md",
+  "strategy_id": "delivery-pbi09-release-evidence-v1",
+  "iteration": 65,
+  "task_packet_ref": ".codex/task-packets/PBI-09-release-evidence.md",
   "phase_history": [
     {
       "phase": "SDA",
@@ -1768,6 +1768,43 @@
       ],
       "resume_point": ".codex/task-packets/PBI-08-semantic-eval.md",
       "timestamp": "2026-08-22T02:55:00+09:00"
+    },
+    {
+      "phase": "QGA",
+      "status": "APPROVE",
+      "agent": "/root/spec_qga",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-08",
+      "task_packet_ref": ".codex/task-packets/PBI-08-semantic-eval.md",
+      "decision": "PBI-08 delivery approved after status-only lexical ordering, byte identity, and no-dedupe became independently executable",
+      "evidence": [
+        "DA fix commit 0e7ad7c",
+        "SDA transition commit 3fd8184f196a8a47e76f873dd2f0df371ded63b0",
+        "python3 .codex/spec-verifiers/verify_pbi08.py => PBI08_GREEN tests=16 pass=16 fail=0 required_titles=16 fixtures=3 probe=PASS",
+        "independent QGA decision supplied by orchestrator: APPROVE"
+      ],
+      "resume_point": ".codex/task-packets/PBI-09-release-evidence.md",
+      "timestamp": "2026-08-22T03:00:00+09:00"
+    },
+    {
+      "phase": "DA",
+      "status": "READY_FOR_IMPLEMENTATION",
+      "agent": "/root/spec_finalize",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-09",
+      "task_packet_ref": ".codex/task-packets/PBI-09-release-evidence.md",
+      "decision": "PBI-09 starts with a measured missing-README RED and an exact documentation, Apache-2.0, NOTICE-scope, security, and release-command contract",
+      "evidence": [
+        "python3 .codex/spec-verifiers/verify_pbi09.py => exit1; PBI09_RED missing README.md; stderr empty; reproduced twice",
+        "official Apache-2.0 source is 11358 bytes and SHA-256 cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "objective pnpm license inventory observed MIT=72, Apache-2.0=2, BSD-2-Clause=2 package versions",
+        "two installed TypeScript 7.0.2 NOTICE files are identical SHA-256 f5c708b59114507b8b27b48181b6883d106bbca0c1634bbee45b5e344237b66b and dev-only/not bundled, so distributable obligation=0 and root NOTICE must remain absent",
+        "README exact install/update/usage/CLI/rules/exits/range/limitations plus SECURITY/CONTRIBUTING/CHANGELOG are mandatory",
+        "release input, dependency license, secret scan, and high/critical audit evidence share one content-derived releaseInputSha256",
+        "four exact release tests, 12 required titles, link/command/hash/runtime scan oracle, and credential-free required CI reject false-positive collection"
+      ],
+      "resume_point": ".codex/task-packets/PBI-09-release-evidence.md",
+      "timestamp": "2026-08-22T03:05:00+09:00"
     }
   ],
   "blocker_history": [
@@ -1845,5 +1882,5 @@
     }
   ],
   "created_at": "2026-08-21T09:39:07+09:00",
-  "updated_at": "2026-08-22T02:55:00+09:00"
+  "updated_at": "2026-08-22T03:05:00+09:00"
 }
