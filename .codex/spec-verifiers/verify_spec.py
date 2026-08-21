@@ -75,6 +75,7 @@ MUTATIONS = (
     "drop-pbi06g-falsification-title", "weaken-pbi06g-range",
     "permit-pbi06g-negative-composition", "permit-pbi06g-regex",
     "permit-pbi06g-external-dependency", "drop-pbi06g-green-falsification",
+    "drop-pbi06g-b04-title", "placeholder-pbi06g-b04-body",
 )
 
 def read_state() -> dict:
@@ -98,6 +99,7 @@ def read_state() -> dict:
         "packets": packets,
         "workflow": json.loads((ROOT / ".codex/workflow-state.json").read_text()),
         "pbi05p_test": (ROOT / "packages/readability-core/test/paragraph/contract.test.ts").read_text(),
+        "pbi06g_test": (ROOT / "packages/readability-core/test/deterministic/D007.contract.test.ts").read_text(),
     }
 
 def packet_id(body: str) -> str:
@@ -1340,7 +1342,7 @@ def pbi06g_registration_errors(body: str, oracle_exists: bool, source_exists: bo
         'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi06g.py"',
         'test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/deterministic/D007.contract.test.ts"',
         'exact_test_file: "packages/readability-core/test/deterministic/D007.contract.test.ts"',
-        'minimum_tests: 13', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 13',
+        'minimum_tests: 14', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 14',
         '"D007-P01 default fixed double-negative pattern reports literally"',
         '"D007-P02 configured patterns replace the default and match literally"',
         '"D007-P03 separated configured occurrences report independently"',
@@ -1349,11 +1351,12 @@ def pbi06g_registration_errors(body: str, oracle_exists: bool, source_exists: bo
         '"D007-B01 base and emoji-prefixed UTF-16 ranges reconstruct only the pattern"',
         '"D007-B02 regex metacharacters are literal and same-start longest wins"',
         '"D007-B03 default warning and explicit error severity are preserved"',
+        '"D007-B04 adjacent literal occurrences advance to the previous match end"',
         '"D007-C01 patterns validation accepts omission and empty replacement but rejects malformed values"',
         '"D007-F01 separated negative fragments cannot be composed into a match"',
         '"D007-M01 composition regex precedence range and code mutants fail fixtures"',
         'no_match_guard: "--fail-if-no-match plus exact test file, collected count, pass=tests, fail=0, and all required titles"',
-        'green_signature: "PBI06G_GREEN tests>=13 pass=tests fail=0 required_titles=13"',
+        'green_signature: "PBI06G_GREEN tests>=14 pass=tests fail=0 required_titles=14"',
     ))
     errors = []
     if not ownership: errors.append("PBI06G-OWNERSHIP")
@@ -1378,9 +1381,10 @@ def pbi06g_registration_errors(body: str, oracle_exists: bool, source_exists: bo
         'source_file: "packages/readability-core/src/rules/D007.ts"',
         'analyze_registration: "D007 dispatch with validated patterns and severity"',
         'public_export: "analyzeD007"',
-        'fixture_contract: "P01/P02/P03, N01/N02/N03, B01/B02/B03, C01, F01, M01, D01 all executable"',
+        'fixture_contract: "P01/P02/P03, N01/N02/N03, B01/B02/B03/B04, C01, F01, M01, D01 all executable"',
         'mapping_contract: "omitted default, configured replacement including empty, literal left-to-right non-overlap, same-start longest, and separated occurrences executable"',
         'falsification_contract: "negative-fragment composition, regex, shorter-before-longest, overlap, document-range, code-point, code-inclusion, and append-default mutants are rejected"',
+        'overlap_oracle: "B04 source contains analyze(aaaa,[aa]) and asserts exactly [0,2),[2,4); title or substantive assertions cannot be replaced by a vacuous assertion"',
         'package.json: "87d2ccaa29bd499df2777ed25614fd3e84a457a79ae5cc1d1581059dd7f62760"',
         'pnpm-lock.yaml: "f5cc3eea2d7a5c7e04810e44f6d31798094437e54bdfa519112788bdb0f773ba"',
         'packages/readability-core/package.json: "996ac24d4b0af2137c09c7ee84934fbd3db368c6db45347325441331685e9f55"',
@@ -1389,9 +1393,11 @@ def pbi06g_registration_errors(body: str, oracle_exists: bool, source_exists: bo
         'packages/readability-core/src/types/findings.ts: "760fb0b3045423a9900f554e33529a81fb2d98548f873b269991fc14697b9a26"',
         'packages/readability-core/src/types/range.ts: "f77039d0cc681c2fd0564da9e245c92961c21273cfa573a496cd9f0aec973de5"',
         'packages/readability-core/src/types/errors.ts: "0d4f56962f75bc214964afa4aadd9de8e7c9627cf7bdb09f19892b6670cc2701"',
-        'minimum_tests: 13', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 13',
-        'signature: "PBI06G_GREEN tests>=13 pass=tests fail=0 required_titles=13"',
-        'da_commit: "4bacca0"',
+        'minimum_tests: 14', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 14',
+        'signature: "PBI06G_GREEN tests>=14 pass=tests fail=0 required_titles=14"',
+        'initial_green: "DA commit 4bacca0; tests=13 pass=13 fail=0 required_titles=13"',
+        'qga_fix_green: "DA commit 75c6461; tests=14 pass=14 fail=0 required_titles=14; B04 adjacent overlap advancement substantive"',
+        'da_commit: "75c6461"',
     ))
     if not green: errors.append("PBI06G-POST-IMPLEMENTATION-GREEN")
     return errors
@@ -1413,6 +1419,17 @@ def verify(state: dict) -> list[str]:
     need(
         "assert.ok(true)" not in f04_source and all(fragment in f04_source for fragment in f04_fragments),
         "PBI05P-F04-SUBSTANTIVE-ORACLE",
+    )
+    b04_source = state["pbi06g_test"]
+    b04_fragments = (
+        'test("D007-B04 adjacent literal occurrences advance to the previous match end"',
+        'analyze("aaaa", config(["aa"])).map(({ range }) => range)',
+        '{ start: 0, end: 2 }',
+        '{ start: 2, end: 4 }',
+    )
+    need(
+        "assert.ok(true)" not in b04_source and all(fragment in b04_source for fragment in b04_fragments),
+        "PBI06G-B04-SUBSTANTIVE-ORACLE",
     )
 
     # Matrix -> specification: stable IDs, exact meanings, thresholds, range and operations.
@@ -1809,6 +1826,14 @@ def apply_mutation(name: str, state: dict) -> None:
     m, t, packets = state["matrix"], state["text"], state["packets"]
     if name == "drop-h113-falsification": t["mvp"] = t["mvp"].replace("H113-F01", "H113-X01")
     elif name == "drift-d007-normative-range": t["d"] = t["d"].replace("`[2,10)`（UTF-16 code unitを実測）", "`[3,12)`（drift）", 1)
+    elif name == "drop-pbi06g-b04-title":
+        state["pbi06g_test"] = state["pbi06g_test"].replace("D007-B04 adjacent literal occurrences advance to the previous match end", "D007-X04 removed", 1)
+    elif name == "placeholder-pbi06g-b04-body":
+        state["pbi06g_test"] = state["pbi06g_test"].replace(
+            '  assert.deepEqual(analyze("aaaa", config(["aa"])).map(({ range }) => range), [\n    { start: 0, end: 2 },\n    { start: 2, end: 4 },\n  ]);',
+            '  assert.ok(true);',
+            1,
+        )
     elif name == "drop-d004-falsification": t["d"] = t["d"].replace("D004-P01/N01/B01/F01", "D004-P01/N01/B01")
     elif name == "change-public-owner": t["dec5"] = t["dec5"].replace("owner: krhrtky", "owner: changed")
     elif name == "change-normative-range": m["range"]["unit"] = "Unicode code point"

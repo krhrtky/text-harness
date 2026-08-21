@@ -195,6 +195,8 @@ EXPECTED = {
     "permit-pbi06g-regex": "PBI06G-RULE-CONTRACT",
     "permit-pbi06g-external-dependency": "PBI06G-RULE-CONTRACT",
     "drop-pbi06g-green-falsification": "PBI06G-POST-IMPLEMENTATION-GREEN",
+    "drop-pbi06g-b04-title": "PBI06G-B04-SUBSTANTIVE-ORACLE",
+    "placeholder-pbi06g-b04-body": "PBI06G-B04-SUBSTANTIVE-ORACLE",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -870,9 +872,9 @@ test("D002-B03 multi-mark combining sequence reports exact source range", () => 
         summary = re.search(r"PBI06G_GREEN tests=(\d+) pass=(\d+) fail=(\d+) required_titles=(\d+)", green.stdout)
         self.assertIsNotNone(summary)
         tests, passed, failed, titles = (int(value) for value in summary.groups())
-        self.assertGreaterEqual(tests, 13)
+        self.assertGreaterEqual(tests, 14)
         self.assertEqual(tests, passed)
         self.assertEqual(0, failed)
-        self.assertEqual(13, titles)
+        self.assertEqual(14, titles)
 
 if __name__ == "__main__": unittest.main()

@@ -4,8 +4,8 @@
   "current_phase": "DA",
   "active_pbi": "PBI-06G",
   "gate_type": "DELIVERY",
-  "strategy_id": "delivery-pbi06g-green-transition-v1",
-  "iteration": 53,
+  "strategy_id": "delivery-pbi06g-qga-fix-green-v1",
+  "iteration": 54,
   "task_packet_ref": ".codex/task-packets/PBI-06G-d007.md",
   "phase_history": [
     {
@@ -1469,6 +1469,25 @@
       ],
       "resume_point": ".codex/task-packets/PBI-06G-d007.md",
       "timestamp": "2026-08-22T01:05:00+09:00"
+    },
+    {
+      "phase": "DA",
+      "status": "QGA_FIX_GREEN",
+      "agent": "/root/delivery",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-06G",
+      "task_packet_ref": ".codex/task-packets/PBI-06G-d007.md",
+      "decision": "D007 overlap advancement is now pinned by an additional substantive B04 fixture without replacing the original Green history",
+      "evidence": [
+        "Initial Green retained: DA commit 4bacca0; tests=13 pass=13 fail=0 required_titles=13",
+        "QGA fix commit 75c6461",
+        "python3 .codex/spec-verifiers/verify_pbi06g.py => PBI06G_GREEN tests=14 pass=14 fail=0 required_titles=14",
+        "D007-B04 adjacent literal occurrences advance to the previous match end is required",
+        "B04 source must analyze aaaa with pattern aa and assert exact non-overlapping ranges [0,2) and [2,4)",
+        "title deletion and assert.ok(true) placeholder mutations are rejected independently of aggregate test counts"
+      ],
+      "resume_point": ".codex/task-packets/PBI-06G-d007.md",
+      "timestamp": "2026-08-22T01:15:00+09:00"
     }
   ],
   "blocker_history": [
@@ -1546,5 +1565,5 @@
     }
   ],
   "created_at": "2026-08-21T09:39:07+09:00",
-  "updated_at": "2026-08-22T01:05:00+09:00"
+  "updated_at": "2026-08-22T01:15:00+09:00"
 }

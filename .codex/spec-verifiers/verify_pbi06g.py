@@ -19,6 +19,7 @@ REQUIRED_TITLES = (
     "D007-B01 base and emoji-prefixed UTF-16 ranges reconstruct only the pattern",
     "D007-B02 regex metacharacters are literal and same-start longest wins",
     "D007-B03 default warning and explicit error severity are preserved",
+    "D007-B04 adjacent literal occurrences advance to the previous match end",
     "D007-C01 patterns validation accepts omission and empty replacement but rejects malformed values",
     "D007-F01 separated negative fragments cannot be composed into a match",
     "D007-M01 composition regex precedence range and code mutants fail fixtures",
@@ -39,6 +40,15 @@ def main() -> int:
         if not (ROOT / required).is_file(): print(f"PBI06G_RED missing {required}"); return 1
     inherited = inherited_contract_error()
     if inherited is not None: print("PBI06G_FAIL forbidden_path_drift " + inherited); return 1
+    test_source = (ROOT / TEST).read_text()
+    b04_fragments = (
+        'test("D007-B04 adjacent literal occurrences advance to the previous match end"',
+        'analyze("aaaa", config(["aa"])).map(({ range }) => range)',
+        '{ start: 0, end: 2 }',
+        '{ start: 2, end: 4 }',
+    )
+    if "assert.ok(true)" in test_source or not all(fragment in test_source for fragment in b04_fragments):
+        print("PBI06G_FAIL B04 substantive overlap oracle missing"); return 1
     analyze = (ROOT / "packages/readability-core/src/analyze.ts").read_text()
     index = (ROOT / "packages/readability-core/src/index.ts").read_text()
     if 'analyzeD007' not in analyze or 'case "D007"' not in analyze or "rule.patterns" not in analyze or "rule.severity" not in analyze:
@@ -53,7 +63,7 @@ def main() -> int:
     totals = {name: int(value) for name, value in re.findall(r"^(?:ℹ|#)\s+(tests|pass|fail)\s+(\d+)\s*$", plain, re.MULTILINE)}
     tests, passed, failed = totals.get("tests", -1), totals.get("pass", -1), totals.get("fail", -1)
     titles = sum(title in plain for title in REQUIRED_TITLES)
-    if tests < 13 or passed != tests or failed != 0 or titles != len(REQUIRED_TITLES):
+    if tests < 14 or passed != tests or failed != 0 or titles != len(REQUIRED_TITLES):
         print(f"PBI06G_FAIL tests={tests} pass={passed} fail={failed} required_titles={titles}/{len(REQUIRED_TITLES)}"); return 1
     print(f"PBI06G_GREEN tests={tests} pass={passed} fail=0 required_titles={len(REQUIRED_TITLES)}"); return 0
 
