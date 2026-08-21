@@ -72,7 +72,7 @@ function stringMap(value: unknown, field: string, required: boolean): Readonly<R
 
 function validatePairs(value: unknown): readonly (readonly [string, string])[] {
   if (value === undefined) return DEFAULT_PAIRS;
-  if (!Array.isArray(value) || value.some((pair) => !Array.isArray(pair) || pair.length !== 2
+  if (!Array.isArray(value) || value.length === 0 || value.some((pair) => !Array.isArray(pair) || pair.length !== 2
       || pair.some((mark) => typeof mark !== "string" || mark.length === 0))) {
     throw new ConfigurationError("pairs must contain opening and closing strings");
   }

@@ -209,6 +209,14 @@ test("unknown object rule IDs are configuration errors with exit code 2", () => 
   }
 });
 
+test("D003-C02 empty pairs fail before analysis with ConfigurationError exit 2", () => {
+  assert.throws(
+    () => analyze("（本文）", { rules: { D003: { ruleId: "D003", pairs: [] } } }),
+    (error: unknown) => error instanceof ConfigurationError && error.exitCode === 2,
+  );
+  assert.deepEqual(analyze("（本文]", { rules: { D003: false } }), []);
+});
+
 test("all deterministic default severities match the public contract", () => {
   const rules = {
     D001: { ruleId: "D001", style: "consistent" },
