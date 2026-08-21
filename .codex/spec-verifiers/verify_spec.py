@@ -70,6 +70,11 @@ MUTATIONS = (
     "drop-pbi06f-falsification-title", "weaken-pbi06f-range",
     "weaken-pbi06f-token-group", "permit-pbi06f-distant-repetition",
     "permit-pbi06f-external-dependency", "drop-pbi06f-green-falsification",
+    "drift-d007-normative-range",
+    "drop-pbi06g-analyze-ownership", "drop-pbi06g-no-match-guard",
+    "drop-pbi06g-falsification-title", "weaken-pbi06g-range",
+    "permit-pbi06g-negative-composition", "permit-pbi06g-regex",
+    "permit-pbi06g-external-dependency",
 )
 
 def read_state() -> dict:
@@ -1311,6 +1316,74 @@ def pbi06f_registration_errors(body: str, oracle_exists: bool, source_exists: bo
         errors.append("PBI06F-POST-IMPLEMENTATION-GREEN")
     return errors
 
+
+def pbi06g_registration_errors(body: str, oracle_exists: bool, source_exists: bool) -> list[str]:
+    ownership = all(value in body for value in (
+        '    - "packages/readability-core/src/rules/D007.ts"',
+        '    - "packages/readability-core/test/deterministic/D007.contract.test.ts"',
+        '    - "packages/readability-core/src/analyze.ts"',
+        '    - "packages/readability-core/src/index.ts"',
+        'packages/readability-core/src/analyze.ts: "既存D001-D006/H dispatchを維持し、validated D007 patterns/severityをanalyzeD007へ渡すcaseだけ追加する"',
+        'packages/readability-core/src/index.ts: "既存public exportsを維持し、analyzeD007 exportだけ追加する"',
+    ))
+    contract = all(value in body for value in (
+        'input_contract: "できないわけではない with omitted patterns"',
+        'config_contract: "{ruleId:D007,patterns?:readonly string[],severity?:warning|error}; omitted uses exact default; explicit array replaces default; empty array reports zero; empty-string item, malformed value, unknown fields are rejected; duplicate literals cannot duplicate findings"',
+        'mapping_contract: "literal left-to-right non-overlap; same start longest pattern; regex metacharacters literal; separated occurrences map one-to-one; no free-form composition of separate negative fragments"',
+        'oracle_contract: "できないわけではない reports exactly default pattern ないわけではない; custom patterns report only configured literals; ない理由ではない, D007:false, and code-only inputs report zero"',
+        'range_contract: "RNG-001 UTF-16 zero-based half-open matched pattern only; base [2,10), input length 10; emoji-prefixed 😀できないわけではない reports [4,12); input.slice reconstructs ないわけではない"',
+        'severity_contract: "omitted=>warning; explicit warning|error preserved exactly"',
+        'external_dependency_contract: "PBI-06 decision INTERNAL/PBI-06G; package manifests and lockfile unchanged"',
+        'mutations: ["D007-M-COMPOSE-NEGATIVES", "D007-M-REGEX", "D007-M-SHORTER-BEFORE-LONGEST", "D007-M-OVERLAP", "D007-M-DOCUMENT-RANGE", "D007-M-CODE-POINT", "D007-M-INCLUDE-CODE", "D007-M-APPEND-DEFAULT"]',
+    ))
+    acceptance = all(value in body for value in (
+        'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi06g.py"',
+        'test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/deterministic/D007.contract.test.ts"',
+        'exact_test_file: "packages/readability-core/test/deterministic/D007.contract.test.ts"',
+        'minimum_tests: 13', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 13',
+        '"D007-P01 default fixed double-negative pattern reports literally"',
+        '"D007-P02 configured patterns replace the default and match literally"',
+        '"D007-P03 separated configured occurrences report independently"',
+        '"D007-N02 disabled D007 and replaced default pattern do not report"',
+        '"D007-N03 Markdown code spans and blocks are excluded"',
+        '"D007-B01 base and emoji-prefixed UTF-16 ranges reconstruct only the pattern"',
+        '"D007-B02 regex metacharacters are literal and same-start longest wins"',
+        '"D007-B03 default warning and explicit error severity are preserved"',
+        '"D007-C01 patterns validation accepts omission and empty replacement but rejects malformed values"',
+        '"D007-F01 separated negative fragments cannot be composed into a match"',
+        '"D007-M01 composition regex precedence range and code mutants fail fixtures"',
+        'no_match_guard: "--fail-if-no-match plus exact test file, collected count, pass=tests, fail=0, and all required titles"',
+        'green_signature: "PBI06G_GREEN tests>=13 pass=tests fail=0 required_titles=13"',
+    ))
+    errors = []
+    if not ownership: errors.append("PBI06G-OWNERSHIP")
+    if not contract: errors.append("PBI06G-RULE-CONTRACT")
+    if not acceptance or not oracle_exists: errors.append("PBI06G-ACCEPTANCE-ORACLE")
+    if not source_exists:
+        registered = all(value in body for value in (
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi06g.py; exit=1; signature=PBI06G_RED missing packages/readability-core/src/rules/D007.ts"',
+            'red_status: "REGISTERED_RED"', 'phase: "PRE_IMPLEMENTATION"',
+            'command: "python3 .codex/spec-verifiers/verify_pbi06g.py"', 'exit: 1',
+            'stdout: "PBI06G_RED missing packages/readability-core/src/rules/D007.ts"',
+            'stderr: "<empty>"', 'measured_runs: 2',
+        ))
+        if not registered: errors.append("PBI06G-PRE-IMPLEMENTATION-RED")
+        return errors
+    green = all(value in body for value in (
+        'expected_red: null', 'red_status: "CONSUMED_GREEN"',
+        'phase: "PRE_IMPLEMENTATION"',
+        'stdout: "PBI06G_RED missing packages/readability-core/src/rules/D007.ts"',
+        'stderr: "<empty>"', 'measured_runs: 2',
+        'green_transition:', 'command: "python3 .codex/spec-verifiers/verify_pbi06g.py"', 'exit: 0',
+        'source_file: "packages/readability-core/src/rules/D007.ts"',
+        'analyze_registration: "D007 dispatch with validated patterns and severity"',
+        'public_export: "analyzeD007"',
+        'minimum_tests: 13', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 13',
+        'signature: "PBI06G_GREEN tests>=13 pass=tests fail=0 required_titles=13"',
+    ))
+    if not green: errors.append("PBI06G-POST-IMPLEMENTATION-GREEN")
+    return errors
+
 def verify(state: dict) -> list[str]:
     m, t, packets, workflow = state["matrix"], state["text"], state["packets"], state["workflow"]
     errors: list[str] = []
@@ -1333,6 +1406,7 @@ def verify(state: dict) -> list[str]:
     # Matrix -> specification: stable IDs, exact meanings, thresholds, range and operations.
     canonical_range = {"contractId":"RNG-001","unit":"UTF-16 code unit","interval":"[start,end)","origin":0,"oracle":"input.slice(start,end)"}
     need(all(m["range"].get(k) == v for k, v in {**canonical_range,"decisionRef":"DEC-002"}.items()), "NORMATIVE-RANGE")
+    need('default pattern `ないわけではない` | 固定pattern部分 `[2,10)`（UTF-16 code unitを実測）' in t["d"], "D007-RANGE-TRACE")
     mvp_range = json_contract(t["mvp"], "RNG-001")
     dec2_range = json_contract(t["dec2"], "RNG-001")
     need(mvp_range == canonical_range, "RANGE-MVP-MATRIX")
@@ -1523,6 +1597,13 @@ def verify(state: dict) -> list[str]:
                 (ROOT / "packages/readability-core/src/rules/D006.ts").is_file(),
             ):
                 need(False, error)
+        if pid == "PBI-06G":
+            for error in pbi06g_registration_errors(
+                body,
+                (ROOT / ".codex/spec-verifiers/verify_pbi06g.py").is_file(),
+                (ROOT / "packages/readability-core/src/rules/D007.ts").is_file(),
+            ):
+                need(False, error)
         need(not any(x in body for x in ("TBD", "placeholder", "実装開始時に")), f"PACKET-PLACEHOLDER-{name}")
 
     for gap in range(8, 18):
@@ -1698,12 +1779,24 @@ def verify(state: dict) -> list[str]:
             for item in workflow.get("phase_history", [])
         )
     )
-    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started or pbi05j_delivery_started or pbi06_delivery_started or pbi06a_delivery_started or pbi06b_delivery_started or pbi06c_delivery_started or pbi06d_delivery_started or pbi06e_delivery_started or pbi06f_delivery_started, "WORKFLOW-GATE-TRANSITION")
+    pbi06g_delivery_started = (
+        workflow.get("current_phase") == "DA"
+        and workflow.get("gate_type") == "DELIVERY"
+        and workflow.get("active_pbi") == "PBI-06G"
+        and workflow.get("task_packet_ref") == ".codex/task-packets/PBI-06G-d007.md"
+        and any(
+            item.get("phase") == "QGA" and item.get("status") == "APPROVE"
+            and item.get("gate_type") == "DELIVERY" and item.get("active_pbi") == "PBI-06F"
+            for item in workflow.get("phase_history", [])
+        )
+    )
+    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started or pbi05j_delivery_started or pbi06_delivery_started or pbi06a_delivery_started or pbi06b_delivery_started or pbi06c_delivery_started or pbi06d_delivery_started or pbi06e_delivery_started or pbi06f_delivery_started or pbi06g_delivery_started, "WORKFLOW-GATE-TRANSITION")
     return errors
 
 def apply_mutation(name: str, state: dict) -> None:
     m, t, packets = state["matrix"], state["text"], state["packets"]
     if name == "drop-h113-falsification": t["mvp"] = t["mvp"].replace("H113-F01", "H113-X01")
+    elif name == "drift-d007-normative-range": t["d"] = t["d"].replace("`[2,10)`（UTF-16 code unitを実測）", "`[3,12)`（drift）", 1)
     elif name == "drop-d004-falsification": t["d"] = t["d"].replace("D004-P01/N01/B01/F01", "D004-P01/N01/B01")
     elif name == "change-public-owner": t["dec5"] = t["dec5"].replace("owner: krhrtky", "owner: changed")
     elif name == "change-normative-range": m["range"]["unit"] = "Unicode code point"
@@ -2138,6 +2231,31 @@ def apply_mutation(name: str, state: dict) -> None:
             packets[key] = packets[key].replace(
                 '    falsification_contract: "single-token, no-whitespace-normalization, distant-repetition, gte, first-range, code-point, and code-inclusion mutants are rejected"\n',
                 "",
+                1,
+            )
+    elif name in (
+        "drop-pbi06g-analyze-ownership", "drop-pbi06g-no-match-guard",
+        "drop-pbi06g-falsification-title", "weaken-pbi06g-range",
+        "permit-pbi06g-negative-composition", "permit-pbi06g-regex",
+        "permit-pbi06g-external-dependency",
+    ):
+        key = next(k for k, body in packets.items() if packet_id(body) == "PBI-06G")
+        if name == "drop-pbi06g-analyze-ownership":
+            packets[key] = packets[key].replace('    - "packages/readability-core/src/analyze.ts"\n', "", 1)
+        elif name == "drop-pbi06g-no-match-guard":
+            packets[key] = packets[key].replace(" --fail-if-no-match", "", 1)
+        elif name == "drop-pbi06g-falsification-title":
+            packets[key] = packets[key].replace(', "D007-F01 separated negative fragments cannot be composed into a match"', "", 1)
+        elif name == "weaken-pbi06g-range":
+            packets[key] = packets[key].replace("base [2,10), input length 10", "base range unspecified", 1)
+        elif name == "permit-pbi06g-negative-composition":
+            packets[key] = packets[key].replace("no free-form composition of separate negative fragments", "separate negative fragments may be composed", 1)
+        elif name == "permit-pbi06g-regex":
+            packets[key] = packets[key].replace("regex metacharacters literal", "regex metacharacters evaluated", 1)
+        else:
+            packets[key] = packets[key].replace(
+                "PBI-06 decision INTERNAL/PBI-06G; package manifests and lockfile unchanged",
+                "external dependency permitted",
                 1,
             )
     else: raise ValueError(name)

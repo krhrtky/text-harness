@@ -36,7 +36,7 @@ exit 2で拒否する。`severity`省略時はD001〜D005=`error`、D006〜D008=
 | D004 / AC-D004-01 | `必ず成功する`, `forbiddenTerms=["必ず"]` | 完全一致した`必ず` `[0,2)`。substringや正規表現として解釈しない | `D004-P01/N01/B01/F01`。F01は`必ずしも`を語境界なしで誤検出する実装を検出 |
 | D005 / AC-D005-01 | `サーバーを起動`, `terminology={"サーバー":"サーバ"}` | nonpreferred term `サーバー` `[0,4)`、messageにpreferred term | `D005-P01/N01/B01/F01`。F01はpreferred側を違反扱いする逆mappingを検出 |
 | D006 / AC-D006-01 | `非常に非常に高い`, `maxConsecutive=1` | 2個目の同一token `非常に` `[3,6)`。空白差はtoken境界で正規化 | `D006-P01/N01/B01/F01`。F01は離れた反復を連続扱いするmutationを検出 |
-| D007 / AC-D007-01 | `できないわけではない`, default pattern `ないわけではない` | 固定pattern部分 `[3,12)`。自由な否定語組合せは対象外 | `D007-P01/N01/B01/F01`。F01は`ない理由ではない`をsubstring合成するmutationを検出 |
+| D007 / AC-D007-01 | `できないわけではない`, default pattern `ないわけではない` | 固定pattern部分 `[2,10)`（UTF-16 code unitを実測）。自由な否定語組合せは対象外 | `D007-P01/N01/B01/F01`。F01は`ない理由ではない`をsubstring合成するmutationを検出 |
 | D008 / AC-D008-01 | `実行することができる`, default mapping `することができる`→`できる` | 冗長pattern `[2,10)`、messageにreplacement | `D008-P01/N01/B01/F01`。F01は`こと`単独を冗長扱いするmutationを検出 |
 
 各個別ACは、positive=上表finding 1件、non-match=0件、boundary=入力先頭/末尾またはUnicode境界の
