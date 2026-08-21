@@ -1,0 +1,162 @@
+#!/bin/sh
+
+set -u
+
+readonly EXPECTED_NODE_VERSION="v24.19.0"
+readonly EXPECTED_PNPM_VERSION="11.22.0"
+
+usage() {
+  printf '%s\n' \
+    'usage: scripts/text-harness-setup --check' \
+    '       scripts/text-harness-setup --install' \
+    '       scripts/text-harness-setup --upgrade --from <git-ref>' >&2
+  exit 2
+}
+
+fail() {
+  code=$1
+  shift
+  printf 'SETUP ERROR code=%s %s\n' "$code" "$*" >&2
+  exit "$code"
+}
+
+parse_arguments() {
+  mode=
+  from_ref=
+  case "$#:$1" in
+    1:--check) mode=check ;;
+    1:--install) mode=install ;;
+    3:--upgrade)
+      [ "$2" = "--from" ] && [ -n "$3" ] || usage
+      mode=upgrade
+      from_ref=$3
+      ;;
+    *) usage ;;
+  esac
+}
+
+find_repository_root() {
+  script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd) || fail 4 'repository root unavailable'
+  repository_root=$(CDPATH= cd -- "$script_dir/.." 2>/dev/null && pwd) || fail 4 'repository root unavailable'
+  [ "$repository_root" != "/" ] || fail 4 'invalid repository root'
+  cd -- "$repository_root" || fail 4 'repository root unavailable'
+}
+
+check_toolchain() {
+  command -v node >/dev/null 2>&1 || fail 3 'node is required'
+  command -v pnpm >/dev/null 2>&1 || fail 3 'pnpm is required'
+  node_version=$(node --version 2>/dev/null) || fail 3 'node version unavailable'
+  pnpm_version=$(pnpm --version 2>/dev/null) || fail 3 'pnpm version unavailable'
+  [ "$node_version" = "$EXPECTED_NODE_VERSION" ] || fail 3 "expected node $EXPECTED_NODE_VERSION, found $node_version"
+  [ "$pnpm_version" = "$EXPECTED_PNPM_VERSION" ] || fail 3 "expected pnpm $EXPECTED_PNPM_VERSION, found $pnpm_version"
+}
+
+check_repository() {
+  git rev-parse --is-inside-work-tree >/dev/null 2>&1 || fail 4 'git work tree required'
+  git rev-parse --verify HEAD >/dev/null 2>&1 || fail 4 'baseline commit required; unborn HEAD is not installable'
+
+  protected_status=$(git status --porcelain -- \
+    AGENTS.md \
+    scripts/text-harness-setup \
+    tests/ops \
+    tests/fixtures/upgrade/v0.0.0-baseline \
+    package.json \
+    pnpm-lock.yaml \
+    .node-version) || fail 4 'protected path status unavailable'
+  [ -z "$protected_status" ] || fail 4 'protected paths are dirty'
+}
+
+check_upgrade_baseline() {
+  git cat-file -e "$from_ref^{commit}" >/dev/null 2>&1 || fail 4 "previous baseline does not exist: $from_ref"
+  for required_path in package.json pnpm-lock.yaml .node-version; do
+    git cat-file -e "$from_ref:$required_path" >/dev/null 2>&1 || fail 4 "previous baseline is incomplete: $required_path"
+  done
+}
+
+config_path() {
+  if [ -n "${TEXT_HARNESS_CONFIG_HOME:-}" ]; then
+    printf '%s/config.json\n' "$TEXT_HARNESS_CONFIG_HOME"
+  else
+    [ -n "${HOME:-}" ] || fail 2 'HOME or TEXT_HARNESS_CONFIG_HOME is required'
+    printf '%s/.config/text-harness/config.json\n' "$HOME"
+  fi
+}
+
+hash_file() {
+  target=$1
+  if [ ! -e "$target" ]; then
+    printf '<absent>\n'
+    return
+  fi
+  [ -f "$target" ] || fail 2 "config is not a regular file: $target"
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$target" | awk '{print $1}'
+    return
+  fi
+  command -v shasum >/dev/null 2>&1 || fail 2 'SHA-256 utility unavailable'
+  shasum -a 256 "$target" | awk '{print $1}'
+}
+
+rollback_modules() {
+  if [ -n "${rollback_dir:-}" ] && [ -d "$rollback_dir" ]; then
+    if [ -e node_modules ]; then
+      rm -rf -- node_modules
+    fi
+    mv -- "$rollback_dir" node_modules
+  elif [ "${had_modules:-0}" = 0 ] && [ -e node_modules ]; then
+    rm -rf -- node_modules
+  fi
+}
+
+discard_rollback() {
+  if [ -n "${rollback_dir:-}" ] && [ -d "$rollback_dir" ]; then
+    rm -rf -- "$rollback_dir"
+  fi
+}
+
+install_and_verify() {
+  config_before=$(hash_file "$current_config")
+  rollback_dir=
+  had_modules=0
+  if [ -e node_modules ]; then
+    [ -d node_modules ] || fail 5 'node_modules is not a directory'
+    had_modules=1
+    rollback_dir="$repository_root/.text-harness-node-modules.rollback.$$"
+    [ ! -e "$rollback_dir" ] || fail 5 'rollback path already exists'
+    mv -- node_modules "$rollback_dir" || fail 5 'cannot prepare dependency rollback'
+  fi
+
+  if ! pnpm install --frozen-lockfile; then
+    rollback_modules
+    fail 5 'dependency install failed; previous dependencies restored'
+  fi
+  if ! pnpm test:smoke; then
+    rollback_modules
+    fail 5 'smoke verification failed; previous dependencies restored'
+  fi
+  config_after=$(hash_file "$current_config")
+  if [ "$config_before" != "$config_after" ]; then
+    rollback_modules
+    fail 5 'user config SHA-256 changed; previous dependencies restored'
+  fi
+  discard_rollback
+}
+
+main() {
+  [ "$#" -gt 0 ] || usage
+  parse_arguments "$@"
+  find_repository_root
+  check_toolchain
+  check_repository
+  current_config=$(config_path)
+  hash_file "$current_config" >/dev/null
+  if [ "$mode" = upgrade ]; then
+    check_upgrade_baseline
+  fi
+  if [ "$mode" != check ]; then
+    install_and_verify
+  fi
+  printf 'SETUP OK mode=%s\n' "$mode"
+}
+
+main "$@"

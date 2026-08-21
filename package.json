@@ -1,0 +1,19 @@
+{
+  "name": "text-harness",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Deterministic and semantic readability engineering workspace",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": ">=24.19.0 <25",
+    "pnpm": "11.22.0"
+  },
+  "scripts": {
+    "test": "pnpm test:ops",
+    "test:ops": "node --test tests/ops/*.test.mjs",
+    "test:smoke": "node --test tests/ops/smoke.test.mjs && printf 'SMOKE PASS\\n'",
+    "lint": "sh -n scripts/text-harness-setup && node --check tests/ops/setup.test.mjs && node --check tests/ops/smoke.test.mjs",
+    "typecheck": "node --check tests/ops/setup.test.mjs && node --check tests/ops/smoke.test.mjs"
+  }
+}

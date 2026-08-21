@@ -1,0 +1,13 @@
+{
+  "name": "text-harness-baseline-fixture",
+  "version": "0.0.0-baseline",
+  "private": true,
+  "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": ">=24.19.0 <25",
+    "pnpm": "11.22.0"
+  },
+  "scripts": {
+    "test:smoke": "node --test tests/smoke.test.mjs"
+  }
+}
