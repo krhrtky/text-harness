@@ -23,6 +23,7 @@ REQUIRED_TITLES = (
     "INT-SCHEMA-01 valid separated report satisfies the exact schema",
     "INT-SCHEMA-02 merged or cross-contaminated result shapes are rejected",
     "INT-ORDER-01 report output is canonical for input permutations",
+    "INT-ORDER-02 same primary keys use full payload tie-breakers without deduplication",
     "INT-CLI-01 mixed pass fixture writes one report and exits zero",
     "INT-CLI-02 mixed fail fixture exits one solely for D error",
     "INT-CLI-03 invalid Semantic severity exits two without partial stdout",
@@ -44,11 +45,11 @@ UNCHANGED_HASHES = {
 }
 DELIVERY_HASHES = {
     Path("packages/textlint-adapter/package.json"): "bfc3d793caadeb84ab6730a5ba2122a2bfe14c571fec301fcfa8f32841272414",
-    Path("packages/textlint-adapter/src/index.ts"): "3edac8f15e10d5b6fba00b1897b2c6557ee210cb92f663f8e4d1a29ef27c8850",
+    Path("packages/textlint-adapter/src/index.ts"): "44e0de81038c8fa1406f21bd8f09e5d407c45dbef46a899b0ab1a2e076e63546",
     Path("packages/textlint-adapter/src/cli.ts"): "90b1c03cdc7210b483e6650632d52b4fde062ffb5f00fd154beb8c0610ffca79",
     Path("packages/textlint-adapter/schema/validation-report.schema.json"): "8a0d545278e7222f7144ca8b719afbf289903ab4b4f2b6d5f7a35a753b0b6023",
-    Path("packages/textlint-adapter/test/integration/report.contract.test.ts"): "de3ebb53800c7aa8ea1b4c73982bcb8a98f50b5b84881815ce3dfc286996de1f",
-    Path("packages/textlint-adapter/test/integration/cli.contract.test.ts"): "7b75c82936e41adc2e598acc55b757585d6f5468eaac4ab6fb0c0ac656257094",
+    Path("packages/textlint-adapter/test/integration/report.contract.test.ts"): "8fd4d6458cc022c025c8c82abf1f73dcceebd2b1896206b339014c28811ea0ba",
+    Path("packages/textlint-adapter/test/integration/cli.contract.test.ts"): "9c5c98006fc22f8afc2847f777adbfec29798741cc53b8889be98215226a0c87",
     Path("packages/textlint-adapter/test/integration/e2e.contract.test.ts"): "1b5aec7e5fc67af07aa15c89d50bfb492f046d32401487d254110463eec42d97",
     Path("packages/textlint-adapter/test/integration/ci.contract.test.ts"): "985c8a56d3740b8bdf9c52eec69f2f87ca2e11c5d6d59a9952dd2f0dda5df9cd",
     Path("packages/textlint-adapter/test/fixtures/mixed-pass.json"): "cb08948df2ef6a28ad124444682abbd0f1eac91e8f458cf428564ece03bbcffa",
@@ -117,7 +118,19 @@ const semantic = [
   { ruleId:"S203", status:"violation", range:{start:1,end:2}, evidence:["v"], reason:"V", confidence:0.9 },
   { ruleId:"S205", status:"no_violation", range:{start:5,end:6}, evidence:["n"], reason:"N", confidence:0.8 },
 ];
-console.log(JSON.stringify({ mixed:buildValidationReport([d,h],semantic), pass:buildValidationReport([h],semantic) }));
+const lintTies = [
+  {...d,range:{start:0,end:2},severity:"error",message:"B"},
+  {...d,range:{start:0,end:2},severity:"warning",message:"Z"},
+  {...d,range:{start:0,end:2},severity:"error",message:"A"},
+  {...d,range:{start:0,end:2},severity:"error",message:"A"},
+];
+const semanticTies = [
+  {ruleId:"S203",status:"violation",range:{start:1,end:2},evidence:["b"],reason:"A",confidence:0.2},
+  {ruleId:"S203",status:"violation",range:{start:1,end:2},evidence:["a"],reason:"B",confidence:0.2},
+  {ruleId:"S203",status:"violation",range:{start:1,end:2},evidence:["a"],reason:"A",confidence:0.2,suggestedAction:"A"},
+  {ruleId:"S203",status:"violation",range:{start:1,end:2},evidence:["a"],reason:"A",confidence:0.2,suggestedAction:"A"},
+];
+console.log(JSON.stringify({ mixed:buildValidationReport([d,h],semantic), pass:buildValidationReport([h],semantic), tieForward:buildValidationReport(lintTies,semanticTies), tieReverse:buildValidationReport([...lintTies].reverse(),[...semanticTies].reverse()) }));
 '''
     result = subprocess.run(("mise", "x", "node@24.19.0", "--", "node", "--input-type=module", "--eval", script), cwd=ROOT, text=True, capture_output=True)
     if result.returncode != 0: return [f"probe-exit-{result.returncode}"], result.stdout + result.stderr
@@ -133,6 +146,11 @@ console.log(JSON.stringify({ mixed:buildValidationReport([d,h],semantic), pass:b
     if [item.get("status") for item in notices] != ["violation", "uncertain", "no_violation"]: errors.append("semantic-status")
     if any(item.get("level") != "notice" or "severity" in item or not item.get("evidence") or not isinstance(item.get("confidence"), (int, float)) for item in notices): errors.append("semantic-lossless")
     if not lint or passed.get("lintMessages") != [lint[0]]: errors.append("pass-lint")
+    tie_forward, tie_reverse = value.get("tieForward", {}), value.get("tieReverse", {})
+    if json.dumps(tie_forward, separators=(",", ":"), ensure_ascii=False) != json.dumps(tie_reverse, separators=(",", ":"), ensure_ascii=False): errors.append("tie-total-order")
+    tie_lint, tie_semantic = tie_forward.get("lintMessages", []), tie_forward.get("semanticNotices", [])
+    if len(tie_lint) != 4 or [f"{item.get('level')}:{item.get('message')}" for item in tie_lint] != ["error:A", "error:A", "error:B", "warning:Z"]: errors.append("tie-lint-lossless")
+    if len(tie_semantic) != 4 or [item.get("evidence") for item in tie_semantic] != [["a"], ["a"], ["a"], ["b"]]: errors.append("tie-semantic-lossless")
     return errors, result.stdout + result.stderr
 
 def main() -> int:
@@ -166,8 +184,8 @@ def main() -> int:
     totals = {name: int(value) for name, value in re.findall(r"^(?:ℹ|#)\s+(tests|pass|fail)\s+(\d+)\s*$", plain, re.MULTILINE)}
     tests, passed, failed = totals.get("tests", -1), totals.get("pass", -1), totals.get("fail", -1)
     titles = sum(title in plain for title in REQUIRED_TITLES)
-    if tests < 14 or passed != tests or failed != 0 or titles != len(REQUIRED_TITLES): return fail(f"tests={tests} pass={passed} fail={failed} required_titles={titles}/{len(REQUIRED_TITLES)}")
-    print(f"PBI08_GREEN tests={tests} pass={passed} fail=0 required_titles=14 fixtures=3 probe=PASS")
+    if tests < 15 or passed != tests or failed != 0 or titles != len(REQUIRED_TITLES): return fail(f"tests={tests} pass={passed} fail={failed} required_titles={titles}/{len(REQUIRED_TITLES)}")
+    print(f"PBI08_GREEN tests={tests} pass={passed} fail=0 required_titles=15 fixtures=3 probe=PASS")
     return 0
 
 if __name__ == "__main__": raise SystemExit(main())

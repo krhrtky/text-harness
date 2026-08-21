@@ -236,6 +236,10 @@ EXPECTED = {
     "permit-pbi08-network": "PBI08-INTEGRATION-CONTRACT",
     "drop-pbi08-invalid-cli-title": "PBI08-ACCEPTANCE-ORACLE",
     "drop-pbi08-red-signature": "PBI08-ACCEPTANCE-ORACLE",
+    "drop-pbi08-order02-title": "PBI08-ACCEPTANCE-ORACLE",
+    "weaken-pbi08-tie-order": "PBI08-INTEGRATION-CONTRACT",
+    "permit-pbi08-dedupe": "PBI08-POST-IMPLEMENTATION-GREEN",
+    "weaken-pbi08-byte-identity": "PBI08-POST-IMPLEMENTATION-GREEN",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -973,11 +977,15 @@ test("D002-B03 multi-mark combining sequence reports exact source range", () => 
         summary = re.search(r"PBI08_GREEN tests=(\d+) pass=(\d+) fail=(\d+) required_titles=(\d+) fixtures=(\d+) probe=PASS", green.stdout)
         self.assertIsNotNone(summary)
         tests, passed, failed, titles, fixtures = (int(value) for value in summary.groups())
-        self.assertGreaterEqual(tests, 14)
+        self.assertGreaterEqual(tests, 15)
         self.assertEqual(tests, passed)
         self.assertEqual(0, failed)
-        self.assertEqual(14, titles)
+        self.assertEqual(15, titles)
         self.assertEqual(3, fixtures)
+        probe_errors, probe_output = verify_pbi08.run_behavioral_probe()
+        self.assertEqual([], probe_errors, probe_output)
+        for path, expected in verify_pbi08.DELIVERY_HASHES.items():
+            self.assertEqual(expected, hashlib.sha256((ROOT / path).read_bytes()).hexdigest(), str(path))
 
     def test_pbi08_schema_oracle_rejects_cross_contamination(self) -> None:
         range_schema = {"type": "object", "additionalProperties": False, "required": ["start", "end"], "properties": {"start": {"type": "integer", "minimum": 0}, "end": {"type": "integer", "minimum": 1}}}

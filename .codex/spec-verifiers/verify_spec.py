@@ -105,6 +105,8 @@ MUTATIONS = (
     "merge-pbi08-result-types", "semantic-pbi08-exit1",
     "permit-pbi08-semantic-severity", "permit-pbi08-network",
     "drop-pbi08-invalid-cli-title", "drop-pbi08-red-signature",
+    "drop-pbi08-order02-title", "weaken-pbi08-tie-order",
+    "permit-pbi08-dedupe", "weaken-pbi08-byte-identity",
 )
 
 def read_state() -> dict:
@@ -1647,18 +1649,20 @@ def pbi08_registration_errors(body: str, oracle_exists: bool, schema_exists: boo
         'type_contract: "ValidationReport schemaVersion=1.0.0, exitCode 0|1, lintMessages:LintMessage[], semanticNotices:SemanticNotice[]',
         'exit_contract: "AC-INT-01: D error + H warning + Semantic violation => exit1 solely because of D; removing D => exit0; semantic status/confidence cannot affect exit; invalid CLI payload/usage => process exit2 with no partial report"',
         'schema_contract: "JSON Schema draft 2020-12, additionalProperties=false recursively; separate lintMessages and semanticNotices required; semantic severity/error/autofix/rewrite forbidden; lint status/evidence/confidence forbidden',
+        'ordering_contract: "lintMessagesはrange.start/end,ruleId,category,severity,message、semanticNoticesはrange.start/end,ruleId,status,evidence lexicographic,reason,confidence,suggestedAction(undefined first)のfull payload total-order。等値duplicateをdedupeせずlossless保持し、APIとCLIそれぞれforward/reverse permutationがbyte-identical canonical JSONを返す"',
         'ci_contract: ".github/workflows/integration-contract.yml pull_request required candidate, permissions contents:read, Node24.19.0/corepack pnpm11.22.0, exact PBI-08 verifier; verifierはclean checkoutでfrozen-lockfile install後にprobe/testを行う; no secrets/API/network/live model"',
         'external_dependency_contract: "runtime/dev dependency追加なし; root/workspace/core/package lock and textlint-adapter tsconfig unchanged',
     ))
     acceptance = all(value in body for value in (
         'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi08.py"',
         '--filter @text-harness/textlint-adapter --fail-if-no-match',
-        'minimum_tests: 14', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 14', 'fixture_count: 3',
+        'minimum_tests: 15', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 15', 'fixture_count: 3',
+        '"INT-ORDER-02 same primary keys use full payload tie-breakers without deduplication"',
         '"INT-CLI-03 invalid Semantic severity exits two without partial stdout"',
         '"INT-F01 Semantic violation cannot be promoted to lint error"',
         'red_signature: "PBI08_RED missing packages/textlint-adapter/schema/validation-report.schema.json"',
-        'no_match_guard: "exact package filter with --fail-if-no-match, exact four test files, tests>=14, pass=tests, fail=0, all 14 titles, exact three fixtures, schema/CLI/workflow presence, and independent runtime behavior probe"',
-        'green_signature: "PBI08_GREEN tests>=14 pass=tests fail=0 required_titles=14 fixtures=3 probe=PASS"',
+        'no_match_guard: "exact package filter with --fail-if-no-match, exact four test files, tests>=15, pass=tests, fail=0, all 15 titles, exact three fixtures, schema/CLI/workflow presence, and independent runtime behavior probe including tie total-order/no-dedupe"',
+        'green_signature: "PBI08_GREEN tests>=15 pass=tests fail=0 required_titles=15 fixtures=3 probe=PASS"',
     ))
     errors: list[str] = []
     if not ownership: errors.append("PBI08-OWNERSHIP")
@@ -1680,16 +1684,18 @@ def pbi08_registration_errors(body: str, oracle_exists: bool, schema_exists: boo
         'stdout: "PBI08_RED missing packages/textlint-adapter/schema/validation-report.schema.json"',
         'stderr: "<empty>"', 'measured_runs: 2', 'green_transition:',
         'command: "python3 .codex/spec-verifiers/verify_pbi08.py"', 'exit: 0',
-        'product_commit: "59317f4"', 'schema_version: "1.0.0"',
-        'tests: 14', 'pass: 14', 'fail: 0', 'required_titles: 14', 'fixtures: 3',
+        'product_commit: "3049fea"', 'schema_version: "1.0.0"',
+        'tests: 15', 'pass: 15', 'fail: 0', 'required_titles: 15', 'fixtures: 3',
         'runtime_probe: "PASS"',
-        'report_contract: "lintMessages and semanticNotices separate; category/status/evidence/confidence lossless; canonical independent ordering"',
+        'report_contract: "lintMessages and semanticNotices separate; category/status/evidence/confidence lossless; full-payload total-order; duplicates retained; API and CLI permutation outputs byte-identical"',
         'exit_contract: "D error only=>1; H warning and Semantic violation/no_violation/uncertain=>0; invalid CLI input/usage=>2 and stdout empty"',
         'clean_checkout_contract: "verifier invokes mise x node@24.19.0 -- corepack pnpm install --frozen-lockfile before independent runtime probe and exact integration tests"',
         'packages/textlint-adapter/package.json: "bfc3d793caadeb84ab6730a5ba2122a2bfe14c571fec301fcfa8f32841272414"',
-        'packages/textlint-adapter/src/index.ts: "3edac8f15e10d5b6fba00b1897b2c6557ee210cb92f663f8e4d1a29ef27c8850"',
+        'packages/textlint-adapter/src/index.ts: "44e0de81038c8fa1406f21bd8f09e5d407c45dbef46a899b0ab1a2e076e63546"',
         'packages/textlint-adapter/src/cli.ts: "90b1c03cdc7210b483e6650632d52b4fde062ffb5f00fd154beb8c0610ffca79"',
         'packages/textlint-adapter/schema/validation-report.schema.json: "8a0d545278e7222f7144ca8b719afbf289903ab4b4f2b6d5f7a35a753b0b6023"',
+        'packages/textlint-adapter/test/integration/report.contract.test.ts: "8fd4d6458cc022c025c8c82abf1f73dcceebd2b1896206b339014c28811ea0ba"',
+        'packages/textlint-adapter/test/integration/cli.contract.test.ts: "9c5c98006fc22f8afc2847f777adbfec29798741cc53b8889be98215226a0c87"',
         'packages/textlint-adapter/test/integration/e2e.contract.test.ts: "1b5aec7e5fc67af07aa15c89d50bfb492f046d32401487d254110463eec42d97"',
         '.github/workflows/integration-contract.yml: "d0712df9f704569953a234f6f30cb1f5d9a097f154e650b3f9ed121e4ab55e32"',
         'package.json: "87d2ccaa29bd499df2777ed25614fd3e84a457a79ae5cc1d1581059dd7f62760"',
@@ -1697,8 +1703,14 @@ def pbi08_registration_errors(body: str, oracle_exists: bool, schema_exists: boo
         'pnpm-workspace.yaml: "d115dc6c83ba283a7d17146ad456056f3f70b003edb8c312a52880b48b034001"',
         'packages/readability-core/src/types/findings.ts: "760fb0b3045423a9900f554e33529a81fb2d98548f873b269991fc14697b9a26"',
         'packages/textlint-adapter/tsconfig.json: "1891f8459b7f3b1283c31c1340d4e340e893d89e67f13e4242eb57d77c2ba772"',
-        'falsification_contract: "merged arrays, Semantic/H failure promotion, semantic error level, dropped evidence, cross-schema fields, nondeterministic order, CLI partial output/wrong exit/network, title deletion, no-match, and delivery hash drift are rejected"',
-        'signature: "PBI08_GREEN tests>=14 pass=tests fail=0 required_titles=14 fixtures=3 probe=PASS"',
+        'falsification_contract: "merged arrays, Semantic/H failure promotion, semantic error level, dropped evidence, cross-schema fields, nondeterministic/partial tie order, dedupe, API/CLI byte drift, CLI partial output/wrong exit/network, title deletion, no-match, and delivery hash drift are rejected"',
+        'signature: "PBI08_GREEN tests>=15 pass=tests fail=0 required_titles=15 fixtures=3 probe=PASS"',
+        'product_commit: "59317f4"',
+        'signature: "PBI08_GREEN tests=14 pass=14 fail=0 required_titles=14 fixtures=3 probe=PASS"',
+        'artifact_hashes: "index=3edac8f15e10d5b6fba00b1897b2c6557ee210cb92f663f8e4d1a29ef27c8850 report_test=de3ebb53800c7aa8ea1b4c73982bcb8a98f50b5b84881815ce3dfc286996de1f cli_test=7b75c82936e41adc2e598acc55b757585d6f5468eaac4ab6fb0c0ac656257094"',
+        'product_commit: "3049fea"',
+        'reason: "same primary keys previously relied on stable input order; full payload total-order and no-dedupe/API+CLI byte identity close the integration ordering gap"',
+        'signature: "PBI08_GREEN tests=15 pass=15 fail=0 required_titles=15 fixtures=3 probe=PASS"',
     ))
     if not green: errors.append("PBI08-POST-IMPLEMENTATION-GREEN")
     return errors
@@ -2774,6 +2786,8 @@ def apply_mutation(name: str, state: dict) -> None:
         "merge-pbi08-result-types", "semantic-pbi08-exit1",
         "permit-pbi08-semantic-severity", "permit-pbi08-network",
         "drop-pbi08-invalid-cli-title", "drop-pbi08-red-signature",
+        "drop-pbi08-order02-title", "weaken-pbi08-tie-order",
+        "permit-pbi08-dedupe", "weaken-pbi08-byte-identity",
     ):
         key = next(k for k, body in packets.items() if packet_id(body) == "PBI-08")
         if name == "drop-pbi08-cli-ownership":
@@ -2790,6 +2804,14 @@ def apply_mutation(name: str, state: dict) -> None:
             packets[key] = packets[key].replace("no secrets/API/network/live model", "network/live model permitted", 1)
         elif name == "drop-pbi08-invalid-cli-title":
             packets[key] = packets[key].replace(', "INT-CLI-03 invalid Semantic severity exits two without partial stdout"', "", 1)
+        elif name == "drop-pbi08-order02-title":
+            packets[key] = packets[key].replace(', "INT-ORDER-02 same primary keys use full payload tie-breakers without deduplication"', "", 1)
+        elif name == "weaken-pbi08-tie-order":
+            packets[key] = packets[key].replace("full payload total-order", "primary-key partial order", 1)
+        elif name == "permit-pbi08-dedupe":
+            packets[key] = packets[key].replace("duplicates retained", "duplicates deduplicated", 1)
+        elif name == "weaken-pbi08-byte-identity":
+            packets[key] = packets[key].replace("API and CLI permutation outputs byte-identical", "API and CLI output order unspecified", 1)
         else:
             packets[key] = packets[key].replace('    red_signature: "PBI08_RED missing packages/textlint-adapter/schema/validation-report.schema.json"\n', "", 1)
     else: raise ValueError(name)

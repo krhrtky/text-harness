@@ -4,8 +4,8 @@
   "current_phase": "DA",
   "active_pbi": "PBI-08",
   "gate_type": "DELIVERY",
-  "strategy_id": "delivery-pbi08-separated-integration-green-v2",
-  "iteration": 61,
+  "strategy_id": "delivery-pbi08-total-order-green-v3",
+  "iteration": 62,
   "task_packet_ref": ".codex/task-packets/PBI-08-semantic-eval.md",
   "phase_history": [
     {
@@ -1691,6 +1691,27 @@
       ],
       "resume_point": ".codex/task-packets/PBI-08-semantic-eval.md",
       "timestamp": "2026-08-22T02:25:00+09:00"
+    },
+    {
+      "phase": "DA",
+      "status": "QGA_FIX_GREEN",
+      "agent": "/root/delivery",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-08",
+      "task_packet_ref": ".codex/task-packets/PBI-08-semantic-eval.md",
+      "decision": "PBI-08 now uses a full-payload total order for same-range/same-rule findings and preserves duplicate findings without input-order leakage",
+      "evidence": [
+        "Previous Green history retained: product 59317f4; 14/14; index/report/CLI test hashes recorded",
+        "QGA fix product commit 3049fea",
+        "python3 .codex/spec-verifiers/verify_pbi08.py => PBI08_GREEN tests=15 pass=15 fail=0 required_titles=15 fixtures=3 probe=PASS",
+        "INT-ORDER-02 fixes lint tie-breakers category/severity/message and Semantic tie-breakers status/evidence/reason/confidence/suggestedAction",
+        "equal duplicate findings remain present; forward/reverse permutations are byte-identical through API and CLI paths",
+        "index SHA-256 44e0de81038c8fa1406f21bd8f09e5d407c45dbef46a899b0ab1a2e076e63546",
+        "report test SHA-256 8fd4d6458cc022c025c8c82abf1f73dcceebd2b1896206b339014c28811ea0ba; CLI test SHA-256 9c5c98006fc22f8afc2847f777adbfec29798741cc53b8889be98215226a0c87",
+        "partial tie-order, dedupe, API/CLI byte drift, title deletion, and delivery-hash mutations are rejected"
+      ],
+      "resume_point": ".codex/task-packets/PBI-08-semantic-eval.md",
+      "timestamp": "2026-08-22T02:35:00+09:00"
     }
   ],
   "blocker_history": [
@@ -1768,5 +1789,5 @@
     }
   ],
   "created_at": "2026-08-21T09:39:07+09:00",
-  "updated_at": "2026-08-22T02:25:00+09:00"
+  "updated_at": "2026-08-22T02:35:00+09:00"
 }
