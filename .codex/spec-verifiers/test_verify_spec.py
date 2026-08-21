@@ -3,10 +3,12 @@ from __future__ import annotations
 import subprocess
 import unittest
 import importlib.util
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 VERIFIER = ROOT / ".codex/spec-verifiers/verify_spec.py"
+sys.dont_write_bytecode = True
 SPEC = importlib.util.spec_from_file_location("verify_spec", VERIFIER)
 assert SPEC and SPEC.loader
 verify_spec = importlib.util.module_from_spec(SPEC)
@@ -53,10 +55,20 @@ class SpecVerifierTest(unittest.TestCase):
                 self.assertEqual(1, result.returncode)
                 self.assertIn(signature, result.stdout)
 
-    def test_registered_expected_reds_match_current_spec_baseline(self) -> None:
+    def test_registered_expected_reds_and_pbi01_green_transition(self) -> None:
         pbi00 = self.run_verifier("--mutation", "drop-h113-falsification")
         self.assertEqual((1, "SPEC_FAIL H113-FALSIFICATION\n"), (pbi00.returncode, pbi00.stdout))
-        pbi01 = subprocess.run("test -x scripts/text-harness-setup", cwd=ROOT, shell=True, text=True, capture_output=True)
-        self.assertEqual((1, "", ""), (pbi01.returncode, pbi01.stdout, pbi01.stderr))
+        state = verify_spec.read_state()
+        packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-01")
+        pre_implementation = packet.replace("expected_red: null", 'expected_red: "test -x scripts/text-harness-setup; exit=1; signature=<empty>"').replace('red_status: "CONSUMED_GREEN"', 'red_status: "REGISTERED_RED"')
+        self.assertEqual([], verify_spec.pbi01_transition_errors(pre_implementation, executable_exists=False))
+        self.assertEqual([], verify_spec.pbi01_transition_errors(packet, executable_exists=True))
+        self.assertTrue((ROOT / "scripts/text-harness-setup").is_file())
+        self.assertNotEqual(0, (ROOT / "scripts/text-harness-setup").stat().st_mode & 0o111)
+        green = subprocess.run("mise x node@24.19.0 -- node --test tests/ops/*.test.mjs", cwd=ROOT, shell=True, text=True, capture_output=True)
+        self.assertEqual(0, green.returncode, green.stderr)
+        self.assertIn("tests 11", green.stdout)
+        self.assertIn("pass 11", green.stdout)
+        self.assertIn("fail 0", green.stdout)
 
 if __name__ == "__main__": unittest.main()

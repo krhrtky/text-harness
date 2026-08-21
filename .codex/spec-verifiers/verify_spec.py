@@ -53,6 +53,32 @@ def json_contract(text: str, contract_id: str) -> dict | None:
             return value
     return None
 
+def pbi01_transition_errors(body: str, executable_exists: bool) -> list[str]:
+    historical = all(value in body for value in (
+        'phase: "PRE_IMPLEMENTATION"',
+        'command: "test -x scripts/text-harness-setup"',
+        "exit: 1",
+        'signature: "<empty>"',
+    ))
+    if not historical:
+        return ["PBI01-RED-HISTORY"]
+    if not executable_exists:
+        active_red = all(value in body for value in (
+            'expected_red: "test -x scripts/text-harness-setup; exit=1; signature=<empty>"',
+            'red_status: "REGISTERED_RED"',
+        ))
+        return [] if active_red else ["PBI01-PRE-IMPLEMENTATION-RED"]
+    green = all(value in body for value in (
+        "expected_red: null",
+        'red_status: "CONSUMED_GREEN"',
+        'executable: "scripts/text-harness-setup"',
+        'acceptance_command: "pnpm test:ops"',
+        'verification_command: "mise x node@24.19.0 -- node --test tests/ops/*.test.mjs"',
+        "exit: 0",
+        'signature: "tests 11; pass 11; fail 0"',
+    ))
+    return [] if green else ["PBI01-POST-IMPLEMENTATION-GREEN"]
+
 def verify(state: dict) -> list[str]:
     m, t, packets, workflow = state["matrix"], state["text"], state["packets"], state["workflow"]
     errors: list[str] = []
@@ -121,7 +147,11 @@ def verify(state: dict) -> list[str]:
             need(field in body, f"PACKET-FIELD-{name}-{field[:-1].upper()}")
         red_line = next((line.strip() for line in body.splitlines() if line.strip().startswith("expected_red:")), "")
         if red_line == "expected_red: null":
-            need("red_registration_gate:" in body, f"PACKET-RED-GATE-{pid}")
+            if pid == "PBI-01":
+                for error in pbi01_transition_errors(body, (ROOT / "scripts/text-harness-setup").is_file() and (ROOT / "scripts/text-harness-setup").stat().st_mode & 0o111 != 0):
+                    need(False, error)
+            else:
+                need("red_registration_gate:" in body, f"PACKET-RED-GATE-{pid}")
         else:
             need("exit=" in red_line and "signature=" in red_line, f"PACKET-RED-SIGNATURE-{pid}")
             need("pnpm " not in red_line, f"PACKET-RED-NONEXECUTABLE-{pid}")

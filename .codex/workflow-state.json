@@ -4,8 +4,8 @@
   "current_phase": "DA",
   "active_pbi": "PBI-01",
   "gate_type": "DELIVERY",
-  "strategy_id": "delivery-pbi01-setup-v1",
-  "iteration": 7,
+  "strategy_id": "delivery-pbi01-setup-v2",
+  "iteration": 8,
   "task_packet_ref": ".codex/task-packets/PBI-01-setup.md",
   "phase_history": [
     {
@@ -156,6 +156,22 @@
         ".codex/task-packets/"
       ],
       "timestamp": "2026-08-21T13:15:00+09:00"
+    },
+    {
+      "phase": "DA",
+      "status": "PBI_GREEN_REPORTED",
+      "agent": "/root/pbi01_da",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-01",
+      "decision": "The registered pre-implementation RED was consumed by an executable setup implementation and the PBI-01 acceptance suite is green",
+      "evidence": [
+        "RED history: test -x scripts/text-harness-setup => exit 1, empty stdout/stderr",
+        "Green executable: scripts/text-harness-setup",
+        "mise x node@24.19.0 -- corepack pnpm test:ops => exit 0",
+        "tests 11; pass 11; fail 0"
+      ],
+      "resume_point": ".codex/task-packets/PBI-01-setup.md",
+      "timestamp": "2026-08-21T14:05:00+09:00"
     },
     {
       "phase": "QGA",
@@ -309,5 +325,5 @@
     }
   ],
   "created_at": "2026-08-21T09:39:07+09:00",
-  "updated_at": "2026-08-21T13:45:00+09:00"
+  "updated_at": "2026-08-21T14:05:00+09:00"
 }
