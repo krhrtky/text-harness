@@ -1,0 +1,226 @@
+{
+  "schemaVersion": 1,
+  "evaluatedAt": "2026-08-21",
+  "toolchain": {
+    "node": "24.19.0",
+    "pnpm": "11.22.0"
+  },
+  "rules": [
+    {
+      "ruleId": "D001",
+      "candidate": { "package": "textlint-rule-no-mix-dearu-desumasu", "version": "6.0.4" },
+      "gates": {
+        "functional": {
+          "status": "UNKNOWN", "command": null, "exitCode": null, "artifact": null,
+          "evidence": ["2026-08-21 candidate 6.0.4 primary source https://github.com/textlint-ja/textlint-rule-no-mix-dearu-desumasu documents style mixing, but the four D001 fixtures were not executed against an integration adapter."]
+        },
+        "configCompatibility": {
+          "status": "UNKNOWN", "command": null, "exitCode": null, "artifact": null,
+          "evidence": ["D001 candidate 6.0.4 exposes preferInHeader, preferInBody, preferInList, and strict at https://github.com/textlint-ja/textlint-rule-no-mix-dearu-desumasu; no lossless proof exists for the public style=consistent|desu-masu|da-dearu contract."]
+        },
+        "license": {
+          "status": "PASS", "command": "npm view textlint-rule-no-mix-dearu-desumasu@6.0.4 license --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d001",
+          "evidence": ["2026-08-21 npm registry metadata for textlint-rule-no-mix-dearu-desumasu@6.0.4 reports MIT; source is https://github.com/textlint-ja/textlint-rule-no-mix-dearu-desumasu."]
+        },
+        "maintainability": {
+          "status": "PASS", "command": "npm view textlint-rule-no-mix-dearu-desumasu@6.0.4 name version license repository.url time.modified deprecated dist.integrity --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d001",
+          "evidence": ["2026-08-21 registry metadata pins version 6.0.4, repository https://github.com/textlint-ja/textlint-rule-no-mix-dearu-desumasu.git, release metadata, integrity, and no deprecation marker."]
+        },
+        "range": {
+          "status": "UNKNOWN", "command": null, "exitCode": null, "artifact": null,
+          "evidence": ["D001 candidate 6.0.4 has no executed adapter proof for RNG-001 UTF-16 0-based half-open reconstruction; UNKNOWN prevents external adoption."]
+        }
+      },
+      "decision": { "mode": "INTERNAL", "reasonCode": "NON_PASS_GATE", "implementationPbi": "PBI-06A" }
+    },
+    {
+      "ruleId": "D002",
+      "candidate": { "package": "textlint-rule-no-nfd", "version": "2.0.2" },
+      "gates": {
+        "functional": {
+          "status": "FAIL", "command": "npm view textlint-rule-no-nfd@2.0.2 readme --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d002",
+          "evidence": ["2026-08-21 candidate 2.0.2 at https://github.com/textlint-ja/textlint-rule-no-nfd documents UTF8-MAC dakuten detection, not the D002 contract to reject every source where source.normalize(\"NFC\") differs."]
+        },
+        "configCompatibility": {
+          "status": "PASS", "command": "npm view textlint-rule-no-nfd@2.0.2 readme --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d002",
+          "evidence": ["D002 has no public configuration fields; candidate 2.0.2 is enabled with a boolean as documented at https://github.com/textlint-ja/textlint-rule-no-nfd."]
+        },
+        "license": {
+          "status": "PASS", "command": "npm view textlint-rule-no-nfd@2.0.2 license --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d002",
+          "evidence": ["2026-08-21 npm registry metadata for textlint-rule-no-nfd@2.0.2 reports MIT; source is https://github.com/textlint-ja/textlint-rule-no-nfd."]
+        },
+        "maintainability": {
+          "status": "PASS", "command": "npm view textlint-rule-no-nfd@2.0.2 name version license repository.url time.modified deprecated dist.integrity --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d002",
+          "evidence": ["2026-08-21 registry metadata pins version 2.0.2, repository https://github.com/textlint-ja/textlint-rule-no-nfd.git, release metadata, integrity, and no deprecation marker."]
+        },
+        "range": {
+          "status": "UNKNOWN", "command": null, "exitCode": null, "artifact": null,
+          "evidence": ["D002 candidate 2.0.2 has no executed combining-character adapter proof for RNG-001 UTF-16 0-based half-open reconstruction; UNKNOWN prevents external adoption."]
+        }
+      },
+      "decision": { "mode": "INTERNAL", "reasonCode": "NON_PASS_GATE", "implementationPbi": "PBI-06B" }
+    },
+    {
+      "ruleId": "D003",
+      "candidate": { "package": "@textlint-rule/textlint-rule-no-unmatched-pair", "version": "2.0.4" },
+      "gates": {
+        "functional": {
+          "status": "FAIL", "command": "npm view @textlint-rule/textlint-rule-no-unmatched-pair@2.0.4 readme --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d003",
+          "evidence": ["2026-08-21 candidate 2.0.4 at https://github.com/textlint-rule/textlint-rule-no-unmatched-pair documents a larger fixed pair catalog including full-width brackets; D003 requires exactly （）「」『』【】[] and Markdown code exclusion."]
+        },
+        "configCompatibility": {
+          "status": "PASS", "command": "npm view @textlint-rule/textlint-rule-no-unmatched-pair@2.0.4 readme --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d003",
+          "evidence": ["D003 has no public configuration fields; candidate 2.0.4 is enabled with a boolean as documented at https://github.com/textlint-rule/textlint-rule-no-unmatched-pair."]
+        },
+        "license": {
+          "status": "PASS", "command": "npm view @textlint-rule/textlint-rule-no-unmatched-pair@2.0.4 license --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d003",
+          "evidence": ["2026-08-21 npm registry metadata for @textlint-rule/textlint-rule-no-unmatched-pair@2.0.4 reports MIT; source is https://github.com/textlint-rule/textlint-rule-no-unmatched-pair."]
+        },
+        "maintainability": {
+          "status": "PASS", "command": "npm view @textlint-rule/textlint-rule-no-unmatched-pair@2.0.4 name version license repository.url time.modified deprecated dist.integrity --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d003",
+          "evidence": ["2026-08-21 registry metadata pins version 2.0.4, repository https://github.com/textlint-rule/textlint-rule-no-unmatched-pair.git, release metadata, integrity, and no deprecation marker."]
+        },
+        "range": {
+          "status": "UNKNOWN", "command": null, "exitCode": null, "artifact": null,
+          "evidence": ["D003 candidate 2.0.4 has no executed unmatched-close adapter proof for RNG-001 UTF-16 0-based half-open reconstruction; UNKNOWN prevents external adoption."]
+        }
+      },
+      "decision": { "mode": "INTERNAL", "reasonCode": "NON_PASS_GATE", "implementationPbi": "PBI-06C" }
+    },
+    {
+      "ruleId": "D004",
+      "candidate": { "package": "textlint-rule-ng-word", "version": "1.0.0" },
+      "gates": {
+        "functional": {
+          "status": "UNKNOWN", "command": null, "exitCode": null, "artifact": null,
+          "evidence": ["2026-08-21 candidate 1.0.0 primary source https://github.com/KeitaMoromizato/ng-word documents NG words, but literal-only substring and 必ずしも falsification fixtures for D004 were not executed."]
+        },
+        "configCompatibility": {
+          "status": "PASS", "command": "npm view textlint-rule-ng-word@1.0.0 readme --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d004",
+          "evidence": ["D004 forbiddenTerms:string[] maps directly to candidate 1.0.0 words:string[] documented at https://github.com/KeitaMoromizato/ng-word; functional literal semantics remain separately UNKNOWN."]
+        },
+        "license": {
+          "status": "PASS", "command": "npm view textlint-rule-ng-word@1.0.0 license --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d004",
+          "evidence": ["2026-08-21 npm registry metadata for textlint-rule-ng-word@1.0.0 reports MIT; source is https://github.com/KeitaMoromizato/ng-word."]
+        },
+        "maintainability": {
+          "status": "PASS", "command": "npm view textlint-rule-ng-word@1.0.0 name version license repository.url time.modified deprecated dist.integrity --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d004",
+          "evidence": ["2026-08-21 registry metadata pins version 1.0.0, repository https://github.com/KeitaMoromizato/ng-word.git, release metadata, integrity, and no deprecation marker."]
+        },
+        "range": {
+          "status": "UNKNOWN", "command": null, "exitCode": null, "artifact": null,
+          "evidence": ["D004 candidate 1.0.0 has no executed emoji-adjacent adapter proof for RNG-001 UTF-16 0-based half-open reconstruction; UNKNOWN prevents external adoption."]
+        }
+      },
+      "decision": { "mode": "INTERNAL", "reasonCode": "NON_PASS_GATE", "implementationPbi": "PBI-06D" }
+    },
+    {
+      "ruleId": "D005",
+      "candidate": { "package": "textlint-rule-prh", "version": "6.1.0" },
+      "gates": {
+        "functional": {
+          "status": "UNKNOWN", "command": null, "exitCode": null, "artifact": null,
+          "evidence": ["2026-08-21 candidate 6.1.0 primary source https://github.com/textlint-rule/textlint-rule-prh documents replacement dictionaries, but D005 token-boundary and non-preferred/preferred fixtures were not executed."]
+        },
+        "configCompatibility": {
+          "status": "FAIL", "command": "npm view textlint-rule-prh@6.1.0 readme --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d005",
+          "evidence": ["D005 requires an in-memory terminology object; candidate 6.1.0 requires rulePaths to YAML and permits RegExp patterns as documented at https://github.com/textlint-rule/textlint-rule-prh, so the public config is not losslessly accepted."]
+        },
+        "license": {
+          "status": "PASS", "command": "npm view textlint-rule-prh@6.1.0 license --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d005",
+          "evidence": ["2026-08-21 npm registry metadata for textlint-rule-prh@6.1.0 reports MIT; source is https://github.com/textlint-rule/textlint-rule-prh."]
+        },
+        "maintainability": {
+          "status": "PASS", "command": "npm view textlint-rule-prh@6.1.0 name version license repository.url time.modified deprecated dist.integrity --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d005",
+          "evidence": ["2026-08-21 registry metadata pins version 6.1.0, repository https://github.com/textlint-rule/textlint-rule-prh.git, release metadata, integrity, and no deprecation marker."]
+        },
+        "range": {
+          "status": "UNKNOWN", "command": null, "exitCode": null, "artifact": null,
+          "evidence": ["D005 candidate 6.1.0 has no executed replacement-token adapter proof for RNG-001 UTF-16 0-based half-open reconstruction; UNKNOWN prevents external adoption."]
+        }
+      },
+      "decision": { "mode": "INTERNAL", "reasonCode": "NON_PASS_GATE", "implementationPbi": "PBI-06E" }
+    },
+    {
+      "ruleId": "D006",
+      "candidate": { "package": "textlint-rule-ja-no-successive-word", "version": "2.0.1" },
+      "gates": {
+        "functional": {
+          "status": "UNKNOWN", "command": null, "exitCode": null, "artifact": null,
+          "evidence": ["2026-08-21 candidate 2.0.1 primary source https://github.com/textlint-ja/textlint-rule-ja-no-successive-word documents successive morphological tokens, but the D006 maxConsecutive boundary fixtures were not executed."]
+        },
+        "configCompatibility": {
+          "status": "FAIL", "command": "npm view textlint-rule-ja-no-successive-word@2.0.1 readme --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d006",
+          "evidence": ["D006 requires maxConsecutive=1|2; candidate 2.0.1 exposes allowOnomatopee and allow, but no maxConsecutive option, at https://github.com/textlint-ja/textlint-rule-ja-no-successive-word."]
+        },
+        "license": {
+          "status": "PASS", "command": "npm view textlint-rule-ja-no-successive-word@2.0.1 license --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d006",
+          "evidence": ["2026-08-21 npm registry metadata for textlint-rule-ja-no-successive-word@2.0.1 reports MIT; source is https://github.com/textlint-ja/textlint-rule-ja-no-successive-word."]
+        },
+        "maintainability": {
+          "status": "PASS", "command": "npm view textlint-rule-ja-no-successive-word@2.0.1 name version license repository.url time.modified deprecated dist.integrity --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d006",
+          "evidence": ["2026-08-21 registry metadata pins version 2.0.1, repository https://github.com/textlint-ja/textlint-rule-ja-no-successive-word.git, release metadata, integrity, and no deprecation marker."]
+        },
+        "range": {
+          "status": "UNKNOWN", "command": null, "exitCode": null, "artifact": null,
+          "evidence": ["D006 candidate 2.0.1 has no executed repeated-token adapter proof for RNG-001 UTF-16 0-based half-open reconstruction; UNKNOWN prevents external adoption."]
+        }
+      },
+      "decision": { "mode": "INTERNAL", "reasonCode": "NON_PASS_GATE", "implementationPbi": "PBI-06F" }
+    },
+    {
+      "ruleId": "D007",
+      "candidate": { "package": "textlint-rule-no-double-negative-ja", "version": "2.0.1" },
+      "gates": {
+        "functional": {
+          "status": "UNKNOWN", "command": null, "exitCode": null, "artifact": null,
+          "evidence": ["2026-08-21 candidate 2.0.1 primary source https://github.com/textlint-ja/textlint-rule-no-double-negative-ja documents built-in Japanese double negatives, but D007 configured-pattern fixtures were not executed."]
+        },
+        "configCompatibility": {
+          "status": "FAIL", "command": "npm view textlint-rule-no-double-negative-ja@2.0.1 readme --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d007",
+          "evidence": ["D007 requires patterns:string[]; candidate 2.0.1 documents no configuration option at https://github.com/textlint-ja/textlint-rule-no-double-negative-ja, so arbitrary public patterns cannot be accepted."]
+        },
+        "license": {
+          "status": "PASS", "command": "npm view textlint-rule-no-double-negative-ja@2.0.1 license --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d007",
+          "evidence": ["2026-08-21 npm registry metadata for textlint-rule-no-double-negative-ja@2.0.1 reports MIT; source is https://github.com/textlint-ja/textlint-rule-no-double-negative-ja."]
+        },
+        "maintainability": {
+          "status": "PASS", "command": "npm view textlint-rule-no-double-negative-ja@2.0.1 name version license repository.url time.modified deprecated dist.integrity --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d007",
+          "evidence": ["2026-08-21 registry metadata pins version 2.0.1, repository https://github.com/textlint-ja/textlint-rule-no-double-negative-ja.git, release metadata, integrity, and no deprecation marker."]
+        },
+        "range": {
+          "status": "UNKNOWN", "command": null, "exitCode": null, "artifact": null,
+          "evidence": ["D007 candidate 2.0.1 has no executed configured-pattern adapter proof for RNG-001 UTF-16 0-based half-open reconstruction; UNKNOWN prevents external adoption."]
+        }
+      },
+      "decision": { "mode": "INTERNAL", "reasonCode": "NON_PASS_GATE", "implementationPbi": "PBI-06G" }
+    },
+    {
+      "ruleId": "D008",
+      "candidate": { "package": "textlint-rule-ja-no-redundant-expression", "version": "4.0.1" },
+      "gates": {
+        "functional": {
+          "status": "UNKNOWN", "command": null, "exitCode": null, "artifact": null,
+          "evidence": ["2026-08-21 candidate 4.0.1 primary source https://github.com/textlint-ja/textlint-rule-ja-no-redundant-expression documents built-in redundant expressions, but D008 configured replacement fixtures were not executed."]
+        },
+        "configCompatibility": {
+          "status": "FAIL", "command": "npm view textlint-rule-ja-no-redundant-expression@4.0.1 readme --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d008",
+          "evidence": ["D008 requires replacements:Record<string,string>; candidate 4.0.1 exposes allowNodeTypes and dictOptions for built-in dictionaries at https://github.com/textlint-ja/textlint-rule-ja-no-redundant-expression, not arbitrary replacements."]
+        },
+        "license": {
+          "status": "PASS", "command": "npm view textlint-rule-ja-no-redundant-expression@4.0.1 license --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d008",
+          "evidence": ["2026-08-21 npm registry metadata for textlint-rule-ja-no-redundant-expression@4.0.1 reports MIT; source is https://github.com/textlint-ja/textlint-rule-ja-no-redundant-expression."]
+        },
+        "maintainability": {
+          "status": "PASS", "command": "npm view textlint-rule-ja-no-redundant-expression@4.0.1 name version license repository.url time.modified deprecated dist.integrity --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d008",
+          "evidence": ["2026-08-21 registry metadata pins version 4.0.1, repository https://github.com/textlint-ja/textlint-rule-ja-no-redundant-expression.git, release metadata, integrity, and no deprecation marker."]
+        },
+        "range": {
+          "status": "UNKNOWN", "command": null, "exitCode": null, "artifact": null,
+          "evidence": ["D008 candidate 4.0.1 has no executed replacement-match adapter proof for RNG-001 UTF-16 0-based half-open reconstruction; UNKNOWN prevents external adoption."]
+        }
+      },
+      "decision": { "mode": "INTERNAL", "reasonCode": "NON_PASS_GATE", "implementationPbi": "PBI-06H" }
+    }
+  ]
+}
