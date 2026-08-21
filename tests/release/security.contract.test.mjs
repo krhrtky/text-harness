@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { chmodSync, cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import test from "node:test";
 
 import { detectSecretKinds } from "../../scripts/verify-release.mjs";
@@ -16,22 +16,16 @@ function run(command, args, options = {}) {
 
 function createReleaseFixture() {
   const directory = mkdtempSync(join(tmpdir(), "text-harness-secret-scan-"));
-  const paths = [
-    ".node-version", "AGENTS.md", "README.md", "LICENSE", "SECURITY.md", "CONTRIBUTING.md", "CHANGELOG.md",
-    "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "scripts", "docs", "packages", "skills", "node_modules",
-  ];
-  for (const path of paths) {
-    const source = join(repositoryRoot, path);
-    if (existsSync(source)) cpSync(source, join(directory, path), { recursive: true });
+  const trackedPaths = run("git", ["ls-files", "-z"], { cwd: repositoryRoot }).stdout.split("\0").filter((path) => path && !path.startsWith(".codex/"));
+  for (const path of trackedPaths) {
+    const destination = join(directory, path);
+    mkdirSync(dirname(destination), { recursive: true });
+    cpSync(join(repositoryRoot, path), destination);
   }
   assert.equal(run("git", ["init", "-b", "main"], { cwd: directory }).status, 0);
-  const releasePaths = Object.keys(JSON.parse(readFileSync(join(directory, "docs/release-evidence/release-input.json"), "utf8")).paths);
-  const trackedPaths = [
-    ...releasePaths,
-    "README.md", "LICENSE", "SECURITY.md", "CONTRIBUTING.md", "CHANGELOG.md",
-    "scripts/verify-release.mjs", "docs/release-evidence/dependency-license-scan.json", "docs/release-evidence/security-scan.json",
-  ];
   assert.equal(run("git", ["add", "--", ...trackedPaths], { cwd: directory }).status, 0);
+  const install = run("pnpm", ["install", "--frozen-lockfile"], { cwd: directory, env: { ...process.env, CI: "true" } });
+  assert.equal(install.status, 0, install.stdout + install.stderr);
   return directory;
 }
 
@@ -58,6 +52,7 @@ test("REL-SEC-01 tracked secret scan has zero findings", (context) => {
   });
   const fixtures = [
     ...["p", "o", "u", "s", "r"].map((prefix) => ["GitHub PAT", `gh${prefix}_${"a".repeat(36)}`]),
+    ["GitHub PAT", "github_" + "pat_" + "Ab3_".repeat(22) + "Z9"],
     ["AWS access key", "AK" + "IA" + "A".repeat(16)],
     ["AWS access key", "AS" + "IA" + "B".repeat(16)],
     ...["", "RSA ", "EC ", "OPENSSH ", "ENCRYPTED ", "DSA "].map((kind) => ["PEM private key", `-----BEGIN ${kind}PRIVATE KEY-----`]),
@@ -80,6 +75,9 @@ test("REL-SEC-01 tracked secret scan has zero findings", (context) => {
 
   const directory = createReleaseFixture();
   context.after(() => rmSync(directory, { recursive: true, force: true }));
+  const license = run(process.execPath, ["scripts/verify-release.mjs", "license"], { cwd: directory });
+  assert.equal(license.status, 0, license.stdout + license.stderr);
+  assert.match(license.stdout, /RELEASE_VERIFY_PASS mode=license/);
   for (const [kind, value] of fixtures) {
     for (const result of verifyTrackedFixture(directory, value, 1)) assert.match(result.stderr, new RegExp(`tracked secret findings: tracked-secret\\.txt:${kind}`));
   }
