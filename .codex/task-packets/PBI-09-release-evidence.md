@@ -72,7 +72,7 @@ task_packet:
     installed_notice_paths: ["node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/NOTICE.txt", "node_modules/.pnpm/@typescript+typescript-darwin-arm64@7.0.2/node_modules/@typescript/typescript-darwin-arm64/NOTICE.txt"]
     unique_notice_sha256: ["f5c708b59114507b8b27b48181b6883d106bbca0c1634bbee45b5e344237b66b"]
     notice_distribution_scope: "both packages are dev-only and their binary/NOTICE is not included in the public source repository release; distributable retention obligations=0"
-  mutations: ["REL-M-DROP-INSTALL", "REL-M-INVALID-UPGRADE", "REL-M-DROP-RULE", "REL-M-SEMANTIC-HARD-ERROR", "REL-M-LICENSE-TEXT", "REL-M-COPYRIGHT", "REL-M-LOCK-HASH", "REL-M-LICENSE-COUNT", "REL-M-NOTICE-OMITTED-WITH-OBLIGATION", "REL-M-UNNEEDED-NOTICE", "REL-M-SECRET-FINDING", "REL-M-HIGH-AUDIT", "REL-M-EVIDENCE-SHA-DRIFT", "REL-M-BROKEN-LINK", "REL-M-MISSING-SCRIPT", "REL-M-FALSE-NO-MATCH", "REL-M-CI-SECRET", "REL-M-STALE-EVIDENCE", "REL-M-PLATFORM-LICENSE-NORMALIZATION", "REL-M-LINUX-ARM64-NOTICE", "REL-M-README-NONEXECUTABLE-CLI", "REL-M-GITHUB-PAT", "REL-M-AWS-ACCESS-KEY", "REL-M-PEM-PRIVATE-KEY", "REL-M-AUDIT-EXIT42", "REL-M-AUDIT-UNKNOWN-SUCCESS", "REL-M-CHANGELOG-SELF-LINK", "REL-M-AWS-ASIA-DROP", "REL-M-AWS-19-21-BOUNDARY", "REL-M-PEM-SIX-LABELS", "REL-M-GITHUB-PREFIX-SET", "REL-M-TRACKED-PATH-RUNTIME"]
+  mutations: ["REL-M-DROP-INSTALL", "REL-M-INVALID-UPGRADE", "REL-M-DROP-RULE", "REL-M-SEMANTIC-HARD-ERROR", "REL-M-LICENSE-TEXT", "REL-M-COPYRIGHT", "REL-M-LOCK-HASH", "REL-M-LICENSE-COUNT", "REL-M-NOTICE-OMITTED-WITH-OBLIGATION", "REL-M-UNNEEDED-NOTICE", "REL-M-SECRET-FINDING", "REL-M-HIGH-AUDIT", "REL-M-EVIDENCE-SHA-DRIFT", "REL-M-BROKEN-LINK", "REL-M-MISSING-SCRIPT", "REL-M-FALSE-NO-MATCH", "REL-M-CI-SECRET", "REL-M-STALE-EVIDENCE", "REL-M-PLATFORM-LICENSE-NORMALIZATION", "REL-M-LINUX-ARM64-NOTICE", "REL-M-README-NONEXECUTABLE-CLI", "REL-M-GITHUB-PAT", "REL-M-AWS-ACCESS-KEY", "REL-M-PEM-PRIVATE-KEY", "REL-M-AUDIT-EXIT42", "REL-M-AUDIT-UNKNOWN-SUCCESS", "REL-M-CHANGELOG-SELF-LINK", "REL-M-AWS-ASIA-DROP", "REL-M-AWS-19-21-BOUNDARY", "REL-M-PEM-SIX-LABELS", "REL-M-GITHUB-PREFIX-SET", "REL-M-TRACKED-PATH-RUNTIME", "REL-M-GITHUB-PAT-LONG-TRACKED", "REL-M-FRESH-FROZEN-INSTALL-BYPASS", "REL-M-LICENSE-BEFORE-SECRET-BYPASS"]
   expected_red: null
   red_status: "CONSUMED_GREEN"
   expected_red_history:
@@ -147,6 +147,17 @@ task_packet:
       docs/release-evidence/security-scan.json: "19792186051f5a14ac931c2709291ab546f73035332ad072d174b8afdd702806"
     exact_provider_contract: "GitHub=ghp_/gho_/ghu_/ghs_/ghr_/github_pat_; AWS=(AKIA|ASIA)+[A-Z0-9]{16}=20 chars; PEM=PRIVATE/RSA/EC/OPENSSH/ENCRYPTED/DSA PRIVATE KEY"
     runtime_fixture_contract: "each positive is written to tracked-secret.txt, git-added, then both security and release modes must exit1 with path+kind; approved nonmatches run both modes exit0"
+  secret_test_qga_fix_transition:
+    phase: "POST_IMPLEMENTATION_QGA_FIX_3"
+    product_commit: "e1650bc"
+    command: "python3 .codex/spec-verifiers/verify_pbi09.py"
+    exit: 0
+    signature: "PBI09_GREEN tests=12 pass=12 fail=0 required_titles=12 links=PASS commands=PASS license=PASS notice=ABSENT security=PASS"
+    release_input_sha256: "d2b07d7382d4aa38f1a20bf71baeb1a8e21485fa1845a14db435599df03e0a25"
+    security_test_sha256: "cca8a322d2ae8f9c5171c16fe45ce6b8ca7005e1083504d19a68d88b479095f6"
+    github_pat_contract: "github_pat_ positive uses tracked-secret.txt and both security/release modes; branch/prefix removal mutation must fail"
+    fresh_platform_contract: "temporary workspace copies tracked non-.codex files only, runs pnpm install --frozen-lockfile with CI=true, proves license mode PASS on its platform-local node_modules, then proves every tracked positive is rejected"
+    local_architecture_evidence: "measured locally on Darwin arm64; this proves fresh platform-local reconstruction but does not substitute for native Linux x64 execution"
   red_registration_gate: "PBI開始時、依存PBI完了後かつ実装変更前に、実在する失敗test command・exit code・完全一致signatureを登録する"
   acceptance: ["O-01", "O-05", "O-06D", "O-06H", "O-10", "DEC-005", "README install/update/usage/rules/limitations", "Apache-2.0/NOTICE", "security/license evidence"]
   engineering_constraints: "docs/requirements/engineering-constraints.md A01-A08"

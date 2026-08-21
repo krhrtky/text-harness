@@ -119,6 +119,8 @@ MUTATIONS = (
     "drop-pbi09-aws-asia", "weaken-pbi09-aws-boundary",
     "drop-pbi09-pem-label", "drop-pbi09-github-prefix",
     "drop-pbi09-tracked-runtime",
+    "drop-pbi09-github-pat-tracked", "drop-pbi09-fresh-frozen-install",
+    "drop-pbi09-license-before-secret", "drop-pbi10-native-x64-gate",
 )
 
 def read_state() -> dict:
@@ -1827,12 +1829,14 @@ def pbi09_registration_errors(body: str, oracle_exists: bool, readme_exists: boo
             "f40ee09d91284facb93e95d44559d17128f17d0ede02fd131b88ecab6f375299",
             "b87dee2ccc04785b9ad9f754af1361bdd28f231874f4d19fcb2a457a730d2ec7",
             "19792186051f5a14ac931c2709291ab546f73035332ad072d174b8afdd702806",
+            "cca8a322d2ae8f9c5171c16fe45ce6b8ca7005e1083504d19a68d88b479095f6",
         )
         green = all(value in body for value in (
             "expected_red: null", 'red_status: "CONSUMED_GREEN"',
             'product_commit: "63555bd"',
             'product_commit: "0660ed4"',
             'product_commit: "7057fac"',
+            'product_commit: "e1650bc"',
             'signature: "PBI09_GREEN tests=12 pass=12 fail=0 required_titles=12 links=PASS commands=PASS license=PASS notice=ABSENT security=PASS"',
             'release_input_sha256: "d2b07d7382d4aa38f1a20bf71baeb1a8e21485fa1845a14db435599df03e0a25"',
             "PBI-06〜PBI-08 delivery時=87d2ccaa29bd499df2777ed25614fd3e84a457a79ae5cc1d1581059dd7f62760; PBI-09 Green以降=aaaca4013b1553336b859b4fcf2a54eeb625181d7b10c16a735645565683ea43",
@@ -1841,9 +1845,25 @@ def pbi09_registration_errors(body: str, oracle_exists: bool, readme_exists: boo
             "provider fixtures GitHub PAT/AWS/PEM plus generic assignment; current audit status0 and known-clean phrase; exit42 and unknown-success output both rejected",
             "GitHub=ghp_/gho_/ghu_/ghs_/ghr_/github_pat_; AWS=(AKIA|ASIA)+[A-Z0-9]{16}=20 chars; PEM=PRIVATE/RSA/EC/OPENSSH/ENCRYPTED/DSA PRIVATE KEY",
             "each positive is written to tracked-secret.txt, git-added, then both security and release modes must exit1 with path+kind; approved nonmatches run both modes exit0",
+            "github_pat_ positive uses tracked-secret.txt and both security/release modes; branch/prefix removal mutation must fail",
+            "temporary workspace copies tracked non-.codex files only, runs pnpm install --frozen-lockfile with CI=true, proves license mode PASS on its platform-local node_modules, then proves every tracked positive is rejected",
+            "measured locally on Darwin arm64; this proves fresh platform-local reconstruction but does not substitute for native Linux x64 execution",
         )) and all(digest in body for digest in post_hashes)
         if not green: errors.append("PBI09-POST-IMPLEMENTATION-GREEN")
     return errors
+
+def pbi10_native_x64_errors(body: str) -> list[str]:
+    required = (
+        "local Darwin arm64 PBI-09 Greenはnative Linux x64証拠の代替にならない",
+        "public repository作成・push後、GitHub Actions ubuntu native X64 runner上のfresh checkoutでfrozen installとverify:releaseが成功するまでRELEASE APPROVE禁止",
+        "remote HEAD SHAと同一candidate SHA",
+        'runner: "GitHub Actions ubuntu native X64（emulation/self-reportだけは禁止）"',
+        'command_sequence: ["checkout exact remote main SHA", "corepack pnpm install --frozen-lockfile", "pnpm verify:release"]',
+        'required_evidence: ["repository=krhrtky/text-harness", "branch=main", "remoteHeadSha=candidateSha", "runner.os=Linux", "runner.arch=X64", "workflow run URL", "conclusion=success", "license=PASS", "notice=ABSENT", "security=PASS"]',
+        "run missing/cancelled/skipped/failure、arch不一致、SHA不一致、evidence欠落はRELEASE REQUEST_CHANGES",
+        '"docs/release-evidence/native-x64-release.json"',
+    )
+    return [] if all(value in body for value in required) else ["PBI10-NATIVE-X64-GATE"]
 
 def verify(state: dict) -> list[str]:
     m, t, packets, workflow = state["matrix"], state["text"], state["packets"], state["workflow"]
@@ -2115,6 +2135,9 @@ def verify(state: dict) -> list[str]:
                 (ROOT / ".codex/spec-verifiers/verify_pbi09.py").is_file(),
                 (ROOT / "README.md").is_file(),
             ):
+                need(False, error)
+        if pid == "PBI-10":
+            for error in pbi10_native_x64_errors(body):
                 need(False, error)
         need(not any(x in body for x in ("TBD", "placeholder", "実装開始時に")), f"PACKET-PLACEHOLDER-{name}")
 
@@ -2978,6 +3001,8 @@ def apply_mutation(name: str, state: dict) -> None:
         "drop-pbi09-aws-asia", "weaken-pbi09-aws-boundary",
         "drop-pbi09-pem-label", "drop-pbi09-github-prefix",
         "drop-pbi09-tracked-runtime",
+        "drop-pbi09-github-pat-tracked", "drop-pbi09-fresh-frozen-install",
+        "drop-pbi09-license-before-secret",
     ):
         key = next(k for k, body in packets.items() if packet_id(body) == "PBI-09")
         if name == "drop-pbi09-readme-ownership":
@@ -3020,8 +3045,17 @@ def apply_mutation(name: str, state: dict) -> None:
             packets[key] = packets[key].replace("ghp_/gho_/ghu_/ghs_/ghr_/github_pat_", "ghp_", 1)
         elif name == "drop-pbi09-tracked-runtime":
             packets[key] = packets[key].replace("secret scanはtracked pathをruntimeで読む。", "", 1)
+        elif name == "drop-pbi09-github-pat-tracked":
+            packets[key] = packets[key].replace("github_pat_ positive uses tracked-secret.txt and both security/release modes; branch/prefix removal mutation must fail", "github_pat_ branch untested", 1)
+        elif name == "drop-pbi09-fresh-frozen-install":
+            packets[key] = packets[key].replace("runs pnpm install --frozen-lockfile with CI=true", "reuses parent node_modules", 1)
+        elif name == "drop-pbi09-license-before-secret":
+            packets[key] = packets[key].replace("proves license mode PASS on its platform-local node_modules", "license mode not executed", 1)
         else:
             packets[key] = packets[key].replace('    red_signature: "PBI09_RED missing README.md"\n', "", 1)
+    elif name == "drop-pbi10-native-x64-gate":
+        key = next(k for k, body in packets.items() if packet_id(body) == "PBI-10")
+        packets[key] = packets[key].replace('  native_x64_release_gate:\n', '  native_x64_release_gate_removed:\n', 1).replace('    runner: "GitHub Actions ubuntu native X64（emulation/self-reportだけは禁止）"\n', "", 1)
     else: raise ValueError(name)
 
 def main() -> int:

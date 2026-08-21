@@ -45,7 +45,7 @@ DELIVERY_HASHES = {
     Path("scripts/verify-release.mjs"): "f40ee09d91284facb93e95d44559d17128f17d0ede02fd131b88ecab6f375299",
     Path("tests/release/docs.contract.test.mjs"): "8e5eab2024ea9c7aefb6e68553644fd8bf97298474f385bf571a82c8311d9ef8",
     Path("tests/release/license.contract.test.mjs"): "3c944d9c6e2ff3a6588b02757060f3e389b6ad9192aae48a53cf2f385a10c93e",
-    Path("tests/release/security.contract.test.mjs"): "b87dee2ccc04785b9ad9f754af1361bdd28f231874f4d19fcb2a457a730d2ec7",
+    Path("tests/release/security.contract.test.mjs"): "cca8a322d2ae8f9c5171c16fe45ce6b8ca7005e1083504d19a68d88b479095f6",
     Path("tests/release/commands.contract.test.mjs"): "4943916a60da3e578670b2b00cde75f041e152be5a24eb2545528625488f7a98",
     Path("docs/release-evidence/release-input.json"): "4e9869dce79955efb3c0f9e7cb8b10115fd8b40c60996e8f3e9190568809bed1",
     Path("docs/release-evidence/dependency-license-scan.json"): "e5267bbfa72b7d33a05d35f38245f190cd4ca6dae7d605178802deec89101863",

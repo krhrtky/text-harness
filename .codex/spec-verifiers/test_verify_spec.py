@@ -264,6 +264,10 @@ EXPECTED = {
     "drop-pbi09-pem-label": "PBI09-RELEASE-CONTRACT",
     "drop-pbi09-github-prefix": "PBI09-RELEASE-CONTRACT",
     "drop-pbi09-tracked-runtime": "PBI09-RELEASE-CONTRACT",
+    "drop-pbi09-github-pat-tracked": "PBI09-POST-IMPLEMENTATION-GREEN",
+    "drop-pbi09-fresh-frozen-install": "PBI09-POST-IMPLEMENTATION-GREEN",
+    "drop-pbi09-license-before-secret": "PBI09-POST-IMPLEMENTATION-GREEN",
+    "drop-pbi10-native-x64-gate": "PBI10-NATIVE-X64-GATE",
 }
 
 class SpecVerifierTest(unittest.TestCase):
