@@ -45,6 +45,10 @@ assert PBI06_SPEC and PBI06_SPEC.loader
 verify_pbi06 = importlib.util.module_from_spec(PBI06_SPEC)
 PBI06_SPEC.loader.exec_module(verify_pbi06)
 PBI06A_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi06a.py"
+PBI06A_SPEC = importlib.util.spec_from_file_location("verify_pbi06a", PBI06A_VERIFIER)
+assert PBI06A_SPEC and PBI06A_SPEC.loader
+verify_pbi06a = importlib.util.module_from_spec(PBI06A_SPEC)
+PBI06A_SPEC.loader.exec_module(verify_pbi06a)
 
 EXPECTED = {
     "drop-h113-falsification": "H113-FALSIFICATION",
@@ -120,6 +124,7 @@ EXPECTED = {
     "drop-pbi06a-falsification-title": "PBI06A-ACCEPTANCE-ORACLE",
     "weaken-pbi06a-range": "PBI06A-RULE-CONTRACT",
     "permit-pbi06a-external-dependency": "PBI06A-RULE-CONTRACT",
+    "drop-pbi06a-unchanged-hash": "PBI06A-POST-IMPLEMENTATION-GREEN",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -576,14 +581,27 @@ packages:
                 verify_pbi06.runtime_dependency_errors(temporary_root, {dependency: "0" * 64}),
             )
 
-    def test_pbi06a_registered_red_matches_repository_state(self) -> None:
+    def test_pbi06a_green_transition_preserves_registered_red(self) -> None:
         state = verify_spec.read_state()
         packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-06A")
-        self.assertEqual([], verify_spec.pbi06a_registration_errors(packet, PBI06A_VERIFIER.is_file(), False))
-        first = subprocess.run(["python3", str(PBI06A_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
-        second = subprocess.run(["python3", str(PBI06A_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
-        expected = (1, "PBI06A_RED missing packages/readability-core/src/rules/D001.ts\n", "")
-        self.assertEqual(expected, (first.returncode, first.stdout, first.stderr))
-        self.assertEqual(expected, (second.returncode, second.stdout, second.stderr))
+        pre_implementation = packet.replace(
+            "expected_red: null",
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi06a.py; exit=1; signature=PBI06A_RED missing packages/readability-core/src/rules/D001.ts"',
+            1,
+        ).replace('red_status: "CONSUMED_GREEN"', 'red_status: "REGISTERED_RED"', 1)
+        self.assertEqual([], verify_spec.pbi06a_registration_errors(pre_implementation, True, False))
+        self.assertEqual([], verify_spec.pbi06a_registration_errors(packet, PBI06A_VERIFIER.is_file(), True))
+        green = subprocess.run(["python3", str(PBI06A_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        self.assertEqual(0, green.returncode, green.stdout + green.stderr)
+        summary = re.search(r"PBI06A_GREEN tests=(\d+) pass=(\d+) fail=(\d+) required_titles=(\d+)", green.stdout)
+        self.assertIsNotNone(summary)
+        tests, passed, failed, titles = (int(value) for value in summary.groups())
+        self.assertGreaterEqual(tests, 11)
+        self.assertEqual(tests, passed)
+        self.assertEqual(0, failed)
+        self.assertEqual(11, titles)
+        self.assertEqual([], verify_pbi06a.unchanged_errors())
+        for path, expected in verify_pbi06a.UNCHANGED_HASHES.items():
+            self.assertEqual(expected, hashlib.sha256((ROOT / path).read_bytes()).hexdigest())
 
 if __name__ == "__main__": unittest.main()

@@ -2,6 +2,7 @@
 """PBI-06A D001 style-consistency delivery oracle."""
 from __future__ import annotations
 
+import hashlib
 import re
 import subprocess
 from pathlib import Path
@@ -27,6 +28,24 @@ TEST_COMMAND = (
     "--filter", "@text-harness/readability-core", "--fail-if-no-match",
     "exec", "node", "--test", "test/deterministic/D001.contract.test.ts",
 )
+UNCHANGED_HASHES = {
+    Path("package.json"): "87d2ccaa29bd499df2777ed25614fd3e84a457a79ae5cc1d1581059dd7f62760",
+    Path("pnpm-lock.yaml"): "f5cc3eea2d7a5c7e04810e44f6d31798094437e54bdfa519112788bdb0f773ba",
+    Path("packages/readability-core/package.json"): "996ac24d4b0af2137c09c7ee84934fbd3db368c6db45347325441331685e9f55",
+    Path("packages/readability-core/src/config/validate.ts"): "1ba8045cf518f846a436423fa4b1c725597a385f96121969b9d6721655a5724b",
+    Path("packages/readability-core/src/types/rules.ts"): "3b6681dc4632b806a734fa34156434e933d49494de46e65c42f65f3a6ce360de",
+    Path("packages/readability-core/src/types/findings.ts"): "760fb0b3045423a9900f554e33529a81fb2d98548f873b269991fc14697b9a26",
+    Path("packages/readability-core/src/types/range.ts"): "f77039d0cc681c2fd0564da9e245c92961c21273cfa573a496cd9f0aec973de5",
+    Path("packages/readability-core/src/types/errors.ts"): "0d4f56962f75bc214964afa4aadd9de8e7c9627cf7bdb09f19892b6670cc2701",
+}
+
+
+def unchanged_errors(root: Path = ROOT) -> list[str]:
+    return [
+        str(path) for path, expected in UNCHANGED_HASHES.items()
+        if not (root / path).is_file()
+        or hashlib.sha256((root / path).read_bytes()).hexdigest() != expected
+    ]
 
 
 def main() -> int:
@@ -41,6 +60,10 @@ def main() -> int:
         return 1
     if 'export { analyzeD001 } from "./rules/D001.ts"' not in index:
         print("PBI06A_FAIL public export missing D001")
+        return 1
+    drift = unchanged_errors()
+    if drift:
+        print("PBI06A_FAIL forbidden_path_drift " + ",".join(drift))
         return 1
     result = subprocess.run(TEST_COMMAND, cwd=ROOT, text=True, capture_output=True)
     output = result.stdout + result.stderr

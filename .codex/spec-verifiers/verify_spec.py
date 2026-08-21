@@ -41,6 +41,7 @@ MUTATIONS = (
     "drift-pbi06-maint-command", "drift-pbi06-integrity",
     "drop-pbi06a-analyze-ownership", "drop-pbi06a-no-match-guard",
     "drop-pbi06a-falsification-title", "weaken-pbi06a-range", "permit-pbi06a-external-dependency",
+    "drop-pbi06a-unchanged-hash",
 )
 
 def read_state() -> dict:
@@ -790,6 +791,34 @@ def pbi06a_registration_errors(body: str, oracle_exists: bool, source_exists: bo
         ))
         if not registered:
             errors.append("PBI06A-PRE-IMPLEMENTATION-RED")
+        return errors
+    green = all(value in body for value in (
+        'expected_red: null', 'red_status: "CONSUMED_GREEN"',
+        'phase: "PRE_IMPLEMENTATION"',
+        'command: "python3 .codex/spec-verifiers/verify_pbi06a.py"', 'exit: 1',
+        'stdout: "PBI06A_RED missing packages/readability-core/src/rules/D001.ts"',
+        'stderr: "<empty>"', 'measured_runs: 2',
+        'green_transition:', 'exit: 0',
+        'source_file: "packages/readability-core/src/rules/D001.ts"',
+        'analyze_registration: "D001 dispatch with validated style and severity"',
+        'public_export: "analyzeD001"',
+        'fixture_contract: "P01/P02/P03, N01/N02, B01/B02, C01, F01, M01, D01 all executable"',
+        'range_contract: "B01 reconstructs complete offending sentence with RNG-001 UTF-16 half-open range"',
+        'falsification_contract: "F01 ignores quotation-internal endings; M01 rejects baseline-majority, range, and quotation mutants"',
+        'package.json: "87d2ccaa29bd499df2777ed25614fd3e84a457a79ae5cc1d1581059dd7f62760"',
+        'pnpm-lock.yaml: "f5cc3eea2d7a5c7e04810e44f6d31798094437e54bdfa519112788bdb0f773ba"',
+        'packages/readability-core/package.json: "996ac24d4b0af2137c09c7ee84934fbd3db368c6db45347325441331685e9f55"',
+        'packages/readability-core/src/config/validate.ts: "1ba8045cf518f846a436423fa4b1c725597a385f96121969b9d6721655a5724b"',
+        'packages/readability-core/src/types/rules.ts: "3b6681dc4632b806a734fa34156434e933d49494de46e65c42f65f3a6ce360de"',
+        'packages/readability-core/src/types/findings.ts: "760fb0b3045423a9900f554e33529a81fb2d98548f873b269991fc14697b9a26"',
+        'packages/readability-core/src/types/range.ts: "f77039d0cc681c2fd0564da9e245c92961c21273cfa573a496cd9f0aec973de5"',
+        'packages/readability-core/src/types/errors.ts: "0d4f56962f75bc214964afa4aadd9de8e7c9627cf7bdb09f19892b6670cc2701"',
+        'minimum_tests: 11', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 11',
+        'signature: "PBI06A_GREEN tests>=11 pass=tests fail=0 required_titles=11"',
+        'initial_da_green: "tests 11; pass 11; fail 0; required_titles 11; DA commit ee13308b"',
+    ))
+    if not green:
+        errors.append("PBI06A-POST-IMPLEMENTATION-GREEN")
     return errors
 
 def verify(state: dict) -> list[str]:
@@ -1321,6 +1350,7 @@ def apply_mutation(name: str, state: dict) -> None:
     elif name in (
         "drop-pbi06a-analyze-ownership", "drop-pbi06a-no-match-guard",
         "drop-pbi06a-falsification-title", "weaken-pbi06a-range", "permit-pbi06a-external-dependency",
+        "drop-pbi06a-unchanged-hash",
     ):
         key = next(k for k, body in packets.items() if packet_id(body) == "PBI-06A")
         if name == "drop-pbi06a-analyze-ownership":
@@ -1331,10 +1361,16 @@ def apply_mutation(name: str, state: dict) -> None:
             packets[key] = packets[key].replace('"D001-F01 quotation-internal sentence endings do not create false style mixing", ', "", 1)
         elif name == "weaken-pbi06a-range":
             packets[key] = packets[key].replace("[8,17)", "whole document", 1)
-        else:
+        elif name == "permit-pbi06a-external-dependency":
             packets[key] = packets[key].replace(
                 "PBI-06 decision INTERNAL/PBI-06A; package manifests and lockfile unchanged",
                 "external dependency permitted",
+                1,
+            )
+        else:
+            packets[key] = packets[key].replace(
+                '      packages/readability-core/src/config/validate.ts: "1ba8045cf518f846a436423fa4b1c725597a385f96121969b9d6721655a5724b"\n',
+                "",
                 1,
             )
     else: raise ValueError(name)
