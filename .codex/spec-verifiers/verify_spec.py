@@ -54,6 +54,7 @@ MUTATIONS = (
     "weaken-pbi06c-range", "permit-pbi06c-external-dependency",
     "drop-pbi06c-config-ownership", "drop-pbi06c-empty-pairs-title",
     "permit-pbi06c-empty-pairs", "drop-pbi06c-config-transition",
+    "drift-pbi06c-post-config-hash",
 )
 
 def read_state() -> dict:
@@ -1016,7 +1017,26 @@ def pbi06c_registration_errors(body: str, oracle_exists: bool, source_exists: bo
         if not registered:
             errors.append("PBI06C-PRE-IMPLEMENTATION-RED")
         return errors
-    if 'expected_red: null' not in body or 'red_status: "CONSUMED_GREEN"' not in body or 'green_transition:' not in body:
+    green = all(value in body for value in (
+        'expected_red: null', 'red_status: "CONSUMED_GREEN"',
+        'phase: "PRE_IMPLEMENTATION"',
+        'stdout: "PBI06C_RED missing packages/readability-core/src/rules/D003.ts"',
+        'stderr: "<empty>"', 'measured_runs: 2',
+        'green_transition:', 'command: "python3 .codex/spec-verifiers/verify_pbi06c.py"', 'exit: 0',
+        'source_file: "packages/readability-core/src/rules/D003.ts"',
+        'analyze_registration: "D003 dispatch with validated pairs and severity"',
+        'public_export: "analyzeD003"',
+        'fixture_contract: "P01/P02/P03, N01/N02, B01/B02/B03, C01/C02, F01, M01, D01 all executable"',
+        'empty_pairs_contract: "public analyze with D003 pairs=[] throws ConfigurationError exitCode=2 before rule execution"',
+        'historical_pbi06a_pbi06b: "1ba8045cf518f846a436423fa4b1c725597a385f96121969b9d6721655a5724b"',
+        'post_pbi06c: "feae0845be487cd3d502abf0ba54a6721abaec5e907a4ddf9e8930ae6c3a80d4"',
+        'transition_reason: "validatePairs rejects empty pair arrays; no other inherited config behavior changes"',
+        'unchanged_contract: "types, root package, core package, lock, findings/range/errors hashes remain inherited exact values"',
+        'minimum_tests: 31', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 13',
+        'signature: "PBI06C_GREEN tests>=31 pass=tests fail=0 required_titles=13"',
+        'da_commit: "6ab8229"',
+    ))
+    if not green:
         errors.append("PBI06C-POST-IMPLEMENTATION-GREEN")
     return errors
 
@@ -1658,6 +1678,7 @@ def apply_mutation(name: str, state: dict) -> None:
         "weaken-pbi06c-range", "permit-pbi06c-external-dependency",
         "drop-pbi06c-config-ownership", "drop-pbi06c-empty-pairs-title",
         "permit-pbi06c-empty-pairs", "drop-pbi06c-config-transition",
+        "drift-pbi06c-post-config-hash",
     ):
         key = next(k for k, body in packets.items() if packet_id(body) == "PBI-06C")
         if name == "drop-pbi06c-analyze-ownership":
@@ -1682,8 +1703,14 @@ def apply_mutation(name: str, state: dict) -> None:
             packets[key] = packets[key].replace(', "D003-C02 empty pairs fail before analysis with ConfigurationError exit 2"', "", 1)
         elif name == "permit-pbi06c-empty-pairs":
             packets[key] = packets[key].replace("throws ConfigurationError with exitCode=2", "returns zero findings", 1)
-        else:
+        elif name == "drop-pbi06c-config-transition":
             packets[key] = packets[key].replace("post-state exact hash is recorded only after Green", "post-state hash is not recorded", 1)
+        else:
+            packets[key] = packets[key].replace(
+                "feae0845be487cd3d502abf0ba54a6721abaec5e907a4ddf9e8930ae6c3a80d4",
+                "0" * 64,
+                1,
+            )
     else: raise ValueError(name)
 
 def main() -> int:

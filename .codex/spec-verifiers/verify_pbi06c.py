@@ -40,7 +40,7 @@ def inherited_contract_error() -> str | None:
         return "dependency-oracle-unavailable"
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    errors = [error for error in module.unchanged_errors() if error != "packages/readability-core/src/config/validate.ts"]
+    errors = module.unchanged_errors()
     return ",".join(errors) if errors else None
 
 

@@ -156,6 +156,7 @@ EXPECTED = {
     "drop-pbi06c-empty-pairs-title": "PBI06C-ACCEPTANCE-ORACLE",
     "permit-pbi06c-empty-pairs": "PBI06C-RULE-CONTRACT",
     "drop-pbi06c-config-transition": "PBI06C-RULE-CONTRACT",
+    "drift-pbi06c-post-config-hash": "PBI06C-POST-IMPLEMENTATION-GREEN",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -632,8 +633,21 @@ packages:
         self.assertEqual(0, failed)
         self.assertEqual(11, titles)
         self.assertEqual([], verify_pbi06a.unchanged_errors())
+        self.assertEqual(
+            "1ba8045cf518f846a436423fa4b1c725597a385f96121969b9d6721655a5724b",
+            verify_pbi06a.HISTORICAL_CONFIG_HASH,
+        )
         for path, expected in verify_pbi06a.UNCHANGED_HASHES.items():
             self.assertEqual(expected, hashlib.sha256((ROOT / path).read_bytes()).hexdigest())
+        with tempfile.TemporaryDirectory() as directory:
+            temporary_root = Path(directory)
+            for path, expected in verify_pbi06a.UNCHANGED_HASHES.items():
+                target = temporary_root / path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes((ROOT / path).read_bytes())
+            config = temporary_root / "packages/readability-core/src/config/validate.ts"
+            config.write_text(config.read_text() + "\n// unauthorized drift\n")
+            self.assertEqual(["packages/readability-core/src/config/validate.ts"], verify_pbi06a.unchanged_errors(temporary_root))
 
     def test_pbi06b_independent_probe_and_fixture_red_contract(self) -> None:
         state = verify_spec.read_state()
@@ -723,13 +737,24 @@ test("D002-B03 multi-mark combining sequence reports exact source range", () => 
             fixture_runner.replace("const [finding] = analyze(input, config());", "const finding = { range: fixtures.multiMark.expectedRange };", 1)
         ))
 
-    def test_pbi06c_registered_red_is_exact_and_reproducible(self) -> None:
+    def test_pbi06c_red_history_and_green_transition(self) -> None:
         state = verify_spec.read_state()
         packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-06C")
-        self.assertEqual([], verify_spec.pbi06c_registration_errors(packet, PBI06C_VERIFIER.is_file(), False))
-        expected = (1, "PBI06C_RED missing packages/readability-core/src/rules/D003.ts\n", "")
-        for _ in range(2):
-            result = subprocess.run(["python3", str(PBI06C_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
-            self.assertEqual(expected, (result.returncode, result.stdout, result.stderr))
+        pre_implementation = packet.replace(
+            "expected_red: null",
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi06c.py; exit=1; signature=PBI06C_RED missing packages/readability-core/src/rules/D003.ts"',
+            1,
+        ).replace('red_status: "CONSUMED_GREEN"', 'red_status: "REGISTERED_RED"', 1)
+        self.assertEqual([], verify_spec.pbi06c_registration_errors(pre_implementation, True, False))
+        self.assertEqual([], verify_spec.pbi06c_registration_errors(packet, PBI06C_VERIFIER.is_file(), True))
+        green = subprocess.run(["python3", str(PBI06C_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        self.assertEqual(0, green.returncode, green.stdout + green.stderr)
+        summary = re.search(r"PBI06C_GREEN tests=(\d+) pass=(\d+) fail=(\d+) required_titles=(\d+)", green.stdout)
+        self.assertIsNotNone(summary)
+        tests, passed, failed, titles = (int(value) for value in summary.groups())
+        self.assertGreaterEqual(tests, 31)
+        self.assertEqual(tests, passed)
+        self.assertEqual(0, failed)
+        self.assertEqual(13, titles)
 
 if __name__ == "__main__": unittest.main()

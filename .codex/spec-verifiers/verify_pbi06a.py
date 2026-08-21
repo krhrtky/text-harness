@@ -28,11 +28,13 @@ TEST_COMMAND = (
     "--filter", "@text-harness/readability-core", "--fail-if-no-match",
     "exec", "node", "--test", "test/deterministic/D001.contract.test.ts",
 )
+HISTORICAL_CONFIG_HASH = "1ba8045cf518f846a436423fa4b1c725597a385f96121969b9d6721655a5724b"
+POST_PBI06C_CONFIG_HASH = "feae0845be487cd3d502abf0ba54a6721abaec5e907a4ddf9e8930ae6c3a80d4"
 UNCHANGED_HASHES = {
     Path("package.json"): "87d2ccaa29bd499df2777ed25614fd3e84a457a79ae5cc1d1581059dd7f62760",
     Path("pnpm-lock.yaml"): "f5cc3eea2d7a5c7e04810e44f6d31798094437e54bdfa519112788bdb0f773ba",
     Path("packages/readability-core/package.json"): "996ac24d4b0af2137c09c7ee84934fbd3db368c6db45347325441331685e9f55",
-    Path("packages/readability-core/src/config/validate.ts"): "1ba8045cf518f846a436423fa4b1c725597a385f96121969b9d6721655a5724b",
+    Path("packages/readability-core/src/config/validate.ts"): POST_PBI06C_CONFIG_HASH,
     Path("packages/readability-core/src/types/rules.ts"): "3b6681dc4632b806a734fa34156434e933d49494de46e65c42f65f3a6ce360de",
     Path("packages/readability-core/src/types/findings.ts"): "760fb0b3045423a9900f554e33529a81fb2d98548f873b269991fc14697b9a26",
     Path("packages/readability-core/src/types/range.ts"): "f77039d0cc681c2fd0564da9e245c92961c21273cfa573a496cd9f0aec973de5",
