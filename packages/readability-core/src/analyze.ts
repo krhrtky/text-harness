@@ -4,6 +4,7 @@ import { analyzeD002 } from "./rules/D002.ts";
 import { analyzeD003 } from "./rules/D003.ts";
 import { analyzeD004 } from "./rules/D004.ts";
 import { analyzeD005 } from "./rules/D005.ts";
+import { analyzeD006 } from "./rules/D006.ts";
 import { analyzeH101 } from "./rules/H101.ts";
 import { analyzeH102 } from "./rules/H102.ts";
 import { analyzeH103 } from "./rules/H103.ts";
@@ -30,6 +31,7 @@ export function analyze(input: unknown, config: ReadabilityConfig | ValidatedRea
       case "D003": return analyzeD003(input, rule.pairs ?? [], rule.severity);
       case "D004": return analyzeD004(input, rule.forbiddenTerms ?? [], rule.severity);
       case "D005": return analyzeD005(input, rule.terminology ?? {}, rule.severity);
+      case "D006": return analyzeD006(input, rule.maxConsecutive, rule.severity);
       case "H101": return threshold === undefined ? [] : analyzeH101(input, threshold, excludeCodeBlocks);
       case "H102": return threshold === undefined ? [] : analyzeH102(input, threshold, excludeCodeBlocks);
       case "H103": return threshold === undefined ? [] : analyzeH103(input, threshold, excludeCodeBlocks);
