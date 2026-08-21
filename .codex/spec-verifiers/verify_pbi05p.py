@@ -29,6 +29,7 @@ REQUIRED_TITLES = (
     "P05P-F02 raw text cannot substitute for StringSource projection",
     "P05P-F03 document range cannot substitute for Paragraph range",
     "P05P-D01 identical input returns deterministic projections",
+    "P05P-F04 splitAST cannot substitute for splitting projected text",
 )
 TEST_COMMAND = (
     "mise", "x", "node@24.19.0", "--", "corepack", "pnpm",
@@ -71,6 +72,30 @@ def dependency_error() -> str | None:
     return None
 
 
+def f04_source_errors(source: str) -> list[str]:
+    match = re.search(
+        r'test\("P05P-F04 splitAST cannot substitute for splitting projected text", \(\) => \{(?P<body>.*?)\n\}\);',
+        source,
+        re.DOTALL,
+    )
+    if match is None:
+        return ["missing-test"]
+    body = match.group("body")
+    errors = []
+    if "assert.ok(true)" in body:
+        errors.append("placeholder")
+    required = {
+        "counterexample-input": 'const input = "**一。** 二。";',
+        "projection": "const [paragraph] = project(input);",
+        "ast": "const astParagraph = parse(input).children[0]!;",
+        "projected-text": 'assert.equal(paragraph?.text, "一。 二。");',
+        "split-oracle": 'assert.equal(split(paragraph!.text).filter(({ type }) => type === "Sentence").length, 2);',
+        "splitAST-oracle": 'assert.equal(splitAST(astParagraph).children.filter(({ type }) => type === "Sentence").length, 1);',
+    }
+    errors.extend(name for name, fragment in required.items() if fragment not in body)
+    return errors
+
+
 def main() -> int:
     dependency = dependency_error()
     if dependency is not None:
@@ -83,6 +108,10 @@ def main() -> int:
         if not (ROOT / required).is_file():
             print(f"PBI05P_RED missing {required}")
             return 1
+    f04_errors = f04_source_errors((ROOT / TEST).read_text())
+    if f04_errors:
+        print("PBI05P_FAIL F04 " + ",".join(f04_errors))
+        return 1
     index = (ROOT / "packages/readability-core/src/index.ts").read_text()
     if 'export { projectParagraphs } from "./paragraph/project.ts"' not in index:
         print("PBI05P_FAIL public export missing projectParagraphs")

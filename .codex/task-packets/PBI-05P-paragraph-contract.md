@@ -43,9 +43,10 @@ task_packet:
     minimum_tests: 13
     pass_equals_tests: true
     fail: 0
-    required_titles: 12
-    required_title_text: ["P05P-S01 list item paragraphs are independent in source order", "P05P-S02 blockquote paragraphs are included", "P05P-X01 header code table and HTML blocks are excluded", "P05P-P01 projection removes delimiters link destinations and HTML tags", "P05P-P02 projection retains visible labels alt inline code and decoded entities", "P05P-R01 ranges are UTF-16 zero-based half-open and slice raw", "P05P-R02 blockquote continuation markers remain in raw range", "P05P-U01 emoji and combining marks preserve UTF-16 ranges", "P05P-F01 blank-line splitting cannot substitute for AST paragraphs", "P05P-F02 raw text cannot substitute for StringSource projection", "P05P-F03 document range cannot substitute for Paragraph range", "P05P-D01 identical input returns deterministic projections"]
-    green_signature: "PBI05P_GREEN tests>=13 pass=tests fail=0 required_titles=12"
+    required_titles: 13
+    required_title_text: ["P05P-S01 list item paragraphs are independent in source order", "P05P-S02 blockquote paragraphs are included", "P05P-X01 header code table and HTML blocks are excluded", "P05P-P01 projection removes delimiters link destinations and HTML tags", "P05P-P02 projection retains visible labels alt inline code and decoded entities", "P05P-R01 ranges are UTF-16 zero-based half-open and slice raw", "P05P-R02 blockquote continuation markers remain in raw range", "P05P-U01 emoji and combining marks preserve UTF-16 ranges", "P05P-F01 blank-line splitting cannot substitute for AST paragraphs", "P05P-F02 raw text cannot substitute for StringSource projection", "P05P-F03 document range cannot substitute for Paragraph range", "P05P-D01 identical input returns deterministic projections", "P05P-F04 splitAST cannot substitute for splitting projected text"]
+    f04_substantive_oracle: "input **一。** 二。; project text 一。 二。; split(projected text) Sentence count 2; splitAST(Paragraph) Sentence count 1; assert.ok(true) forbidden"
+    green_signature: "PBI05P_GREEN tests>=13 pass=tests fail=0 required_titles=13"
   expected_red: null
   red_status: "CONSUMED_GREEN"
   expected_red_history:
@@ -66,16 +67,19 @@ task_packet:
     minimum_tests: 13
     pass_equals_tests: true
     fail: 0
-    required_titles: 12
-    signature: "PBI05P_GREEN tests>=13 pass=tests fail=0 required_titles=12"
+    required_titles: 13
+    f04_substantive_oracle: "projected split=2 and splitAST=1; no-op assertion or either assertion removal is invalid"
+    signature: "PBI05P_GREEN tests>=13 pass=tests fail=0 required_titles=13"
   green_history:
     initial_da_green: "tests 13; pass 13; fail 0; required_titles 12"
+    f04_contract_green: "tests 13; pass 13; fail 0; required_titles 13"
   red_registration_gate: "PBI開始時、依存PBI完了後かつ実装変更前に、実在する失敗test command・exit code・完全一致signatureを登録する"
   engineering_constraints: "docs/requirements/engineering-constraints.md"
   falsification:
     - "blank-line document split substitute"
     - "paragraph.raw projection substitute"
     - "document-wide range substitute"
+    - "splitAST projection substitute"
   done_evidence:
     - "全structure/projection/range fixtureの結果"
     - "各substituteで最低1fixtureがREDになる結果"

@@ -81,6 +81,9 @@ EXPECTED = {
     "drop-pbi05p-no-match-guard": "PBI05P-ACCEPTANCE-ORACLE",
     "drop-pbi05p-projection-title": "PBI05P-ACCEPTANCE-ORACLE",
     "permit-pbi05p-raw-projection": "PBI05P-FALSIFICATION",
+    "drop-pbi05p-f04-title": "PBI05P-ACCEPTANCE-ORACLE",
+    "placeholder-pbi05p-f04-body": "PBI05P-F04-SUBSTANTIVE-ORACLE",
+    "drop-pbi05p-f04-oracle": "PBI05P-F04-SUBSTANTIVE-ORACLE",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -385,6 +388,18 @@ packages:
         self.assertGreaterEqual(tests, 13)
         self.assertEqual(tests, passed)
         self.assertEqual(0, failed)
-        self.assertEqual(12, titles)
+        self.assertEqual(13, titles)
+        source = (ROOT / "packages/readability-core/test/paragraph/contract.test.ts").read_text()
+        self.assertEqual([], verify_pbi05p.f04_source_errors(source))
+        placeholder = re.sub(
+            r'(test\("P05P-F04 splitAST cannot substitute for splitting projected text", \(\) => \{).*?(\n\}\);)',
+            r'\1\n  assert.ok(true);\2', source, count=1, flags=re.DOTALL,
+        )
+        self.assertIn("placeholder", verify_pbi05p.f04_source_errors(placeholder))
+        no_oracle = source.replace(
+            '  assert.equal(splitAST(astParagraph).children.filter(({ type }) => type === "Sentence").length, 1);\n',
+            "", 1,
+        )
+        self.assertIn("splitAST-oracle", verify_pbi05p.f04_source_errors(no_oracle))
 
 if __name__ == "__main__": unittest.main()

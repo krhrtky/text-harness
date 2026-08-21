@@ -30,6 +30,7 @@ MUTATIONS = (
     "drop-pbi05-continuity-title", "permit-pbi05-bridge",
     "drop-pbi05p-package-ownership", "drift-pbi05p-string-version",
     "drop-pbi05p-no-match-guard", "drop-pbi05p-projection-title", "permit-pbi05p-raw-projection",
+    "drop-pbi05p-f04-title", "placeholder-pbi05p-f04-body", "drop-pbi05p-f04-oracle",
 )
 
 def read_state() -> dict:
@@ -51,6 +52,7 @@ def read_state() -> dict:
         "text": {k: (ROOT / v).read_text() for k, v in rels.items()},
         "packets": packets,
         "workflow": json.loads((ROOT / ".codex/workflow-state.json").read_text()),
+        "pbi05p_test": (ROOT / "packages/readability-core/test/paragraph/contract.test.ts").read_text(),
     }
 
 def packet_id(body: str) -> str:
@@ -425,16 +427,19 @@ def pbi05p_registration_errors(body: str, oracle_exists: bool, implementation_ex
         'exact_test_file: "packages/readability-core/test/paragraph/contract.test.ts"',
         'source_file: "packages/readability-core/src/paragraph/project.ts"',
         'public_export: "projectParagraphs"',
-        'minimum_tests: 13', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 12',
+        'minimum_tests: 13', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 13',
         '"P05P-P01 projection removes delimiters link destinations and HTML tags"',
         '"P05P-P02 projection retains visible labels alt inline code and decoded entities"',
         '"P05P-R01 ranges are UTF-16 zero-based half-open and slice raw"',
-        'green_signature: "PBI05P_GREEN tests>=13 pass=tests fail=0 required_titles=12"',
+        '"P05P-F04 splitAST cannot substitute for splitting projected text"',
+        'f04_substantive_oracle: "input **一。** 二。; project text 一。 二。; split(projected text) Sentence count 2; splitAST(Paragraph) Sentence count 1; assert.ok(true) forbidden"',
+        'green_signature: "PBI05P_GREEN tests>=13 pass=tests fail=0 required_titles=13"',
     ))
     falsification = all(value in body for value in (
         '"blank-line document split substitute"',
         '"paragraph.raw projection substitute"',
         '"document-wide range substitute"',
+        '"splitAST projection substitute"',
     ))
     errors = []
     if not ownership:
@@ -467,9 +472,11 @@ def pbi05p_registration_errors(body: str, oracle_exists: bool, implementation_ex
         'source_file: "packages/readability-core/src/paragraph/project.ts"',
         'exact_test_file: "packages/readability-core/test/paragraph/contract.test.ts"',
         'public_export: "projectParagraphs"',
-        'minimum_tests: 13', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 12',
-        'signature: "PBI05P_GREEN tests>=13 pass=tests fail=0 required_titles=12"',
+        'minimum_tests: 13', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 13',
+        'f04_substantive_oracle: "projected split=2 and splitAST=1; no-op assertion or either assertion removal is invalid"',
+        'signature: "PBI05P_GREEN tests>=13 pass=tests fail=0 required_titles=13"',
         'initial_da_green: "tests 13; pass 13; fail 0; required_titles 12"',
+        'f04_contract_green: "tests 13; pass 13; fail 0; required_titles 13"',
     ))
     if not green:
         errors.append("PBI05P-POST-IMPLEMENTATION-GREEN")
@@ -480,6 +487,19 @@ def verify(state: dict) -> list[str]:
     errors: list[str] = []
     def need(ok: bool, code: str) -> None:
         if not ok: errors.append(code)
+
+    f04_source = state["pbi05p_test"]
+    f04_fragments = (
+        'test("P05P-F04 splitAST cannot substitute for splitting projected text"',
+        'const input = "**一。** 二。";',
+        'assert.equal(paragraph?.text, "一。 二。");',
+        'assert.equal(split(paragraph!.text).filter(({ type }) => type === "Sentence").length, 2);',
+        'assert.equal(splitAST(astParagraph).children.filter(({ type }) => type === "Sentence").length, 1);',
+    )
+    need(
+        "assert.ok(true)" not in f04_source and all(fragment in f04_source for fragment in f04_fragments),
+        "PBI05P-F04-SUBSTANTIVE-ORACLE",
+    )
 
     # Matrix -> specification: stable IDs, exact meanings, thresholds, range and operations.
     canonical_range = {"contractId":"RNG-001","unit":"UTF-16 code unit","interval":"[start,end)","origin":0,"oracle":"input.slice(start,end)"}
@@ -794,6 +814,7 @@ def apply_mutation(name: str, state: dict) -> None:
     elif name in (
         "drop-pbi05p-package-ownership", "drift-pbi05p-string-version",
         "drop-pbi05p-no-match-guard", "drop-pbi05p-projection-title", "permit-pbi05p-raw-projection",
+        "drop-pbi05p-f04-title",
     ):
         key = next(k for k, body in packets.items() if packet_id(body) == "PBI-05P")
         if name == "drop-pbi05p-package-ownership":
@@ -810,8 +831,26 @@ def apply_mutation(name: str, state: dict) -> None:
             packets[key] = packets[key].replace(
                 '"P05P-P01 projection removes delimiters link destinations and HTML tags", ', "", 1
             )
-        else:
+        elif name == "permit-pbi05p-raw-projection":
             packets[key] = packets[key].replace("paragraph.raw projection substitute", "paragraph.raw projection permitted", 1)
+        else:
+            packets[key] = packets[key].replace(
+                ', "P05P-F04 splitAST cannot substitute for splitting projected text"', "", 1
+            )
+    elif name == "placeholder-pbi05p-f04-body":
+        state["pbi05p_test"] = re.sub(
+            r'(test\("P05P-F04 splitAST cannot substitute for splitting projected text", \(\) => \{).*?(\n\}\);)',
+            r'\1\n  assert.ok(true);\2',
+            state["pbi05p_test"],
+            count=1,
+            flags=re.DOTALL,
+        )
+    elif name == "drop-pbi05p-f04-oracle":
+        state["pbi05p_test"] = state["pbi05p_test"].replace(
+            '  assert.equal(splitAST(astParagraph).children.filter(({ type }) => type === "Sentence").length, 1);\n',
+            "",
+            1,
+        )
     else: raise ValueError(name)
 
 def main() -> int:
