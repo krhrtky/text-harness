@@ -30,6 +30,9 @@ EXPECTED = {
     "drop-d003-ascii-pair": "D003-PAIR-CONTRACT",
     "drift-mvp-range": "RANGE-MVP-MATRIX",
     "drift-dec002-range": "RANGE-DEC002-MATRIX",
+    "drop-pbi02-manifest-ownership": "PBI02-OWNERSHIP",
+    "drop-pbi02-no-match-guard": "PBI02-ACCEPTANCE-ORACLE",
+    "drop-pbi02-required-title": "PBI02-ACCEPTANCE-ORACLE",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -84,15 +87,37 @@ class SpecVerifierTest(unittest.TestCase):
     def test_pbi02_registered_red_matches_pre_implementation_baseline(self) -> None:
         state = verify_spec.read_state()
         packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-02")
+        oracle = ROOT / ".codex/spec-verifiers/verify_pbi02.py"
+        package_manifest = ROOT / "packages/readability-core/package.json"
         contract_test = ROOT / "packages/readability-core/test/contract/core.contract.test.ts"
-        self.assertEqual([], verify_spec.pbi02_registration_errors(packet, contract_test.is_file()))
+        self.assertEqual(
+            [],
+            verify_spec.pbi02_registration_errors(
+                packet, oracle.is_file(), package_manifest.is_file(), contract_test.is_file()
+            ),
+        )
         for _ in range(2):
             red = subprocess.run(
-                ["test", "-f", "packages/readability-core/test/contract/core.contract.test.ts"],
+                ["python3", str(oracle)],
                 cwd=ROOT,
                 text=True,
                 capture_output=True,
             )
-            self.assertEqual((1, "", ""), (red.returncode, red.stdout, red.stderr))
+            self.assertEqual(
+                (1, "PBI02_RED missing packages/readability-core/package.json\n", ""),
+                (red.returncode, red.stdout, red.stderr),
+            )
+        no_match = subprocess.run(
+            [
+                "mise", "x", "node@24.19.0", "--", "corepack", "pnpm",
+                "--filter", "@text-harness/readability-core", "--fail-if-no-match",
+                "exec", "node", "--test", "test/contract/core.contract.test.ts",
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(1, no_match.returncode)
+        self.assertIn("No projects matched the filters", no_match.stdout + no_match.stderr)
 
 if __name__ == "__main__": unittest.main()

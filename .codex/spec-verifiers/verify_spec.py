@@ -15,6 +15,8 @@ MUTATIONS = (
     "drop-d004-severity", "drop-agents-A05", "drop-expected-red-signature",
     "h102-off-by-one", "swap-semantic-id", "drop-d003-ascii-pair",
     "drift-mvp-range", "drift-dec002-range",
+    "drop-pbi02-manifest-ownership", "drop-pbi02-no-match-guard",
+    "drop-pbi02-required-title",
 )
 
 def read_state() -> dict:
@@ -89,18 +91,48 @@ def pbi01_transition_errors(body: str, executable_exists: bool) -> list[str]:
     ))
     return [] if green else ["PBI01-POST-IMPLEMENTATION-GREEN"]
 
-def pbi02_registration_errors(body: str, contract_test_exists: bool) -> list[str]:
+def pbi02_registration_errors(
+    body: str, oracle_exists: bool, package_manifest_exists: bool, contract_test_exists: bool
+) -> list[str]:
+    ownership = all(value in body for value in (
+        'owned_paths: ["packages/readability-core/package.json", "packages/readability-core/tsconfig.json", "packages/readability-core/src/index.ts", "packages/readability-core/src/types/**", "packages/readability-core/src/config/**", "packages/readability-core/src/analyze.ts", "packages/readability-core/test/contract/**", "packages/textlint-adapter/**", "pnpm-workspace.yaml", "pnpm-lock.yaml"]',
+        'forbidden_paths: ["docs/requirements/normative-contract-matrix.json", "package.json"]',
+        'package.json: "PBI-01 ownership historyを維持し、PBI-02では変更しない"',
+        'pnpm-lock.yaml: "PBI-01作成履歴を維持し、PBI-02 package importer/dependency解決に必要な生成差分だけ更新する"',
+        'pnpm-workspace.yaml: "現baselineでは不存在。packages/*登録のためPBI-02が新規作成する"',
+    ))
+    acceptance = all(value in body for value in (
+        'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi02.py"',
+        'test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/contract/core.contract.test.ts"',
+        'package_manifest: "packages/readability-core/package.json"',
+        'contract_test_file: "packages/readability-core/test/contract/core.contract.test.ts"',
+        "minimum_tests: 3",
+        "pass_equals_tests: true",
+        "fail: 0",
+        '"AC-FND-01 Finding uses UTF-16 zero-based half-open ranges"',
+        '"AC-FND-02 configuration is validated before analysis"',
+        '"AC-INT-01 findings are sorted deterministically across the adapter boundary"',
+        'green_signature: "PBI02_GREEN tests>=3 pass=tests fail=0 required_titles=3"',
+    ))
     registered = all(value in body for value in (
-        'expected_red: "test -f packages/readability-core/test/contract/core.contract.test.ts; exit=1; signature=<empty stdout/stderr>"',
+        'expected_red: "python3 .codex/spec-verifiers/verify_pbi02.py; exit=1; signature=PBI02_RED missing packages/readability-core/package.json"',
         'red_status: "REGISTERED_RED"',
         'phase: "PRE_IMPLEMENTATION"',
-        'command: "test -f packages/readability-core/test/contract/core.contract.test.ts"',
+        'command: "python3 .codex/spec-verifiers/verify_pbi02.py"',
         "exit: 1",
-        'stdout: "<empty>"',
+        'stdout: "PBI02_RED missing packages/readability-core/package.json"',
         'stderr: "<empty>"',
         "measured_runs: 2",
+        'superseded_oracle: "test -f packages/readability-core/test/contract/core.contract.test.ts; exit=1; signature=<empty stdout/stderr>"',
     ))
-    return [] if registered and not contract_test_exists else ["PBI02-PRE-IMPLEMENTATION-RED"]
+    errors = []
+    if not ownership:
+        errors.append("PBI02-OWNERSHIP")
+    if not acceptance or not oracle_exists:
+        errors.append("PBI02-ACCEPTANCE-ORACLE")
+    if not registered or package_manifest_exists or contract_test_exists:
+        errors.append("PBI02-PRE-IMPLEMENTATION-RED")
+    return errors
 
 def verify(state: dict) -> list[str]:
     m, t, packets, workflow = state["matrix"], state["text"], state["packets"], state["workflow"]
@@ -180,7 +212,10 @@ def verify(state: dict) -> list[str]:
             need("pnpm " not in red_line, f"PACKET-RED-NONEXECUTABLE-{pid}")
             if pid == "PBI-02":
                 for error in pbi02_registration_errors(
-                    body, (ROOT / "packages/readability-core/test/contract/core.contract.test.ts").is_file()
+                    body,
+                    (ROOT / ".codex/spec-verifiers/verify_pbi02.py").is_file(),
+                    (ROOT / "packages/readability-core/package.json").is_file(),
+                    (ROOT / "packages/readability-core/test/contract/core.contract.test.ts").is_file(),
                 ):
                     need(False, error)
         need(not any(x in body for x in ("TBD", "placeholder", "実装開始時に")), f"PACKET-PLACEHOLDER-{name}")
@@ -236,6 +271,16 @@ def apply_mutation(name: str, state: dict) -> None:
         t["mvp"] = t["mvp"].replace('"unit": "UTF-16 code unit"', '"unit": "Unicode code point"', 1).replace('"origin": 0', '"origin": 1', 1).replace('"interval": "[start,end)"', '"interval": "[start,end]"', 1)
     elif name == "drift-dec002-range":
         t["dec2"] = t["dec2"].replace('"unit": "UTF-16 code unit"', '"unit": "Unicode code point"', 1).replace('"origin": 0', '"origin": 1', 1).replace('"interval": "[start,end)"', '"interval": "[start,end]"', 1)
+    elif name in ("drop-pbi02-manifest-ownership", "drop-pbi02-no-match-guard", "drop-pbi02-required-title"):
+        key = next(k for k, body in packets.items() if packet_id(body) == "PBI-02")
+        if name == "drop-pbi02-manifest-ownership":
+            packets[key] = packets[key].replace('"packages/readability-core/package.json", ', "", 1)
+        elif name == "drop-pbi02-no-match-guard":
+            packets[key] = packets[key].replace(" --fail-if-no-match", "", 1)
+        else:
+            packets[key] = packets[key].replace(
+                "AC-FND-01 Finding uses UTF-16 zero-based half-open ranges", "REMOVED REQUIRED TITLE", 1
+            )
     else: raise ValueError(name)
 
 def main() -> int:
