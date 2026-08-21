@@ -36,20 +36,20 @@ UNCHANGED_HASHES = {
     Path("scripts/text-harness-setup"): "b252a154665092dd1fa7cd25e9369bb9b2f2a0a513c2daf2f3b43ec562e09216",
 }
 DELIVERY_HASHES = {
-    Path("README.md"): "5a0e0b85110919040fe3342f7f00bcd178b256ee27cbfaaed7c307df238bf405",
+    Path("README.md"): "a5aee6056bcdde6e5509341917bcc0700c9ae2fe022d4633f7d62936817b4375",
     Path("LICENSE"): "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
     Path("SECURITY.md"): "1a1c8be7fdd847d56a5d78b7bc9701c9613adc3aec2ec3e662c0ab78b970504e",
     Path("CONTRIBUTING.md"): "88e49663bcfd061a85380e32a195d9786ba017e9f3b42229e5206256a7be2374",
-    Path("CHANGELOG.md"): "44d608182c8f3540ab9abdd0ba6991db34ac63c3c00db66edd2f51a80bbcfda0",
+    Path("CHANGELOG.md"): "09792754cf54a5ac3ec1b29322c9651c3aac686191c553de6449ad1513e89101",
     Path("package.json"): "aaaca4013b1553336b859b4fcf2a54eeb625181d7b10c16a735645565683ea43",
-    Path("scripts/verify-release.mjs"): "784f878dff9f78b67be9be154b8792f49da6bf2958da3e75a4aa736219385910",
-    Path("tests/release/docs.contract.test.mjs"): "fb930208fe218c30f8e4b5e849a31ea25d73c16df6c86c1b101567fd8e9c7184",
-    Path("tests/release/license.contract.test.mjs"): "16a30b8c426b3956c1c5a6807d7e64c047ecfb85294e434c9f5b5a444f0cbd1f",
-    Path("tests/release/security.contract.test.mjs"): "3a1f6872283c1b97e89c1d643907c358038055d64ac1587bfa244f97f758f859",
-    Path("tests/release/commands.contract.test.mjs"): "fbf5778027b385d29b0f8414e89baa448a8cac700f9e2a60010dccbb5000e0a6",
+    Path("scripts/verify-release.mjs"): "23cdce9e433ad4591aac01c9f5003621ab20816ed3c0793bed354f72b4d8404c",
+    Path("tests/release/docs.contract.test.mjs"): "8e5eab2024ea9c7aefb6e68553644fd8bf97298474f385bf571a82c8311d9ef8",
+    Path("tests/release/license.contract.test.mjs"): "3c944d9c6e2ff3a6588b02757060f3e389b6ad9192aae48a53cf2f385a10c93e",
+    Path("tests/release/security.contract.test.mjs"): "ec603dee69eb254314c21c454ac58aa9af6fc96e8f8104c1d43c3e717eec1fe8",
+    Path("tests/release/commands.contract.test.mjs"): "4943916a60da3e578670b2b00cde75f041e152be5a24eb2545528625488f7a98",
     Path("docs/release-evidence/release-input.json"): "4e9869dce79955efb3c0f9e7cb8b10115fd8b40c60996e8f3e9190568809bed1",
-    Path("docs/release-evidence/dependency-license-scan.json"): "d6ec9c707b98902dbff1d9ab42c581afb52eeb1bb39c9c0a727f4ab005b6d0b2",
-    Path("docs/release-evidence/security-scan.json"): "b7adea144e9d7dd0747806451e2e0ad0af8fe6d2c98320520faca9c7fad32d43",
+    Path("docs/release-evidence/dependency-license-scan.json"): "e5267bbfa72b7d33a05d35f38245f190cd4ca6dae7d605178802deec89101863",
+    Path("docs/release-evidence/security-scan.json"): "fbec797f6de85fa03ae54e7513b5d1884b530b3ce9e5fa0004836efdd7960690",
     Path(".github/workflows/release-contract.yml"): "29bb21410eb4336faca56dd77ce3eacce3d4a71c2624b31521506ba3223c3b63",
 }
 APACHE_SHA256 = "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
@@ -87,12 +87,12 @@ def evidence_errors() -> list[str]:
     if licenses.get("licenseVersionCounts") != {"Apache-2.0": 2, "BSD-2-Clause": 2, "MIT": 72}: errors.append("license-counts")
     notice = licenses.get("noticeScan", {})
     expected_paths = [
-        "node_modules/.pnpm/@typescript+typescript-darwin-arm64@7.0.2/node_modules/@typescript/typescript-darwin-arm64/NOTICE.txt",
+        "node_modules/.pnpm/@typescript+typescript-<platform>-<arch>@7.0.2/node_modules/@typescript/typescript-<platform>-<arch>/NOTICE.txt",
         "node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/NOTICE.txt",
     ]
-    if notice.get("installedPaths") != expected_paths or notice.get("uniqueSha256") != [NOTICE_SHA256] or notice.get("distributableRetentionObligations") != 0 or notice.get("rootNoticeExpected") is not False: errors.append("notice-scope")
+    if notice.get("normalizedInstalledPaths") != expected_paths or notice.get("platformVariants") != ["darwin-arm64", "linux-arm64", "linux-x64"] or notice.get("uniqueSha256") != [NOTICE_SHA256] or notice.get("distributableRetentionObligations") != 0 or notice.get("rootNoticeExpected") is not False: errors.append("notice-scope")
     if (ROOT / "NOTICE").exists(): errors.append("unnecessary-root-notice")
-    if security.get("secretScan", {}).get("findings") != 0 or security.get("dependencyAudit", {}).get("unresolvedHigh") != 0 or security.get("dependencyAudit", {}).get("unresolvedCritical") != 0: errors.append("security-findings")
+    if security.get("secretScan", {}).get("findings") != 0 or security.get("secretScan", {}).get("patterns") != ["generic-assignment", "github-pat", "aws-access-key", "pem-private-key"] or security.get("dependencyAudit", {}).get("unresolvedHigh") != 0 or security.get("dependencyAudit", {}).get("unresolvedCritical") != 0: errors.append("security-findings")
     if security.get("secretScan", {}).get("command") != "git grep -nEI <secret-patterns> -- tracked files" or security.get("dependencyAudit", {}).get("command") != "mise x node@24.19.0 -- corepack pnpm audit --audit-level high": errors.append("security-commands")
     for value in (licenses.get("evaluatedAt"), security.get("evaluatedAt")):
         if not isinstance(value, str) or not re.fullmatch(r"2026-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[+-][0-9]{2}:[0-9]{2}", value): errors.append("evaluated-at")
@@ -103,7 +103,7 @@ def docs_errors() -> list[str]:
     readme = (ROOT / "README.md").read_text()
     sections = ("概要", "要件", "インストール", "更新", "使い方", "CLI", "設定", "ルール", "出力と終了コード", "制約", "開発", "セキュリティ", "ライセンス")
     if not all(re.search(rf"^#+\s+{re.escape(section)}\s*$", readme, re.MULTILINE) for section in sections): errors.append("readme-sections")
-    terms = ("scripts/text-harness-setup --install", "git pull --ff-only origin main && scripts/text-harness-setup --upgrade --from <previous-release-tag>", "text-harness-report --input <path>", "D001", "D008", "H101", "H113", "S201", "S208", "UTF-16", "zero-based", "half-open", "Semantic", "hard error", "autofix", "Node 24.19.0", "pnpm 11.22.0")
+    terms = ("scripts/text-harness-setup --install", "git pull --ff-only origin main && scripts/text-harness-setup --upgrade --from <previous-release-tag>", "<!-- CLI_COMMAND -->", "node packages/textlint-adapter/src/cli.ts --input <path>", "text-harness-report --input <path>", "D001", "D008", "H101", "H113", "S201", "S208", "UTF-16", "zero-based", "half-open", "Semantic", "hard error", "autofix", "Node 24.19.0", "pnpm 11.22.0")
     if not all(term in readme for term in terms): errors.append("readme-contract")
     all_docs = "\n".join((ROOT / path).read_text() for path in (Path("README.md"), Path("SECURITY.md"), Path("CONTRIBUTING.md"), Path("CHANGELOG.md")))
     for target in re.findall(r"\[[^]]+\]\(([^)]+)\)", all_docs):
@@ -114,6 +114,8 @@ def docs_errors() -> list[str]:
         elif not (ROOT / target.split("#", 1)[0]).exists(): errors.append("broken-link:" + target)
     if "https://github.com/krhrtky/text-harness/security/advisories/new" not in (ROOT / "SECURITY.md").read_text(): errors.append("security-reporting")
     if "Copyright 2026 krhrtky" not in readme: errors.append("copyright")
+    changelog = (ROOT / "CHANGELOG.md").read_text()
+    if "HEAD...HEAD" in changelog or "blob/main/CHANGELOG.md" in changelog: errors.append("changelog-self-link")
     return errors
 
 def package_errors() -> list[str]:
@@ -122,7 +124,7 @@ def package_errors() -> list[str]:
     expected = {mode: f"node scripts/verify-release.mjs {mode.split(':', 1)[1] if ':' in mode else mode}" for mode in ("verify:docs", "verify:license", "verify:security", "verify:artifacts", "verify:release")}
     if any(scripts.get(name) != command for name, command in expected.items()): return ["package-scripts"]
     source = (ROOT / "scripts/verify-release.mjs").read_text()
-    if not all(term in source for term in ("docs", "license", "security", "artifacts", "release", "unknown mode", "process.exitCode")): return ["release-script"]
+    if not all(term in source for term in ("docs", "license", "security", "artifacts", "release", "unknown mode", "process.exitCode", "normalizeLicenseInventory", "normalizeNoticePath", "detectSecretKinds", "verifyAudit", "dependency audit result unknown")): return ["release-script"]
     return []
 
 def main() -> int:

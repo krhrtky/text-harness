@@ -253,6 +253,12 @@ EXPECTED = {
     "drop-pbi09-red-signature": "PBI09-ACCEPTANCE-ORACLE",
     "drop-pbi09-post-hash": "PBI09-POST-IMPLEMENTATION-GREEN",
     "drift-pbi09-release-input": "PBI09-POST-IMPLEMENTATION-GREEN",
+    "drop-pbi09-portable-license": "PBI09-RELEASE-CONTRACT",
+    "drop-pbi09-executable-cli": "PBI09-RELEASE-CONTRACT",
+    "drop-pbi09-provider-secrets": "PBI09-RELEASE-CONTRACT",
+    "weaken-pbi09-fail-closed-audit": "PBI09-RELEASE-CONTRACT",
+    "permit-pbi09-changelog-self-link": "PBI09-RELEASE-CONTRACT",
+    "drop-pbi09-qga-fix-hash": "PBI09-POST-IMPLEMENTATION-GREEN",
 }
 
 class SpecVerifierTest(unittest.TestCase):

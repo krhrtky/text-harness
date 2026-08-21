@@ -13,6 +13,11 @@ task_packet:
     - "security evidenceは同じreleaseInputSha256に対するtracked secret scan findings=0とdependency audit unresolved high=0/critical=0を保持する"
     - "README内のinstall/update/usage commandはpackage scriptsとsetup CLIに一致し、存在しないcommandを掲載しない"
     - "release evidenceはgit commitの自己参照を避け、package/lock/workspace/core/adapter/Skillのsorted path+contentから算出するreleaseInputSha256を全artifactで共有する"
+    - "license/NOTICE evidenceは@typescript/typescript-<platform>-<arch>へ正規化し、darwin-arm64/linux-arm64/linux-x64を同一契約として扱う。現在platformの実ファイルSHAを再構築する"
+    - "READMEの<!-- CLI_COMMAND -->直後のcommandはrepository checkoutで実行可能で、canonical JSON 1行、exit0、H101/S203/S204を実測する。将来bin名は説明と区別する"
+    - "secret scanはgeneric assignmentに加えてGitHub PAT/AWS access key/PEM private keyを検出し、通常文のtokenを誤検知しない"
+    - "dependency auditは現在実行してstatus=0かつNo known vulnerabilities foundを確認する。nonzero/spawn error/成功exitでも結果不明はfail-closed"
+    - "CHANGELOG linkはHEAD...HEADや自身のblob linkを禁止し、main commits URLへ解決する"
   active_pbi: "PBI-09"
   depends_on: "PBI-03〜PBI-08,PBI-05J"
   outcome: "README、public metadata、Apache-2.0、NOTICE判定、security/license scan、release commandsが同一release inputについて機械検証可能"
@@ -67,7 +72,7 @@ task_packet:
     installed_notice_paths: ["node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/NOTICE.txt", "node_modules/.pnpm/@typescript+typescript-darwin-arm64@7.0.2/node_modules/@typescript/typescript-darwin-arm64/NOTICE.txt"]
     unique_notice_sha256: ["f5c708b59114507b8b27b48181b6883d106bbca0c1634bbee45b5e344237b66b"]
     notice_distribution_scope: "both packages are dev-only and their binary/NOTICE is not included in the public source repository release; distributable retention obligations=0"
-  mutations: ["REL-M-DROP-INSTALL", "REL-M-INVALID-UPGRADE", "REL-M-DROP-RULE", "REL-M-SEMANTIC-HARD-ERROR", "REL-M-LICENSE-TEXT", "REL-M-COPYRIGHT", "REL-M-LOCK-HASH", "REL-M-LICENSE-COUNT", "REL-M-NOTICE-OMITTED-WITH-OBLIGATION", "REL-M-UNNEEDED-NOTICE", "REL-M-SECRET-FINDING", "REL-M-HIGH-AUDIT", "REL-M-EVIDENCE-SHA-DRIFT", "REL-M-BROKEN-LINK", "REL-M-MISSING-SCRIPT", "REL-M-FALSE-NO-MATCH", "REL-M-CI-SECRET", "REL-M-STALE-EVIDENCE"]
+  mutations: ["REL-M-DROP-INSTALL", "REL-M-INVALID-UPGRADE", "REL-M-DROP-RULE", "REL-M-SEMANTIC-HARD-ERROR", "REL-M-LICENSE-TEXT", "REL-M-COPYRIGHT", "REL-M-LOCK-HASH", "REL-M-LICENSE-COUNT", "REL-M-NOTICE-OMITTED-WITH-OBLIGATION", "REL-M-UNNEEDED-NOTICE", "REL-M-SECRET-FINDING", "REL-M-HIGH-AUDIT", "REL-M-EVIDENCE-SHA-DRIFT", "REL-M-BROKEN-LINK", "REL-M-MISSING-SCRIPT", "REL-M-FALSE-NO-MATCH", "REL-M-CI-SECRET", "REL-M-STALE-EVIDENCE", "REL-M-PLATFORM-LICENSE-NORMALIZATION", "REL-M-LINUX-ARM64-NOTICE", "REL-M-README-NONEXECUTABLE-CLI", "REL-M-GITHUB-PAT", "REL-M-AWS-ACCESS-KEY", "REL-M-PEM-PRIVATE-KEY", "REL-M-AUDIT-EXIT42", "REL-M-AUDIT-UNKNOWN-SUCCESS", "REL-M-CHANGELOG-SELF-LINK"]
   expected_red: null
   red_status: "CONSUMED_GREEN"
   expected_red_history:
@@ -103,6 +108,32 @@ task_packet:
       docs/release-evidence/security-scan.json: "b7adea144e9d7dd0747806451e2e0ad0af8fe6d2c98320520faca9c7fad32d43"
       .github/workflows/release-contract.yml: "29bb21410eb4336faca56dd77ce3eacce3d4a71c2624b31521506ba3223c3b63"
     evidence_contract: "license counts MIT=72/Apache-2.0=2/BSD-2-Clause=2; root NOTICE absent and distributable obligations=0; secret findings=0; unresolved audit high=0/critical=0; links=PASS; commands=PASS"
+  qga_fix_transition:
+    phase: "POST_IMPLEMENTATION_QGA_FIX"
+    product_commit: "0660ed4"
+    command: "python3 .codex/spec-verifiers/verify_pbi09.py"
+    exit: 0
+    signature: "PBI09_GREEN tests=12 pass=12 fail=0 required_titles=12 links=PASS commands=PASS license=PASS notice=ABSENT security=PASS"
+    release_input_sha256: "d2b07d7382d4aa38f1a20bf71baeb1a8e21485fa1845a14db435599df03e0a25"
+    reason: "portable license/NOTICE normalization、repository実行可能README CLI、provider credential検出、current fail-closed audit、非自己参照CHANGELOGをmacOS/Linuxで同一判定にする"
+    artifact_hashes:
+      README.md: "a5aee6056bcdde6e5509341917bcc0700c9ae2fe022d4633f7d62936817b4375"
+      LICENSE: "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+      SECURITY.md: "1a1c8be7fdd847d56a5d78b7bc9701c9613adc3aec2ec3e662c0ab78b970504e"
+      CONTRIBUTING.md: "88e49663bcfd061a85380e32a195d9786ba017e9f3b42229e5206256a7be2374"
+      CHANGELOG.md: "09792754cf54a5ac3ec1b29322c9651c3aac686191c553de6449ad1513e89101"
+      package.json: "aaaca4013b1553336b859b4fcf2a54eeb625181d7b10c16a735645565683ea43"
+      scripts/verify-release.mjs: "23cdce9e433ad4591aac01c9f5003621ab20816ed3c0793bed354f72b4d8404c"
+      tests/release/docs.contract.test.mjs: "8e5eab2024ea9c7aefb6e68553644fd8bf97298474f385bf571a82c8311d9ef8"
+      tests/release/license.contract.test.mjs: "3c944d9c6e2ff3a6588b02757060f3e389b6ad9192aae48a53cf2f385a10c93e"
+      tests/release/security.contract.test.mjs: "ec603dee69eb254314c21c454ac58aa9af6fc96e8f8104c1d43c3e717eec1fe8"
+      tests/release/commands.contract.test.mjs: "4943916a60da3e578670b2b00cde75f041e152be5a24eb2545528625488f7a98"
+      docs/release-evidence/release-input.json: "4e9869dce79955efb3c0f9e7cb8b10115fd8b40c60996e8f3e9190568809bed1"
+      docs/release-evidence/dependency-license-scan.json: "e5267bbfa72b7d33a05d35f38245f190cd4ca6dae7d605178802deec89101863"
+      docs/release-evidence/security-scan.json: "fbec797f6de85fa03ae54e7513b5d1884b530b3ce9e5fa0004836efdd7960690"
+      .github/workflows/release-contract.yml: "29bb21410eb4336faca56dd77ce3eacce3d4a71c2624b31521506ba3223c3b63"
+    portable_evidence: "platformVariants=darwin-arm64,linux-arm64,linux-x64; normalized TypeScript package/NOTICE paths; active platform NOTICE hash reconstruction; releaseInput unchanged"
+    security_evidence: "provider fixtures GitHub PAT/AWS/PEM plus generic assignment; current audit status0 and known-clean phrase; exit42 and unknown-success output both rejected"
   red_registration_gate: "PBI開始時、依存PBI完了後かつ実装変更前に、実在する失敗test command・exit code・完全一致signatureを登録する"
   acceptance: ["O-01", "O-05", "O-06D", "O-06H", "O-10", "DEC-005", "README install/update/usage/rules/limitations", "Apache-2.0/NOTICE", "security/license evidence"]
   engineering_constraints: "docs/requirements/engineering-constraints.md A01-A08"

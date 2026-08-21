@@ -113,6 +113,9 @@ MUTATIONS = (
     "drop-pbi09-update-command", "drop-pbi09-required-title",
     "permit-pbi09-broken-link", "drop-pbi09-red-signature",
     "drop-pbi09-post-hash", "drift-pbi09-release-input",
+    "drop-pbi09-portable-license", "drop-pbi09-executable-cli",
+    "drop-pbi09-provider-secrets", "weaken-pbi09-fail-closed-audit",
+    "permit-pbi09-changelog-self-link", "drop-pbi09-qga-fix-hash",
 )
 
 def read_state() -> dict:
@@ -1763,6 +1766,11 @@ def pbi09_registration_errors(body: str, oracle_exists: bool, readme_exists: boo
         'release_input_contract: "sorted SHA-256 over package.json,pnpm-lock.yaml,pnpm-workspace.yaml,packages/readability-core/**,packages/textlint-adapter/**,skills/readability-review/** excluding node_modules and generated release docs; exact path list and per-path hashes in release-input.json"',
         'link_contract: "README/SECURITY/CONTRIBUTING/CHANGELOGのrelative linkはtracked targetへ解決',
         'security_contract: "tracked-files secret scanとpnpm audit --audit-level highのcommand/toolchain/evaluatedAt/releaseInputSha256を保存し、secret/high/critical各0。scan skip/unknown/stale inputはFAIL"',
+        "license/NOTICE evidenceは@typescript/typescript-<platform>-<arch>へ正規化し、darwin-arm64/linux-arm64/linux-x64を同一契約として扱う。現在platformの実ファイルSHAを再構築する",
+        "READMEの<!-- CLI_COMMAND -->直後のcommandはrepository checkoutで実行可能で、canonical JSON 1行、exit0、H101/S203/S204を実測する。将来bin名は説明と区別する",
+        "secret scanはgeneric assignmentに加えてGitHub PAT/AWS access key/PEM private keyを検出し、通常文のtokenを誤検知しない",
+        "dependency auditは現在実行してstatus=0かつNo known vulnerabilities foundを確認する。nonzero/spawn error/成功exitでも結果不明はfail-closed",
+        "CHANGELOG linkはHEAD...HEADや自身のblob linkを禁止し、main commits URLへ解決する",
     ))
     acceptance = all(value in body for value in (
         'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi09.py"',
@@ -1804,14 +1812,26 @@ def pbi09_registration_errors(body: str, oracle_exists: bool, readme_exists: boo
             "d6ec9c707b98902dbff1d9ab42c581afb52eeb1bb39c9c0a727f4ab005b6d0b2",
             "b7adea144e9d7dd0747806451e2e0ad0af8fe6d2c98320520faca9c7fad32d43",
             "29bb21410eb4336faca56dd77ce3eacce3d4a71c2624b31521506ba3223c3b63",
+            "a5aee6056bcdde6e5509341917bcc0700c9ae2fe022d4633f7d62936817b4375",
+            "09792754cf54a5ac3ec1b29322c9651c3aac686191c553de6449ad1513e89101",
+            "23cdce9e433ad4591aac01c9f5003621ab20816ed3c0793bed354f72b4d8404c",
+            "8e5eab2024ea9c7aefb6e68553644fd8bf97298474f385bf571a82c8311d9ef8",
+            "3c944d9c6e2ff3a6588b02757060f3e389b6ad9192aae48a53cf2f385a10c93e",
+            "ec603dee69eb254314c21c454ac58aa9af6fc96e8f8104c1d43c3e717eec1fe8",
+            "4943916a60da3e578670b2b00cde75f041e152be5a24eb2545528625488f7a98",
+            "e5267bbfa72b7d33a05d35f38245f190cd4ca6dae7d605178802deec89101863",
+            "fbec797f6de85fa03ae54e7513b5d1884b530b3ce9e5fa0004836efdd7960690",
         )
         green = all(value in body for value in (
             "expected_red: null", 'red_status: "CONSUMED_GREEN"',
             'product_commit: "63555bd"',
+            'product_commit: "0660ed4"',
             'signature: "PBI09_GREEN tests=12 pass=12 fail=0 required_titles=12 links=PASS commands=PASS license=PASS notice=ABSENT security=PASS"',
             'release_input_sha256: "d2b07d7382d4aa38f1a20bf71baeb1a8e21485fa1845a14db435599df03e0a25"',
             "PBI-06〜PBI-08 delivery時=87d2ccaa29bd499df2777ed25614fd3e84a457a79ae5cc1d1581059dd7f62760; PBI-09 Green以降=aaaca4013b1553336b859b4fcf2a54eeb625181d7b10c16a735645565683ea43",
             "license counts MIT=72/Apache-2.0=2/BSD-2-Clause=2; root NOTICE absent and distributable obligations=0; secret findings=0; unresolved audit high=0/critical=0; links=PASS; commands=PASS",
+            "platformVariants=darwin-arm64,linux-arm64,linux-x64; normalized TypeScript package/NOTICE paths; active platform NOTICE hash reconstruction; releaseInput unchanged",
+            "provider fixtures GitHub PAT/AWS/PEM plus generic assignment; current audit status0 and known-clean phrase; exit42 and unknown-success output both rejected",
         )) and all(digest in body for digest in post_hashes)
         if not green: errors.append("PBI09-POST-IMPLEMENTATION-GREEN")
     return errors
@@ -2943,6 +2963,9 @@ def apply_mutation(name: str, state: dict) -> None:
         "drop-pbi09-update-command", "drop-pbi09-required-title",
         "permit-pbi09-broken-link", "drop-pbi09-red-signature",
         "drop-pbi09-post-hash", "drift-pbi09-release-input",
+        "drop-pbi09-portable-license", "drop-pbi09-executable-cli",
+        "drop-pbi09-provider-secrets", "weaken-pbi09-fail-closed-audit",
+        "permit-pbi09-changelog-self-link", "drop-pbi09-qga-fix-hash",
     ):
         key = next(k for k, body in packets.items() if packet_id(body) == "PBI-09")
         if name == "drop-pbi09-readme-ownership":
@@ -2962,7 +2985,19 @@ def apply_mutation(name: str, state: dict) -> None:
         elif name == "drop-pbi09-post-hash":
             packets[key] = packets[key].replace('      README.md: "5a0e0b85110919040fe3342f7f00bcd178b256ee27cbfaaed7c307df238bf405"\n', "", 1)
         elif name == "drift-pbi09-release-input":
-            packets[key] = packets[key].replace("d2b07d7382d4aa38f1a20bf71baeb1a8e21485fa1845a14db435599df03e0a25", "0" * 64, 1)
+            packets[key] = packets[key].replace("d2b07d7382d4aa38f1a20bf71baeb1a8e21485fa1845a14db435599df03e0a25", "0" * 64)
+        elif name == "drop-pbi09-portable-license":
+            packets[key] = packets[key].replace('    - "license/NOTICE evidenceは@typescript/typescript-<platform>-<arch>へ正規化し、darwin-arm64/linux-arm64/linux-x64を同一契約として扱う。現在platformの実ファイルSHAを再構築する"\n', "", 1)
+        elif name == "drop-pbi09-executable-cli":
+            packets[key] = packets[key].replace('    - "READMEの<!-- CLI_COMMAND -->直後のcommandはrepository checkoutで実行可能で、canonical JSON 1行、exit0、H101/S203/S204を実測する。将来bin名は説明と区別する"\n', "", 1)
+        elif name == "drop-pbi09-provider-secrets":
+            packets[key] = packets[key].replace('    - "secret scanはgeneric assignmentに加えてGitHub PAT/AWS access key/PEM private keyを検出し、通常文のtokenを誤検知しない"\n', "", 1)
+        elif name == "weaken-pbi09-fail-closed-audit":
+            packets[key] = packets[key].replace("nonzero/spawn error/成功exitでも結果不明はfail-closed", "audit unknown accepted", 1)
+        elif name == "permit-pbi09-changelog-self-link":
+            packets[key] = packets[key].replace("CHANGELOG linkはHEAD...HEADや自身のblob linkを禁止し、main commits URLへ解決する", "CHANGELOG self-link allowed", 1)
+        elif name == "drop-pbi09-qga-fix-hash":
+            packets[key] = packets[key].replace('      README.md: "a5aee6056bcdde6e5509341917bcc0700c9ae2fe022d4633f7d62936817b4375"\n', "", 1)
         else:
             packets[key] = packets[key].replace('    red_signature: "PBI09_RED missing README.md"\n', "", 1)
     else: raise ValueError(name)
