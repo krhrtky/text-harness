@@ -108,7 +108,12 @@ EXPECTED = {
     "permit-pbi06-nonpass-external": "PBI06-EVIDENCE-SCHEMA",
     "drop-pbi06-rule-id": "PBI06-ACCEPTANCE-ORACLE",
     "drop-pbi06-required-title": "PBI06-ACCEPTANCE-ORACLE",
-    "drop-pbi06-runtime-hash": "PBI06-POST-IMPLEMENTATION-GREEN",
+    "drop-pbi06-runtime-hash": "PBI06-EVIDENCE-SCHEMA",
+    "drift-pbi06-version": "PBI06-EVIDENCE-SCHEMA",
+    "drift-pbi06-package": "PBI06-EVIDENCE-SCHEMA",
+    "drift-pbi06-license": "PBI06-EVIDENCE-SCHEMA",
+    "drift-pbi06-maint-command": "PBI06-EVIDENCE-SCHEMA",
+    "drift-pbi06-integrity": "PBI06-EVIDENCE-SCHEMA",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -471,7 +476,7 @@ packages:
         self.assertEqual(0, failed)
         self.assertEqual(14, titles)
 
-    def test_pbi06_schema_and_green_transition_match_repository_state(self) -> None:
+    def test_pbi06_provenance_schema_and_qga_fix_red_match_repository_state(self) -> None:
         def unknown_gate(rule_id: str, gate: str) -> dict:
             evidence = (
                 [f"{rule_id} RNG-001 UTF-16 half-open reconstruction not executed"]
@@ -479,23 +484,31 @@ packages:
             )
             return {"status": "UNKNOWN", "command": None, "exitCode": None, "artifact": None, "evidence": evidence}
 
+        rules = []
+        for index, rule_id in enumerate(verify_pbi06.RULE_IDS):
+            package, version = verify_pbi06.CANDIDATES[rule_id]
+            gates = {gate: unknown_gate(rule_id, gate) for gate in verify_pbi06.GATES}
+            gates["license"] = {
+                "status": "PASS", "command": verify_pbi06.license_command(package, version),
+                "exitCode": 0, "artifact": f"report#{rule_id.lower()}",
+                "evidence": [f"{rule_id} registry license MIT"],
+                "licenseProvenance": verify_pbi06.expected_license_provenance(package, version),
+            }
+            gates["maintainability"] = {
+                "status": "PASS", "command": verify_pbi06.maintenance_command(package, version),
+                "exitCode": 0, "artifact": f"report#{rule_id.lower()}",
+                "evidence": [f"{rule_id} pinned registry provenance"],
+                "maintenanceProvenance": verify_pbi06.expected_maintenance_provenance(rule_id, package, version),
+            }
+            rules.append({
+                "ruleId": rule_id, "candidate": {"package": package, "version": version}, "gates": gates,
+                "decision": {"mode": "INTERNAL", "reasonCode": "NON_PASS_GATE", "implementationPbi": f"PBI-06{chr(ord('A') + index)}"},
+            })
         valid = {
-            "schemaVersion": 1,
+            "schemaVersion": 2,
             "evaluatedAt": "2026-08-21",
             "toolchain": {"node": "24.19.0", "pnpm": "11.22.0"},
-            "rules": [
-                {
-                    "ruleId": rule_id,
-                    "candidate": None,
-                    "gates": {gate: unknown_gate(rule_id, gate) for gate in verify_pbi06.GATES},
-                    "decision": {
-                        "mode": "INTERNAL",
-                        "reasonCode": "NON_PASS_GATE",
-                        "implementationPbi": f"PBI-06{chr(ord('A') + index)}",
-                    },
-                }
-                for index, rule_id in enumerate(verify_pbi06.RULE_IDS)
-            ],
+            "rules": rules,
         }
         self.assertEqual([], verify_pbi06.validate_artifact(valid))
         invalid_external = json.loads(json.dumps(valid))
@@ -506,25 +519,36 @@ packages:
         empty_evidence = json.loads(json.dumps(valid))
         empty_evidence["rules"][0]["gates"]["functional"]["evidence"] = [""]
         self.assertIn("gate-evidence-D001-functional", verify_pbi06.validate_artifact(empty_evidence))
+        version_999 = json.loads(json.dumps(valid))
+        version_999["rules"][0]["candidate"]["version"] = "999.0.0"
+        self.assertIn("candidate-D001", verify_pbi06.validate_artifact(version_999))
+        unrelated_package = json.loads(json.dumps(valid))
+        unrelated_package["rules"][1]["candidate"]["package"] = "unrelated-package"
+        self.assertIn("candidate-D002", verify_pbi06.validate_artifact(unrelated_package))
+        gpl = json.loads(json.dumps(valid))
+        gpl["rules"][2]["gates"]["license"]["licenseProvenance"]["observedSpdx"] = "GPL-3.0"
+        self.assertIn("license-provenance-D003", verify_pbi06.validate_artifact(gpl))
+        unrelated_command = json.loads(json.dumps(valid))
+        unrelated_command["rules"][3]["gates"]["maintainability"]["command"] = "npm view unrelated@latest"
+        self.assertIn("maintenance-command-D004", verify_pbi06.validate_artifact(unrelated_command))
+        tampered = json.loads(json.dumps(valid))
+        tampered["rules"][4]["gates"]["maintainability"]["maintenanceProvenance"]["distIntegrity"] = "TAMPERED"
+        self.assertIn("maintenance-provenance-D005", verify_pbi06.validate_artifact(tampered))
 
         state = verify_spec.read_state()
         packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-06")
         pre_implementation = packet.replace(
-            "expected_red: null",
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi06.py; exit=1; signature=PBI06_RED artifact_schema_version expected=2 actual=1"',
             'expected_red: "python3 .codex/spec-verifiers/verify_pbi06.py; exit=1; signature=PBI06_RED missing docs/decision-evidence/deterministic-qualification.json"',
             1,
-        ).replace('red_status: "CONSUMED_GREEN"', 'red_status: "REGISTERED_RED"', 1)
+        ).replace('red_status: "REGISTERED_RED_QGA_FIX"', 'red_status: "REGISTERED_RED"', 1)
         self.assertEqual([], verify_spec.pbi06_registration_errors(pre_implementation, True, False))
-        self.assertEqual([], verify_spec.pbi06_registration_errors(packet, PBI06_VERIFIER.is_file(), True))
-        green = subprocess.run(["python3", str(PBI06_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
-        self.assertEqual(0, green.returncode, green.stdout + green.stderr)
-        summary = re.search(r"PBI06_GREEN tests=(\d+) pass=(\d+) fail=(\d+) required_titles=(\d+)", green.stdout)
-        self.assertIsNotNone(summary)
-        tests, passed, failed, titles = (int(value) for value in summary.groups())
-        self.assertGreaterEqual(tests, 12)
-        self.assertEqual(tests, passed)
-        self.assertEqual(0, failed)
-        self.assertEqual(12, titles)
+        self.assertEqual([], verify_spec.pbi06_registration_errors(packet, PBI06_VERIFIER.is_file(), True, 1))
+        first = subprocess.run(["python3", str(PBI06_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        second = subprocess.run(["python3", str(PBI06_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        expected = (1, "PBI06_RED artifact_schema_version expected=2 actual=1\n", "")
+        self.assertEqual(expected, (first.returncode, first.stdout, first.stderr))
+        self.assertEqual(expected, (second.returncode, second.stdout, second.stderr))
         for path, expected in verify_pbi06.RUNTIME_DEPENDENCY_HASHES.items():
             self.assertEqual(expected, hashlib.sha256((ROOT / path).read_bytes()).hexdigest())
         with tempfile.TemporaryDirectory() as directory:

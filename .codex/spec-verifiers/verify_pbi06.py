@@ -15,6 +15,27 @@ REPORT = Path("docs/decision-evidence/deterministic-qualification.md")
 TEST = Path("tests/qualification/deterministic.contract.test.mjs")
 RULE_IDS = tuple(f"D{index:03d}" for index in range(1, 9))
 GATES = ("functional", "configCompatibility", "license", "maintainability", "range")
+CANDIDATES = {
+    "D001": ("textlint-rule-no-mix-dearu-desumasu", "6.0.4"),
+    "D002": ("textlint-rule-no-nfd", "2.0.2"),
+    "D003": ("@textlint-rule/textlint-rule-no-unmatched-pair", "2.0.4"),
+    "D004": ("textlint-rule-ng-word", "1.0.0"),
+    "D005": ("textlint-rule-prh", "6.1.0"),
+    "D006": ("textlint-rule-ja-no-successive-word", "2.0.1"),
+    "D007": ("textlint-rule-no-double-negative-ja", "2.0.1"),
+    "D008": ("textlint-rule-ja-no-redundant-expression", "4.0.1"),
+}
+MAINTENANCE_VALUES = {
+    "D001": ("git+https://github.com/textlint-ja/textlint-rule-no-mix-dearu-desumasu.git", "2025-01-16T01:04:33.851Z", "sha512-SmALtOFbtmJ//k2iLMvtqhGrgJ/6uDVZFK7TBj2npVAbt10VxgLL87K+62pQ/BqiN9DpOVObshVFdug7lUOKHw=="),
+    "D002": ("git+https://github.com/textlint-ja/textlint-rule-no-nfd.git", "2023-06-06T06:59:04.058Z", "sha512-lIUvcQ+wqtConpPQU2YwEJl2dRcRyyrxPYZ3V76UwnkVg++XPLIrE5mLDgyNE/UIQ34e/KitJfMLqKWvnkFbNQ=="),
+    "D003": ("git+https://github.com/textlint-rule/textlint-rule-no-unmatched-pair.git", "2024-11-07T01:16:27.784Z", "sha512-g9Ge1xUV9xJy8T7nuutF/2J6Cg2mmPx4gKsC3dCdxVxuL0wMqOOnAi8l6psFpAQ5UFtQuAzwkdclrehPtBT5tg=="),
+    "D004": ("git+https://github.com/KeitaMoromizato/textlint-rule-ng-word.git", "2022-06-27T05:46:57.121Z", "sha512-YG4voM6jjN1aJ3/bOstXW/sf6aUDhiBoOCN52AKk7njxLqYkYJ3GcKTz/79ZMv2PoNa88pm0JuFglU7fTWmtYg=="),
+    "D005": ("git+https://github.com/textlint-rule/textlint-rule-prh.git", "2025-04-20T11:47:38.762Z", "sha512-KrchADHw1/LZ/tAQ2XwL/XdUhunKCvlNmwgp+6hdyzuWX7uojOkDdJWWV0KAN4XWsK6Te5w/SZcYwQ7X6i3B0A=="),
+    "D006": ("git+https://github.com/textlint-ja/textlint-rule-ja-no-successive-word.git", "2023-03-13T06:38:56.594Z", "sha512-XKTXkHwMu86SnGaj73B67U4apDdTquDKF3SfG24tRbzMyJoGe/Iba5VMId8sp8QHeTonp1bYOSxjZsbkpGyCNw=="),
+    "D007": ("git+https://github.com/textlint-ja/textlint-rule-no-double-negative-ja.git", "2022-06-27T05:46:59.120Z", "sha512-LRofmNt+nd2mp+AHmG0ltk9AlbzKbWPE+EToYQ1zORCd8N8suE1YxNEplz9OeQ59ea9ITtudDIWoqeHaZnbDsg=="),
+    "D008": ("git+https://github.com/textlint-ja/textlint-rule-ja-no-redundant-expression.git", "2022-06-27T05:46:36.125Z", "sha512-r8Qe6S7u9N97wD0gcrASqBUdZs5CMEVlgc8Ul+D2NQFiOi1BoseOMo5I9yUsEZMAL46yh/eaw9+EWz6IDlPWeA=="),
+}
+MAINTENANCE_FIELDS = ["name", "version", "license", "repository.url", "time.modified", "deprecated", "dist.integrity"]
 REQUIRED_TITLES = (
     "PBI06-Q01 qualification catalog contains D001 through D008 exactly",
     "PBI06-Q02 every rule contains the exact five mandatory gates",
@@ -56,13 +77,41 @@ def runtime_dependency_errors(
     ]
 
 
+def license_command(package: str, version: str) -> str:
+    return f"mise x node@24.19.0 -- npm view {package}@{version} license --json"
+
+
+def maintenance_command(package: str, version: str) -> str:
+    return (
+        f"mise x node@24.19.0 -- npm view {package}@{version} "
+        "name version license repository.url time.modified deprecated dist.integrity --json"
+    )
+
+
+def expected_license_provenance(package: str, version: str) -> dict:
+    return {
+        "expectedSpdx": "MIT", "observedSpdx": "MIT", "sourceType": "npm-registry",
+        "sourceField": "license", "retrievalCommand": license_command(package, version),
+    }
+
+
+def expected_maintenance_provenance(rule_id: str, package: str, version: str) -> dict:
+    repository_url, modified, integrity = MAINTENANCE_VALUES[rule_id]
+    return {
+        "queriedPackage": package, "queriedVersion": version, "registryVersion": version,
+        "repositoryUrl": repository_url, "modified": modified, "deprecated": None,
+        "distIntegrity": integrity, "sourceFields": MAINTENANCE_FIELDS,
+        "retrievalCommand": maintenance_command(package, version),
+    }
+
+
 def validate_artifact(value: object) -> list[str]:
     if not isinstance(value, dict):
         return ["artifact-not-object"]
     errors = []
     if set(value) != {"schemaVersion", "evaluatedAt", "toolchain", "rules"}:
         errors.append("artifact-keys")
-    if value.get("schemaVersion") != 1:
+    if value.get("schemaVersion") != 2:
         errors.append("schema-version")
     evaluated_at = value.get("evaluatedAt")
     try:
@@ -85,12 +134,9 @@ def validate_artifact(value: object) -> list[str]:
             continue
         if set(rule) != {"ruleId", "candidate", "gates", "decision"}:
             errors.append(f"rule-keys-{expected_id}")
+        package, version = CANDIDATES[expected_id]
         candidate = rule.get("candidate")
-        if candidate is not None and (
-            not isinstance(candidate, dict)
-            or set(candidate) != {"package", "version"}
-            or not all(isinstance(candidate.get(key), str) and candidate[key].strip() for key in ("package", "version"))
-        ):
+        if candidate != {"package": package, "version": version}:
             errors.append(f"candidate-{expected_id}")
         gates = rule.get("gates")
         if not isinstance(gates, dict) or set(gates) != set(GATES):
@@ -99,7 +145,12 @@ def validate_artifact(value: object) -> list[str]:
         statuses = []
         for gate in GATES:
             result = gates.get(gate)
-            if not isinstance(result, dict) or set(result) != {"status", "command", "exitCode", "artifact", "evidence"}:
+            expected_keys = {"status", "command", "exitCode", "artifact", "evidence"}
+            if gate == "license":
+                expected_keys.add("licenseProvenance")
+            if gate == "maintainability":
+                expected_keys.add("maintenanceProvenance")
+            if not isinstance(result, dict) or set(result) != expected_keys:
                 errors.append(f"gate-keys-{expected_id}-{gate}")
                 continue
             status = result.get("status")
@@ -119,6 +170,17 @@ def validate_artifact(value: object) -> list[str]:
                     errors.append(f"gate-exit-{expected_id}-{gate}")
                 if not isinstance(artifact, str) or not artifact.strip():
                     errors.append(f"gate-artifact-{expected_id}-{gate}")
+            if gate == "license":
+                if result.get("command") != license_command(package, version):
+                    errors.append(f"license-command-{expected_id}")
+                if result.get("licenseProvenance") != expected_license_provenance(package, version):
+                    errors.append(f"license-provenance-{expected_id}")
+            if gate == "maintainability":
+                if result.get("command") != maintenance_command(package, version):
+                    errors.append(f"maintenance-command-{expected_id}")
+                provenance = result.get("maintenanceProvenance")
+                if provenance != expected_maintenance_provenance(expected_id, package, version):
+                    errors.append(f"maintenance-provenance-{expected_id}")
         decision = rule.get("decision")
         all_pass = len(statuses) == len(GATES) and all(status == "PASS" for status in statuses)
         expected_decision = (
@@ -151,7 +213,11 @@ def main() -> int:
         if not (ROOT / required).is_file():
             print(f"PBI06_RED missing {required}")
             return 1
-    errors = validate_artifact(json.loads((ROOT / ARTIFACT).read_text()))
+    artifact_value = json.loads((ROOT / ARTIFACT).read_text())
+    if artifact_value.get("schemaVersion") != 2:
+        print(f"PBI06_RED artifact_schema_version expected=2 actual={artifact_value.get('schemaVersion')}")
+        return 1
+    errors = validate_artifact(artifact_value)
     if errors:
         print("PBI06_FAIL artifact " + ",".join(errors))
         return 1

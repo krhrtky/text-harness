@@ -37,6 +37,8 @@ MUTATIONS = (
     "drop-pbi05j-boundary-title", "permit-pbi05j-splitast", "drop-pbi05j-splitast-mutation",
     "drop-pbi06-gate", "weaken-pbi06-evidence", "permit-pbi06-nonpass-external",
     "drop-pbi06-rule-id", "drop-pbi06-required-title", "drop-pbi06-runtime-hash",
+    "drift-pbi06-version", "drift-pbi06-package", "drift-pbi06-license",
+    "drift-pbi06-maint-command", "drift-pbi06-integrity",
 )
 
 def read_state() -> dict:
@@ -623,7 +625,9 @@ def pbi05j_registration_errors(body: str, oracle_exists: bool, implementation_ex
     return errors
 
 
-def pbi06_registration_errors(body: str, oracle_exists: bool, artifact_exists: bool) -> list[str]:
+def pbi06_registration_errors(
+    body: str, oracle_exists: bool, artifact_exists: bool, artifact_schema_version: int | None = None
+) -> list[str]:
     ownership = (
         'owned_paths: ["docs/decision-evidence/deterministic-qualification.md", "docs/decision-evidence/deterministic-qualification.json", "tests/qualification/deterministic.contract.test.mjs"]'
         in body
@@ -632,10 +636,36 @@ def pbi06_registration_errors(body: str, oracle_exists: bool, artifact_exists: b
         'top_level_keys_exact: ["schemaVersion", "evaluatedAt", "toolchain", "rules"]',
         'toolchain_exact: "node=24.19.0; pnpm=11.22.0"',
         'rule_keys_exact: ["ruleId", "candidate", "gates", "decision"]',
-        'gate_keys_exact: ["status", "command", "exitCode", "artifact", "evidence"]',
+        'schema_version: 2',
+        'base_gate_keys_exact: ["status", "command", "exitCode", "artifact", "evidence"]',
+        'license_gate_additional_key: "licenseProvenance"',
+        'maintainability_gate_additional_key: "maintenanceProvenance"',
         'gate_status: "PASS|FAIL|UNKNOWN; UNKNOWN requires command/exitCode/artifact null; PASS/FAIL require non-empty command/artifact and integer exitCode"',
         'evidence_contract: "non-empty array containing only non-empty strings; config evidence names ruleId; range evidence names RNG-001 UTF-16 half-open"',
         'decision_contract: "candidate non-null and all five PASS => EXTERNAL/ALL_GATES_PASS with implementationPbi null; otherwise INTERNAL/NON_PASS_GATE with exact PBI-06A through PBI-06H mapping"',
+        'D001: "textlint-rule-no-mix-dearu-desumasu@6.0.4"',
+        'D002: "textlint-rule-no-nfd@2.0.2"',
+        'D003: "@textlint-rule/textlint-rule-no-unmatched-pair@2.0.4"',
+        'D004: "textlint-rule-ng-word@1.0.0"',
+        'D005: "textlint-rule-prh@6.1.0"',
+        'D006: "textlint-rule-ja-no-successive-word@2.0.1"',
+        'D007: "textlint-rule-no-double-negative-ja@2.0.1"',
+        'D008: "textlint-rule-ja-no-redundant-expression@4.0.1"',
+        'license_provenance_contract: "exact keys expectedSpdx/observedSpdx/sourceType/sourceField/retrievalCommand; expectedSpdx=observedSpdx=MIT, sourceType=npm-registry, sourceField=license, command pins the same candidate"',
+        'maintenance_provenance_contract: "exact keys queriedPackage/queriedVersion/registryVersion/repositoryUrl/modified/deprecated/distIntegrity/sourceFields/retrievalCommand; package/version and command match candidate, modified is ISO, deprecated is null|string, and every captured value equals the rule-specific fixed map"',
+        'primary_retrieval_policy: "mise x node@24.19.0 -- npm view <package>@<version> ... --json; preserve captured fixed values; a later registry mismatch requires a new dated qualification decision and must not silently rewrite this artifact"',
+        'expected_license: "MIT"',
+        'D001: "repositoryUrl=git+https://github.com/textlint-ja/textlint-rule-no-mix-dearu-desumasu.git; modified=2025-01-16T01:04:33.851Z; deprecated=null; distIntegrity=sha512-SmALtOFbtmJ//k2iLMvtqhGrgJ/6uDVZFK7TBj2npVAbt10VxgLL87K+62pQ/BqiN9DpOVObshVFdug7lUOKHw=="',
+        'D002: "repositoryUrl=git+https://github.com/textlint-ja/textlint-rule-no-nfd.git; modified=2023-06-06T06:59:04.058Z; deprecated=null; distIntegrity=sha512-lIUvcQ+wqtConpPQU2YwEJl2dRcRyyrxPYZ3V76UwnkVg++XPLIrE5mLDgyNE/UIQ34e/KitJfMLqKWvnkFbNQ=="',
+        'D003: "repositoryUrl=git+https://github.com/textlint-rule/textlint-rule-no-unmatched-pair.git; modified=2024-11-07T01:16:27.784Z; deprecated=null; distIntegrity=sha512-g9Ge1xUV9xJy8T7nuutF/2J6Cg2mmPx4gKsC3dCdxVxuL0wMqOOnAi8l6psFpAQ5UFtQuAzwkdclrehPtBT5tg=="',
+        'D004: "repositoryUrl=git+https://github.com/KeitaMoromizato/textlint-rule-ng-word.git; modified=2022-06-27T05:46:57.121Z; deprecated=null; distIntegrity=sha512-YG4voM6jjN1aJ3/bOstXW/sf6aUDhiBoOCN52AKk7njxLqYkYJ3GcKTz/79ZMv2PoNa88pm0JuFglU7fTWmtYg=="',
+        'D005: "repositoryUrl=git+https://github.com/textlint-rule/textlint-rule-prh.git; modified=2025-04-20T11:47:38.762Z; deprecated=null; distIntegrity=sha512-KrchADHw1/LZ/tAQ2XwL/XdUhunKCvlNmwgp+6hdyzuWX7uojOkDdJWWV0KAN4XWsK6Te5w/SZcYwQ7X6i3B0A=="',
+        'D006: "repositoryUrl=git+https://github.com/textlint-ja/textlint-rule-ja-no-successive-word.git; modified=2023-03-13T06:38:56.594Z; deprecated=null; distIntegrity=sha512-XKTXkHwMu86SnGaj73B67U4apDdTquDKF3SfG24tRbzMyJoGe/Iba5VMId8sp8QHeTonp1bYOSxjZsbkpGyCNw=="',
+        'D007: "repositoryUrl=git+https://github.com/textlint-ja/textlint-rule-no-double-negative-ja.git; modified=2022-06-27T05:46:59.120Z; deprecated=null; distIntegrity=sha512-LRofmNt+nd2mp+AHmG0ltk9AlbzKbWPE+EToYQ1zORCd8N8suE1YxNEplz9OeQ59ea9ITtudDIWoqeHaZnbDsg=="',
+        'D008: "repositoryUrl=git+https://github.com/textlint-ja/textlint-rule-ja-no-redundant-expression.git; modified=2022-06-27T05:46:36.125Z; deprecated=null; distIntegrity=sha512-r8Qe6S7u9N97wD0gcrASqBUdZs5CMEVlgc8Ul+D2NQFiOi1BoseOMo5I9yUsEZMAL46yh/eaw9+EWz6IDlPWeA=="',
+        'package.json: "87d2ccaa29bd499df2777ed25614fd3e84a457a79ae5cc1d1581059dd7f62760"',
+        'pnpm-lock.yaml: "f5cc3eea2d7a5c7e04810e44f6d31798094437e54bdfa519112788bdb0f773ba"',
+        'packages/readability-core/package.json: "996ac24d4b0af2137c09c7ee84934fbd3db368c6db45347325441331685e9f55"',
     ))
     acceptance = all(value in body for value in (
         'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi06.py"',
@@ -668,6 +698,17 @@ def pbi06_registration_errors(body: str, oracle_exists: bool, artifact_exists: b
         ))
         if not registered:
             errors.append("PBI06-PRE-IMPLEMENTATION-RED")
+        return errors
+    if artifact_schema_version != 2:
+        qga_red = all(value in body for value in (
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi06.py; exit=1; signature=PBI06_RED artifact_schema_version expected=2 actual=1"',
+            'red_status: "REGISTERED_RED_QGA_FIX"',
+            'phase: "PRE_FIX_IMPLEMENTATION"',
+            'stdout: "PBI06_RED artifact_schema_version expected=2 actual=1"',
+            'stderr: "<empty>"', 'measured_runs: 2',
+        ))
+        if not qga_red:
+            errors.append("PBI06-QGA-FIX-RED")
         return errors
     green = all(value in body for value in (
         'expected_red: null', 'red_status: "CONSUMED_GREEN"',
@@ -850,6 +891,8 @@ def verify(state: dict) -> list[str]:
                 body,
                 (ROOT / ".codex/spec-verifiers/verify_pbi06.py").is_file(),
                 (ROOT / "docs/decision-evidence/deterministic-qualification.json").is_file(),
+                json.loads((ROOT / "docs/decision-evidence/deterministic-qualification.json").read_text()).get("schemaVersion")
+                if (ROOT / "docs/decision-evidence/deterministic-qualification.json").is_file() else None,
             ):
                 need(False, error)
         need(not any(x in body for x in ("TBD", "placeholder", "実装開始時に")), f"PACKET-PLACEHOLDER-{name}")
@@ -1158,6 +1201,8 @@ def apply_mutation(name: str, state: dict) -> None:
     elif name in (
         "drop-pbi06-gate", "weaken-pbi06-evidence", "permit-pbi06-nonpass-external",
         "drop-pbi06-rule-id", "drop-pbi06-required-title", "drop-pbi06-runtime-hash",
+        "drift-pbi06-version", "drift-pbi06-package", "drift-pbi06-license",
+        "drift-pbi06-maint-command", "drift-pbi06-integrity",
     ):
         key = next(k for k, body in packets.items() if packet_id(body) == "PBI-06")
         if name == "drop-pbi06-gate":
@@ -1174,10 +1219,24 @@ def apply_mutation(name: str, state: dict) -> None:
             packets[key] = packets[key].replace(
                 '"PBI06-Q07 any UNKNOWN gate selects internal implementation", ', "", 1
             )
-        else:
+        elif name == "drop-pbi06-runtime-hash":
             packets[key] = packets[key].replace(
                 '      pnpm-lock.yaml: "f5cc3eea2d7a5c7e04810e44f6d31798094437e54bdfa519112788bdb0f773ba"\n',
                 "",
+                1,
+            )
+        elif name == "drift-pbi06-version":
+            packets[key] = packets[key].replace("textlint-rule-no-nfd@2.0.2", "textlint-rule-no-nfd@999.0.0", 1)
+        elif name == "drift-pbi06-package":
+            packets[key] = packets[key].replace("textlint-rule-ng-word@1.0.0", "unrelated-package@1.0.0", 1)
+        elif name == "drift-pbi06-license":
+            packets[key] = packets[key].replace('expected_license: "MIT"', 'expected_license: "GPL-3.0"', 1)
+        elif name == "drift-pbi06-maint-command":
+            packets[key] = packets[key].replace("npm view <package>@<version>", "npm view unrelated@latest", 1)
+        else:
+            packets[key] = packets[key].replace(
+                "sha512-KrchADHw1/LZ/tAQ2XwL/XdUhunKCvlNmwgp+6hdyzuWX7uojOkDdJWWV0KAN4XWsK6Te5w/SZcYwQ7X6i3B0A==",
+                "TAMPERED",
                 1,
             )
     else: raise ValueError(name)
