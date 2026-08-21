@@ -18,26 +18,39 @@ task_packet:
     test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/contract/core.contract.test.ts"
     package_manifest: "packages/readability-core/package.json"
     contract_test_file: "packages/readability-core/test/contract/core.contract.test.ts"
-    minimum_tests: 3
+    minimum_tests: 14
     pass_equals_tests: true
     fail: 0
     required_titles:
       - "AC-FND-01 Finding uses UTF-16 zero-based half-open ranges"
       - "AC-FND-02 configuration is validated before analysis"
       - "AC-INT-01 findings are sorted deterministically across the adapter boundary"
-    green_signature: "PBI02_GREEN tests>=3 pass=tests fail=0 required_titles=3"
-  expected_red: "python3 .codex/spec-verifiers/verify_pbi02.py; exit=1; signature=PBI02_RED missing packages/readability-core/package.json"
-  red_status: "REGISTERED_RED"
-  expected_red_evidence:
-    phase: "PRE_IMPLEMENTATION"
-    command: "python3 .codex/spec-verifiers/verify_pbi02.py"
-    exit: 1
-    stdout: "PBI02_RED missing packages/readability-core/package.json"
-    stderr: "<empty>"
-    measured_runs: 2
+    green_signature: "PBI02_GREEN tests>=14 pass=tests fail=0 required_titles=3"
+  expected_red: null
+  red_status: "CONSUMED_GREEN"
   expected_red_history:
-    superseded_oracle: "test -f packages/readability-core/test/contract/core.contract.test.ts; exit=1; signature=<empty stdout/stderr>"
-    reason: "file existence alone did not prove package discovery, test collection, execution count, or expected title"
+    registration:
+      phase: "PRE_IMPLEMENTATION"
+      command: "python3 .codex/spec-verifiers/verify_pbi02.py"
+      exit: 1
+      stdout: "PBI02_RED missing packages/readability-core/package.json"
+      stderr: "<empty>"
+      measured_runs: 2
+    superseded_registration:
+      oracle: "test -f packages/readability-core/test/contract/core.contract.test.ts; exit=1; signature=<empty stdout/stderr>"
+      reason: "file existence alone did not prove package discovery, test collection, execution count, or expected title"
+  green_transition:
+    package_manifest: "packages/readability-core/package.json"
+    contract_test_file: "packages/readability-core/test/contract/core.contract.test.ts"
+    command: "python3 .codex/spec-verifiers/verify_pbi02.py"
+    exit: 0
+    minimum_tests: 14
+    pass_equals_tests: true
+    fail: 0
+    required_titles: 3
+    signature: "PBI02_GREEN tests>=14 pass=tests fail=0 required_titles=3"
+  green_history:
+    initial_da_green: "tests 14; pass 14; fail 0; required_titles 3"
   red_registration_gate: "PBI開始時、依存PBI完了後かつ実装変更前に、実在する失敗test command・exit code・完全一致signatureを登録する"
   acceptance: ["AC-FND-01", "AC-FND-02", "AC-INT-01"]
   engineering_constraints: "docs/requirements/engineering-constraints.md"

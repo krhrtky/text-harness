@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_MANIFEST = Path("packages/readability-core/package.json")
 CONTRACT_TEST = Path("packages/readability-core/test/contract/core.contract.test.ts")
-MINIMUM_TESTS = 3
+MINIMUM_TESTS = 14
 REQUIRED_TITLES = (
     "AC-FND-01 Finding uses UTF-16 zero-based half-open ranges",
     "AC-FND-02 configuration is validated before analysis",

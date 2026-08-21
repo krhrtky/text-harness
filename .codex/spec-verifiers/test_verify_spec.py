@@ -84,40 +84,39 @@ class SpecVerifierTest(unittest.TestCase):
         ):
             self.assertIn(scenario, green.stdout)
 
-    def test_pbi02_registered_red_matches_pre_implementation_baseline(self) -> None:
+    def test_pbi02_red_history_and_green_transition_match_repository_state(self) -> None:
         state = verify_spec.read_state()
         packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-02")
         oracle = ROOT / ".codex/spec-verifiers/verify_pbi02.py"
         package_manifest = ROOT / "packages/readability-core/package.json"
         contract_test = ROOT / "packages/readability-core/test/contract/core.contract.test.ts"
+        pre_implementation = packet.replace(
+            "expected_red: null",
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi02.py; exit=1; signature=PBI02_RED missing packages/readability-core/package.json"',
+            1,
+        ).replace('red_status: "CONSUMED_GREEN"', 'red_status: "REGISTERED_RED"', 1)
         self.assertEqual(
-            [],
-            verify_spec.pbi02_registration_errors(
-                packet, oracle.is_file(), package_manifest.is_file(), contract_test.is_file()
-            ),
+            [], verify_spec.pbi02_transition_errors(pre_implementation, True, False, False)
         )
-        for _ in range(2):
-            red = subprocess.run(
-                ["python3", str(oracle)],
-                cwd=ROOT,
-                text=True,
-                capture_output=True,
-            )
-            self.assertEqual(
-                (1, "PBI02_RED missing packages/readability-core/package.json\n", ""),
-                (red.returncode, red.stdout, red.stderr),
-            )
-        no_match = subprocess.run(
-            [
-                "mise", "x", "node@24.19.0", "--", "corepack", "pnpm",
-                "--filter", "@text-harness/readability-core", "--fail-if-no-match",
-                "exec", "node", "--test", "test/contract/core.contract.test.ts",
-            ],
-            cwd=ROOT,
-            text=True,
-            capture_output=True,
+        self.assertTrue(package_manifest.is_file())
+        self.assertTrue(contract_test.is_file())
+        self.assertEqual([], verify_spec.pbi02_transition_errors(packet, oracle.is_file(), True, True))
+        green = subprocess.run(["python3", str(oracle)], cwd=ROOT, text=True, capture_output=True)
+        self.assertEqual(0, green.returncode, green.stdout + green.stderr)
+        summary = re.search(
+            r"PBI02_GREEN tests=(\d+) pass=(\d+) fail=(\d+) required_titles=(\d+)", green.stdout
         )
-        self.assertEqual(1, no_match.returncode)
-        self.assertIn("No projects matched the filters", no_match.stdout + no_match.stderr)
+        self.assertIsNotNone(summary)
+        tests, passed, failed, titles = (int(value) for value in summary.groups())
+        self.assertGreaterEqual(tests, 14)
+        self.assertEqual(tests, passed)
+        self.assertEqual(0, failed)
+        self.assertEqual(3, titles)
+        for title in (
+            "AC-FND-01 Finding uses UTF-16 zero-based half-open ranges",
+            "AC-FND-02 configuration is validated before analysis",
+            "AC-INT-01 findings are sorted deterministically across the adapter boundary",
+        ):
+            self.assertIn(title, green.stdout)
 
 if __name__ == "__main__": unittest.main()

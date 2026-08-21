@@ -91,7 +91,7 @@ def pbi01_transition_errors(body: str, executable_exists: bool) -> list[str]:
     ))
     return [] if green else ["PBI01-POST-IMPLEMENTATION-GREEN"]
 
-def pbi02_registration_errors(
+def pbi02_transition_errors(
     body: str, oracle_exists: bool, package_manifest_exists: bool, contract_test_exists: bool
 ) -> list[str]:
     ownership = all(value in body for value in (
@@ -106,32 +106,54 @@ def pbi02_registration_errors(
         'test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/contract/core.contract.test.ts"',
         'package_manifest: "packages/readability-core/package.json"',
         'contract_test_file: "packages/readability-core/test/contract/core.contract.test.ts"',
-        "minimum_tests: 3",
+        "minimum_tests: 14",
         "pass_equals_tests: true",
         "fail: 0",
         '"AC-FND-01 Finding uses UTF-16 zero-based half-open ranges"',
         '"AC-FND-02 configuration is validated before analysis"',
         '"AC-INT-01 findings are sorted deterministically across the adapter boundary"',
-        'green_signature: "PBI02_GREEN tests>=3 pass=tests fail=0 required_titles=3"',
+        'green_signature: "PBI02_GREEN tests>=14 pass=tests fail=0 required_titles=3"',
     ))
-    registered = all(value in body for value in (
-        'expected_red: "python3 .codex/spec-verifiers/verify_pbi02.py; exit=1; signature=PBI02_RED missing packages/readability-core/package.json"',
-        'red_status: "REGISTERED_RED"',
+    historical = all(value in body for value in (
         'phase: "PRE_IMPLEMENTATION"',
         'command: "python3 .codex/spec-verifiers/verify_pbi02.py"',
         "exit: 1",
         'stdout: "PBI02_RED missing packages/readability-core/package.json"',
         'stderr: "<empty>"',
         "measured_runs: 2",
-        'superseded_oracle: "test -f packages/readability-core/test/contract/core.contract.test.ts; exit=1; signature=<empty stdout/stderr>"',
+        'oracle: "test -f packages/readability-core/test/contract/core.contract.test.ts; exit=1; signature=<empty stdout/stderr>"',
     ))
     errors = []
     if not ownership:
         errors.append("PBI02-OWNERSHIP")
     if not acceptance or not oracle_exists:
         errors.append("PBI02-ACCEPTANCE-ORACLE")
-    if not registered or package_manifest_exists or contract_test_exists:
-        errors.append("PBI02-PRE-IMPLEMENTATION-RED")
+    if not historical:
+        errors.append("PBI02-RED-HISTORY")
+    if not package_manifest_exists or not contract_test_exists:
+        registered = all(value in body for value in (
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi02.py; exit=1; signature=PBI02_RED missing packages/readability-core/package.json"',
+            'red_status: "REGISTERED_RED"',
+        ))
+        if not registered:
+            errors.append("PBI02-PRE-IMPLEMENTATION-RED")
+        return errors
+    green = all(value in body for value in (
+        "expected_red: null",
+        'red_status: "CONSUMED_GREEN"',
+        'package_manifest: "packages/readability-core/package.json"',
+        'contract_test_file: "packages/readability-core/test/contract/core.contract.test.ts"',
+        'command: "python3 .codex/spec-verifiers/verify_pbi02.py"',
+        "exit: 0",
+        "minimum_tests: 14",
+        "pass_equals_tests: true",
+        "fail: 0",
+        "required_titles: 3",
+        'signature: "PBI02_GREEN tests>=14 pass=tests fail=0 required_titles=3"',
+        'initial_da_green: "tests 14; pass 14; fail 0; required_titles 3"',
+    ))
+    if not green:
+        errors.append("PBI02-POST-IMPLEMENTATION-GREEN")
     return errors
 
 def verify(state: dict) -> list[str]:
@@ -205,19 +227,21 @@ def verify(state: dict) -> list[str]:
             if pid == "PBI-01":
                 for error in pbi01_transition_errors(body, (ROOT / "scripts/text-harness-setup").is_file() and (ROOT / "scripts/text-harness-setup").stat().st_mode & 0o111 != 0):
                     need(False, error)
+            elif pid == "PBI-02":
+                pass
             else:
                 need("red_registration_gate:" in body, f"PACKET-RED-GATE-{pid}")
         else:
             need("exit=" in red_line and "signature=" in red_line, f"PACKET-RED-SIGNATURE-{pid}")
             need("pnpm " not in red_line, f"PACKET-RED-NONEXECUTABLE-{pid}")
-            if pid == "PBI-02":
-                for error in pbi02_registration_errors(
-                    body,
-                    (ROOT / ".codex/spec-verifiers/verify_pbi02.py").is_file(),
-                    (ROOT / "packages/readability-core/package.json").is_file(),
-                    (ROOT / "packages/readability-core/test/contract/core.contract.test.ts").is_file(),
-                ):
-                    need(False, error)
+        if pid == "PBI-02":
+            for error in pbi02_transition_errors(
+                body,
+                (ROOT / ".codex/spec-verifiers/verify_pbi02.py").is_file(),
+                (ROOT / "packages/readability-core/package.json").is_file(),
+                (ROOT / "packages/readability-core/test/contract/core.contract.test.ts").is_file(),
+            ):
+                need(False, error)
         need(not any(x in body for x in ("TBD", "placeholder", "実装開始時に")), f"PACKET-PLACEHOLDER-{name}")
 
     for gap in range(8, 18):
