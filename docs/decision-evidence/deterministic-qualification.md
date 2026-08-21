@@ -14,7 +14,24 @@
 - maintainability: 固定version、source repository、公開日時、integrity、deprecation markerを npm registry metadataで取得できることを実測した。このゲートは将来の活発さを推測せず、監査可能な固定sourceとrelease状態だけを判定する。
 - range: RNG-001のUTF-16、0-based、half-open rangeを原文へ再構成するadapter fixtureの実行証拠がないため、8候補すべて `UNKNOWN` とした。
 
-実測commandは機械可読成果物の各ゲートに保存した。8候補について `npm view <package>@<version> readme --json` と metadata commandを実行し、全16取得が `exit=0` だった。runtime dependency、package manifest、lockfileは変更していない。
+実測commandはschema v2機械可読成果物の各ゲートに保存した。8候補について `npm view <package>@<version> readme --json` と metadata commandを実行し、全16取得が `exit=0` だった。runtime dependency、package manifest、lockfileは変更していない。
+
+## Registry provenance
+
+再観測日時は `2026-08-21T06:01:38Z`。Node 24.19.0を明示して固定versionを問い合わせ、packetに固定された値との差分がないことを確認した。licenseの `sourceField` は `license`、maintenanceの `sourceFields` は exact順序で `name`, `version`, `license`, `repository.url`, `time.modified`, `deprecated`, `dist.integrity` である。registry responseに `deprecated` fieldがなかったため、全候補で型付き値 `null` を保存した。
+
+各候補のlicense commandは `mise x node@24.19.0 -- npm view <candidate> license --json`、maintenance commandは `mise x node@24.19.0 -- npm view <candidate> name version license repository.url time.modified deprecated dist.integrity --json` であり、全16commandが `exit=0` だった。実行したcandidate文字列と観測値は次のとおり。
+
+- D001 `textlint-rule-no-mix-dearu-desumasu@6.0.4`: license=`MIT`; repository=`git+https://github.com/textlint-ja/textlint-rule-no-mix-dearu-desumasu.git`; modified=`2025-01-16T01:04:33.851Z`; deprecated=`null`; integrity=`sha512-SmALtOFbtmJ//k2iLMvtqhGrgJ/6uDVZFK7TBj2npVAbt10VxgLL87K+62pQ/BqiN9DpOVObshVFdug7lUOKHw==`。
+- D002 `textlint-rule-no-nfd@2.0.2`: license=`MIT`; repository=`git+https://github.com/textlint-ja/textlint-rule-no-nfd.git`; modified=`2023-06-06T06:59:04.058Z`; deprecated=`null`; integrity=`sha512-lIUvcQ+wqtConpPQU2YwEJl2dRcRyyrxPYZ3V76UwnkVg++XPLIrE5mLDgyNE/UIQ34e/KitJfMLqKWvnkFbNQ==`。
+- D003 `@textlint-rule/textlint-rule-no-unmatched-pair@2.0.4`: license=`MIT`; repository=`git+https://github.com/textlint-rule/textlint-rule-no-unmatched-pair.git`; modified=`2024-11-07T01:16:27.784Z`; deprecated=`null`; integrity=`sha512-g9Ge1xUV9xJy8T7nuutF/2J6Cg2mmPx4gKsC3dCdxVxuL0wMqOOnAi8l6psFpAQ5UFtQuAzwkdclrehPtBT5tg==`。
+- D004 `textlint-rule-ng-word@1.0.0`: license=`MIT`; repository=`git+https://github.com/KeitaMoromizato/textlint-rule-ng-word.git`; modified=`2022-06-27T05:46:57.121Z`; deprecated=`null`; integrity=`sha512-YG4voM6jjN1aJ3/bOstXW/sf6aUDhiBoOCN52AKk7njxLqYkYJ3GcKTz/79ZMv2PoNa88pm0JuFglU7fTWmtYg==`。
+- D005 `textlint-rule-prh@6.1.0`: license=`MIT`; repository=`git+https://github.com/textlint-rule/textlint-rule-prh.git`; modified=`2025-04-20T11:47:38.762Z`; deprecated=`null`; integrity=`sha512-KrchADHw1/LZ/tAQ2XwL/XdUhunKCvlNmwgp+6hdyzuWX7uojOkDdJWWV0KAN4XWsK6Te5w/SZcYwQ7X6i3B0A==`。
+- D006 `textlint-rule-ja-no-successive-word@2.0.1`: license=`MIT`; repository=`git+https://github.com/textlint-ja/textlint-rule-ja-no-successive-word.git`; modified=`2023-03-13T06:38:56.594Z`; deprecated=`null`; integrity=`sha512-XKTXkHwMu86SnGaj73B67U4apDdTquDKF3SfG24tRbzMyJoGe/Iba5VMId8sp8QHeTonp1bYOSxjZsbkpGyCNw==`。
+- D007 `textlint-rule-no-double-negative-ja@2.0.1`: license=`MIT`; repository=`git+https://github.com/textlint-ja/textlint-rule-no-double-negative-ja.git`; modified=`2022-06-27T05:46:59.120Z`; deprecated=`null`; integrity=`sha512-LRofmNt+nd2mp+AHmG0ltk9AlbzKbWPE+EToYQ1zORCd8N8suE1YxNEplz9OeQ59ea9ITtudDIWoqeHaZnbDsg==`。
+- D008 `textlint-rule-ja-no-redundant-expression@4.0.1`: license=`MIT`; repository=`git+https://github.com/textlint-ja/textlint-rule-ja-no-redundant-expression.git`; modified=`2022-06-27T05:46:36.125Z`; deprecated=`null`; integrity=`sha512-r8Qe6S7u9N97wD0gcrASqBUdZs5CMEVlgc8Ul+D2NQFiOi1BoseOMo5I9yUsEZMAL46yh/eaw9+EWz6IDlPWeA==`。
+
+今後の再取得で値が異なる場合、この記録を上書きせず、観測日時と差分を持つ新しいqualification decisionを作成する。
 
 ## 結果
 
@@ -45,7 +62,7 @@
 
 ### D004
 
-[ng-word](https://github.com/KeitaMoromizato/ng-word) 1.0.0 は `words:string[]` を公開し、D004の `forbiddenTerms:string[]` は形として写像できる。一方、部分一致をliteralとして扱いregexとして解釈しないこと、および `必ずしも` falsificationをfixtureで確認していない。functionalとrangeを確定できないため PBI-06Dへ送る。
+[ng-word](https://github.com/KeitaMoromizato/textlint-rule-ng-word) 1.0.0 は `words:string[]` を公開し、D004の `forbiddenTerms:string[]` は形として写像できる。一方、部分一致をliteralとして扱いregexとして解釈しないこと、および `必ずしも` falsificationをfixtureで確認していない。functionalとrangeを確定できないため PBI-06Dへ送る。
 
 ### D005
 

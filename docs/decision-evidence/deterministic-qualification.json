@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "evaluatedAt": "2026-08-21",
   "toolchain": {
     "node": "24.19.0",
@@ -19,11 +19,13 @@
           "evidence": ["D001 candidate 6.0.4 exposes preferInHeader, preferInBody, preferInList, and strict at https://github.com/textlint-ja/textlint-rule-no-mix-dearu-desumasu; no lossless proof exists for the public style=consistent|desu-masu|da-dearu contract."]
         },
         "license": {
-          "status": "PASS", "command": "npm view textlint-rule-no-mix-dearu-desumasu@6.0.4 license --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d001",
+          "status": "PASS", "command": "mise x node@24.19.0 -- npm view textlint-rule-no-mix-dearu-desumasu@6.0.4 license --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d001",
+          "licenseProvenance": { "expectedSpdx": "MIT", "observedSpdx": "MIT", "sourceType": "npm-registry", "sourceField": "license", "retrievalCommand": "mise x node@24.19.0 -- npm view textlint-rule-no-mix-dearu-desumasu@6.0.4 license --json" },
           "evidence": ["2026-08-21 npm registry metadata for textlint-rule-no-mix-dearu-desumasu@6.0.4 reports MIT; source is https://github.com/textlint-ja/textlint-rule-no-mix-dearu-desumasu."]
         },
         "maintainability": {
-          "status": "PASS", "command": "npm view textlint-rule-no-mix-dearu-desumasu@6.0.4 name version license repository.url time.modified deprecated dist.integrity --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d001",
+          "status": "PASS", "command": "mise x node@24.19.0 -- npm view textlint-rule-no-mix-dearu-desumasu@6.0.4 name version license repository.url time.modified deprecated dist.integrity --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d001",
+          "maintenanceProvenance": { "queriedPackage": "textlint-rule-no-mix-dearu-desumasu", "queriedVersion": "6.0.4", "registryVersion": "6.0.4", "repositoryUrl": "git+https://github.com/textlint-ja/textlint-rule-no-mix-dearu-desumasu.git", "modified": "2025-01-16T01:04:33.851Z", "deprecated": null, "distIntegrity": "sha512-SmALtOFbtmJ//k2iLMvtqhGrgJ/6uDVZFK7TBj2npVAbt10VxgLL87K+62pQ/BqiN9DpOVObshVFdug7lUOKHw==", "sourceFields": ["name", "version", "license", "repository.url", "time.modified", "deprecated", "dist.integrity"], "retrievalCommand": "mise x node@24.19.0 -- npm view textlint-rule-no-mix-dearu-desumasu@6.0.4 name version license repository.url time.modified deprecated dist.integrity --json" },
           "evidence": ["2026-08-21 registry metadata pins version 6.0.4, repository https://github.com/textlint-ja/textlint-rule-no-mix-dearu-desumasu.git, release metadata, integrity, and no deprecation marker."]
         },
         "range": {
@@ -46,11 +48,13 @@
           "evidence": ["D002 has no public configuration fields; candidate 2.0.2 is enabled with a boolean as documented at https://github.com/textlint-ja/textlint-rule-no-nfd."]
         },
         "license": {
-          "status": "PASS", "command": "npm view textlint-rule-no-nfd@2.0.2 license --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d002",
+          "status": "PASS", "command": "mise x node@24.19.0 -- npm view textlint-rule-no-nfd@2.0.2 license --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d002",
+          "licenseProvenance": { "expectedSpdx": "MIT", "observedSpdx": "MIT", "sourceType": "npm-registry", "sourceField": "license", "retrievalCommand": "mise x node@24.19.0 -- npm view textlint-rule-no-nfd@2.0.2 license --json" },
           "evidence": ["2026-08-21 npm registry metadata for textlint-rule-no-nfd@2.0.2 reports MIT; source is https://github.com/textlint-ja/textlint-rule-no-nfd."]
         },
         "maintainability": {
-          "status": "PASS", "command": "npm view textlint-rule-no-nfd@2.0.2 name version license repository.url time.modified deprecated dist.integrity --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d002",
+          "status": "PASS", "command": "mise x node@24.19.0 -- npm view textlint-rule-no-nfd@2.0.2 name version license repository.url time.modified deprecated dist.integrity --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d002",
+          "maintenanceProvenance": { "queriedPackage": "textlint-rule-no-nfd", "queriedVersion": "2.0.2", "registryVersion": "2.0.2", "repositoryUrl": "git+https://github.com/textlint-ja/textlint-rule-no-nfd.git", "modified": "2023-06-06T06:59:04.058Z", "deprecated": null, "distIntegrity": "sha512-lIUvcQ+wqtConpPQU2YwEJl2dRcRyyrxPYZ3V76UwnkVg++XPLIrE5mLDgyNE/UIQ34e/KitJfMLqKWvnkFbNQ==", "sourceFields": ["name", "version", "license", "repository.url", "time.modified", "deprecated", "dist.integrity"], "retrievalCommand": "mise x node@24.19.0 -- npm view textlint-rule-no-nfd@2.0.2 name version license repository.url time.modified deprecated dist.integrity --json" },
           "evidence": ["2026-08-21 registry metadata pins version 2.0.2, repository https://github.com/textlint-ja/textlint-rule-no-nfd.git, release metadata, integrity, and no deprecation marker."]
         },
         "range": {
@@ -73,11 +77,13 @@
           "evidence": ["D003 has no public configuration fields; candidate 2.0.4 is enabled with a boolean as documented at https://github.com/textlint-rule/textlint-rule-no-unmatched-pair."]
         },
         "license": {
-          "status": "PASS", "command": "npm view @textlint-rule/textlint-rule-no-unmatched-pair@2.0.4 license --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d003",
+          "status": "PASS", "command": "mise x node@24.19.0 -- npm view @textlint-rule/textlint-rule-no-unmatched-pair@2.0.4 license --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d003",
+          "licenseProvenance": { "expectedSpdx": "MIT", "observedSpdx": "MIT", "sourceType": "npm-registry", "sourceField": "license", "retrievalCommand": "mise x node@24.19.0 -- npm view @textlint-rule/textlint-rule-no-unmatched-pair@2.0.4 license --json" },
           "evidence": ["2026-08-21 npm registry metadata for @textlint-rule/textlint-rule-no-unmatched-pair@2.0.4 reports MIT; source is https://github.com/textlint-rule/textlint-rule-no-unmatched-pair."]
         },
         "maintainability": {
-          "status": "PASS", "command": "npm view @textlint-rule/textlint-rule-no-unmatched-pair@2.0.4 name version license repository.url time.modified deprecated dist.integrity --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d003",
+          "status": "PASS", "command": "mise x node@24.19.0 -- npm view @textlint-rule/textlint-rule-no-unmatched-pair@2.0.4 name version license repository.url time.modified deprecated dist.integrity --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d003",
+          "maintenanceProvenance": { "queriedPackage": "@textlint-rule/textlint-rule-no-unmatched-pair", "queriedVersion": "2.0.4", "registryVersion": "2.0.4", "repositoryUrl": "git+https://github.com/textlint-rule/textlint-rule-no-unmatched-pair.git", "modified": "2024-11-07T01:16:27.784Z", "deprecated": null, "distIntegrity": "sha512-g9Ge1xUV9xJy8T7nuutF/2J6Cg2mmPx4gKsC3dCdxVxuL0wMqOOnAi8l6psFpAQ5UFtQuAzwkdclrehPtBT5tg==", "sourceFields": ["name", "version", "license", "repository.url", "time.modified", "deprecated", "dist.integrity"], "retrievalCommand": "mise x node@24.19.0 -- npm view @textlint-rule/textlint-rule-no-unmatched-pair@2.0.4 name version license repository.url time.modified deprecated dist.integrity --json" },
           "evidence": ["2026-08-21 registry metadata pins version 2.0.4, repository https://github.com/textlint-rule/textlint-rule-no-unmatched-pair.git, release metadata, integrity, and no deprecation marker."]
         },
         "range": {
@@ -93,19 +99,21 @@
       "gates": {
         "functional": {
           "status": "UNKNOWN", "command": null, "exitCode": null, "artifact": null,
-          "evidence": ["2026-08-21 candidate 1.0.0 primary source https://github.com/KeitaMoromizato/ng-word documents NG words, but literal-only substring and 必ずしも falsification fixtures for D004 were not executed."]
+          "evidence": ["2026-08-21 candidate 1.0.0 primary source https://github.com/KeitaMoromizato/textlint-rule-ng-word documents NG words, but literal-only substring and 必ずしも falsification fixtures for D004 were not executed."]
         },
         "configCompatibility": {
           "status": "PASS", "command": "npm view textlint-rule-ng-word@1.0.0 readme --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d004",
-          "evidence": ["D004 forbiddenTerms:string[] maps directly to candidate 1.0.0 words:string[] documented at https://github.com/KeitaMoromizato/ng-word; functional literal semantics remain separately UNKNOWN."]
+          "evidence": ["D004 forbiddenTerms:string[] maps directly to candidate 1.0.0 words:string[] documented at https://github.com/KeitaMoromizato/textlint-rule-ng-word; functional literal semantics remain separately UNKNOWN."]
         },
         "license": {
-          "status": "PASS", "command": "npm view textlint-rule-ng-word@1.0.0 license --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d004",
-          "evidence": ["2026-08-21 npm registry metadata for textlint-rule-ng-word@1.0.0 reports MIT; source is https://github.com/KeitaMoromizato/ng-word."]
+          "status": "PASS", "command": "mise x node@24.19.0 -- npm view textlint-rule-ng-word@1.0.0 license --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d004",
+          "licenseProvenance": { "expectedSpdx": "MIT", "observedSpdx": "MIT", "sourceType": "npm-registry", "sourceField": "license", "retrievalCommand": "mise x node@24.19.0 -- npm view textlint-rule-ng-word@1.0.0 license --json" },
+          "evidence": ["2026-08-21 npm registry metadata for textlint-rule-ng-word@1.0.0 reports MIT; source is https://github.com/KeitaMoromizato/textlint-rule-ng-word."]
         },
         "maintainability": {
-          "status": "PASS", "command": "npm view textlint-rule-ng-word@1.0.0 name version license repository.url time.modified deprecated dist.integrity --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d004",
-          "evidence": ["2026-08-21 registry metadata pins version 1.0.0, repository https://github.com/KeitaMoromizato/ng-word.git, release metadata, integrity, and no deprecation marker."]
+          "status": "PASS", "command": "mise x node@24.19.0 -- npm view textlint-rule-ng-word@1.0.0 name version license repository.url time.modified deprecated dist.integrity --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d004",
+          "maintenanceProvenance": { "queriedPackage": "textlint-rule-ng-word", "queriedVersion": "1.0.0", "registryVersion": "1.0.0", "repositoryUrl": "git+https://github.com/KeitaMoromizato/textlint-rule-ng-word.git", "modified": "2022-06-27T05:46:57.121Z", "deprecated": null, "distIntegrity": "sha512-YG4voM6jjN1aJ3/bOstXW/sf6aUDhiBoOCN52AKk7njxLqYkYJ3GcKTz/79ZMv2PoNa88pm0JuFglU7fTWmtYg==", "sourceFields": ["name", "version", "license", "repository.url", "time.modified", "deprecated", "dist.integrity"], "retrievalCommand": "mise x node@24.19.0 -- npm view textlint-rule-ng-word@1.0.0 name version license repository.url time.modified deprecated dist.integrity --json" },
+          "evidence": ["2026-08-21 registry metadata pins version 1.0.0, repository https://github.com/KeitaMoromizato/textlint-rule-ng-word.git, release metadata, integrity, and no deprecation marker."]
         },
         "range": {
           "status": "UNKNOWN", "command": null, "exitCode": null, "artifact": null,
@@ -127,11 +135,13 @@
           "evidence": ["D005 requires an in-memory terminology object; candidate 6.1.0 requires rulePaths to YAML and permits RegExp patterns as documented at https://github.com/textlint-rule/textlint-rule-prh, so the public config is not losslessly accepted."]
         },
         "license": {
-          "status": "PASS", "command": "npm view textlint-rule-prh@6.1.0 license --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d005",
+          "status": "PASS", "command": "mise x node@24.19.0 -- npm view textlint-rule-prh@6.1.0 license --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d005",
+          "licenseProvenance": { "expectedSpdx": "MIT", "observedSpdx": "MIT", "sourceType": "npm-registry", "sourceField": "license", "retrievalCommand": "mise x node@24.19.0 -- npm view textlint-rule-prh@6.1.0 license --json" },
           "evidence": ["2026-08-21 npm registry metadata for textlint-rule-prh@6.1.0 reports MIT; source is https://github.com/textlint-rule/textlint-rule-prh."]
         },
         "maintainability": {
-          "status": "PASS", "command": "npm view textlint-rule-prh@6.1.0 name version license repository.url time.modified deprecated dist.integrity --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d005",
+          "status": "PASS", "command": "mise x node@24.19.0 -- npm view textlint-rule-prh@6.1.0 name version license repository.url time.modified deprecated dist.integrity --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d005",
+          "maintenanceProvenance": { "queriedPackage": "textlint-rule-prh", "queriedVersion": "6.1.0", "registryVersion": "6.1.0", "repositoryUrl": "git+https://github.com/textlint-rule/textlint-rule-prh.git", "modified": "2025-04-20T11:47:38.762Z", "deprecated": null, "distIntegrity": "sha512-KrchADHw1/LZ/tAQ2XwL/XdUhunKCvlNmwgp+6hdyzuWX7uojOkDdJWWV0KAN4XWsK6Te5w/SZcYwQ7X6i3B0A==", "sourceFields": ["name", "version", "license", "repository.url", "time.modified", "deprecated", "dist.integrity"], "retrievalCommand": "mise x node@24.19.0 -- npm view textlint-rule-prh@6.1.0 name version license repository.url time.modified deprecated dist.integrity --json" },
           "evidence": ["2026-08-21 registry metadata pins version 6.1.0, repository https://github.com/textlint-rule/textlint-rule-prh.git, release metadata, integrity, and no deprecation marker."]
         },
         "range": {
@@ -154,11 +164,13 @@
           "evidence": ["D006 requires maxConsecutive=1|2; candidate 2.0.1 exposes allowOnomatopee and allow, but no maxConsecutive option, at https://github.com/textlint-ja/textlint-rule-ja-no-successive-word."]
         },
         "license": {
-          "status": "PASS", "command": "npm view textlint-rule-ja-no-successive-word@2.0.1 license --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d006",
+          "status": "PASS", "command": "mise x node@24.19.0 -- npm view textlint-rule-ja-no-successive-word@2.0.1 license --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d006",
+          "licenseProvenance": { "expectedSpdx": "MIT", "observedSpdx": "MIT", "sourceType": "npm-registry", "sourceField": "license", "retrievalCommand": "mise x node@24.19.0 -- npm view textlint-rule-ja-no-successive-word@2.0.1 license --json" },
           "evidence": ["2026-08-21 npm registry metadata for textlint-rule-ja-no-successive-word@2.0.1 reports MIT; source is https://github.com/textlint-ja/textlint-rule-ja-no-successive-word."]
         },
         "maintainability": {
-          "status": "PASS", "command": "npm view textlint-rule-ja-no-successive-word@2.0.1 name version license repository.url time.modified deprecated dist.integrity --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d006",
+          "status": "PASS", "command": "mise x node@24.19.0 -- npm view textlint-rule-ja-no-successive-word@2.0.1 name version license repository.url time.modified deprecated dist.integrity --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d006",
+          "maintenanceProvenance": { "queriedPackage": "textlint-rule-ja-no-successive-word", "queriedVersion": "2.0.1", "registryVersion": "2.0.1", "repositoryUrl": "git+https://github.com/textlint-ja/textlint-rule-ja-no-successive-word.git", "modified": "2023-03-13T06:38:56.594Z", "deprecated": null, "distIntegrity": "sha512-XKTXkHwMu86SnGaj73B67U4apDdTquDKF3SfG24tRbzMyJoGe/Iba5VMId8sp8QHeTonp1bYOSxjZsbkpGyCNw==", "sourceFields": ["name", "version", "license", "repository.url", "time.modified", "deprecated", "dist.integrity"], "retrievalCommand": "mise x node@24.19.0 -- npm view textlint-rule-ja-no-successive-word@2.0.1 name version license repository.url time.modified deprecated dist.integrity --json" },
           "evidence": ["2026-08-21 registry metadata pins version 2.0.1, repository https://github.com/textlint-ja/textlint-rule-ja-no-successive-word.git, release metadata, integrity, and no deprecation marker."]
         },
         "range": {
@@ -181,11 +193,13 @@
           "evidence": ["D007 requires patterns:string[]; candidate 2.0.1 documents no configuration option at https://github.com/textlint-ja/textlint-rule-no-double-negative-ja, so arbitrary public patterns cannot be accepted."]
         },
         "license": {
-          "status": "PASS", "command": "npm view textlint-rule-no-double-negative-ja@2.0.1 license --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d007",
+          "status": "PASS", "command": "mise x node@24.19.0 -- npm view textlint-rule-no-double-negative-ja@2.0.1 license --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d007",
+          "licenseProvenance": { "expectedSpdx": "MIT", "observedSpdx": "MIT", "sourceType": "npm-registry", "sourceField": "license", "retrievalCommand": "mise x node@24.19.0 -- npm view textlint-rule-no-double-negative-ja@2.0.1 license --json" },
           "evidence": ["2026-08-21 npm registry metadata for textlint-rule-no-double-negative-ja@2.0.1 reports MIT; source is https://github.com/textlint-ja/textlint-rule-no-double-negative-ja."]
         },
         "maintainability": {
-          "status": "PASS", "command": "npm view textlint-rule-no-double-negative-ja@2.0.1 name version license repository.url time.modified deprecated dist.integrity --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d007",
+          "status": "PASS", "command": "mise x node@24.19.0 -- npm view textlint-rule-no-double-negative-ja@2.0.1 name version license repository.url time.modified deprecated dist.integrity --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d007",
+          "maintenanceProvenance": { "queriedPackage": "textlint-rule-no-double-negative-ja", "queriedVersion": "2.0.1", "registryVersion": "2.0.1", "repositoryUrl": "git+https://github.com/textlint-ja/textlint-rule-no-double-negative-ja.git", "modified": "2022-06-27T05:46:59.120Z", "deprecated": null, "distIntegrity": "sha512-LRofmNt+nd2mp+AHmG0ltk9AlbzKbWPE+EToYQ1zORCd8N8suE1YxNEplz9OeQ59ea9ITtudDIWoqeHaZnbDsg==", "sourceFields": ["name", "version", "license", "repository.url", "time.modified", "deprecated", "dist.integrity"], "retrievalCommand": "mise x node@24.19.0 -- npm view textlint-rule-no-double-negative-ja@2.0.1 name version license repository.url time.modified deprecated dist.integrity --json" },
           "evidence": ["2026-08-21 registry metadata pins version 2.0.1, repository https://github.com/textlint-ja/textlint-rule-no-double-negative-ja.git, release metadata, integrity, and no deprecation marker."]
         },
         "range": {
@@ -208,11 +222,13 @@
           "evidence": ["D008 requires replacements:Record<string,string>; candidate 4.0.1 exposes allowNodeTypes and dictOptions for built-in dictionaries at https://github.com/textlint-ja/textlint-rule-ja-no-redundant-expression, not arbitrary replacements."]
         },
         "license": {
-          "status": "PASS", "command": "npm view textlint-rule-ja-no-redundant-expression@4.0.1 license --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d008",
+          "status": "PASS", "command": "mise x node@24.19.0 -- npm view textlint-rule-ja-no-redundant-expression@4.0.1 license --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d008",
+          "licenseProvenance": { "expectedSpdx": "MIT", "observedSpdx": "MIT", "sourceType": "npm-registry", "sourceField": "license", "retrievalCommand": "mise x node@24.19.0 -- npm view textlint-rule-ja-no-redundant-expression@4.0.1 license --json" },
           "evidence": ["2026-08-21 npm registry metadata for textlint-rule-ja-no-redundant-expression@4.0.1 reports MIT; source is https://github.com/textlint-ja/textlint-rule-ja-no-redundant-expression."]
         },
         "maintainability": {
-          "status": "PASS", "command": "npm view textlint-rule-ja-no-redundant-expression@4.0.1 name version license repository.url time.modified deprecated dist.integrity --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d008",
+          "status": "PASS", "command": "mise x node@24.19.0 -- npm view textlint-rule-ja-no-redundant-expression@4.0.1 name version license repository.url time.modified deprecated dist.integrity --json", "exitCode": 0, "artifact": "docs/decision-evidence/deterministic-qualification.md#d008",
+          "maintenanceProvenance": { "queriedPackage": "textlint-rule-ja-no-redundant-expression", "queriedVersion": "4.0.1", "registryVersion": "4.0.1", "repositoryUrl": "git+https://github.com/textlint-ja/textlint-rule-ja-no-redundant-expression.git", "modified": "2022-06-27T05:46:36.125Z", "deprecated": null, "distIntegrity": "sha512-r8Qe6S7u9N97wD0gcrASqBUdZs5CMEVlgc8Ul+D2NQFiOi1BoseOMo5I9yUsEZMAL46yh/eaw9+EWz6IDlPWeA==", "sourceFields": ["name", "version", "license", "repository.url", "time.modified", "deprecated", "dist.integrity"], "retrievalCommand": "mise x node@24.19.0 -- npm view textlint-rule-ja-no-redundant-expression@4.0.1 name version license repository.url time.modified deprecated dist.integrity --json" },
           "evidence": ["2026-08-21 registry metadata pins version 4.0.1, repository https://github.com/textlint-ja/textlint-rule-ja-no-redundant-expression.git, release metadata, integrity, and no deprecation marker."]
         },
         "range": {

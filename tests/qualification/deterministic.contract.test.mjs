@@ -8,6 +8,17 @@ const artifact = JSON.parse(
 const ruleIds = Array.from({ length: 8 }, (_, index) => `D${String(index + 1).padStart(3, "0")}`);
 const gateNames = ["functional", "configCompatibility", "license", "maintainability", "range"];
 const routing = Object.fromEntries(ruleIds.map((id, index) => [id, `PBI-06${String.fromCharCode(65 + index)}`]));
+const candidates = {
+  D001: ["textlint-rule-no-mix-dearu-desumasu", "6.0.4", "git+https://github.com/textlint-ja/textlint-rule-no-mix-dearu-desumasu.git", "2025-01-16T01:04:33.851Z", "sha512-SmALtOFbtmJ//k2iLMvtqhGrgJ/6uDVZFK7TBj2npVAbt10VxgLL87K+62pQ/BqiN9DpOVObshVFdug7lUOKHw=="],
+  D002: ["textlint-rule-no-nfd", "2.0.2", "git+https://github.com/textlint-ja/textlint-rule-no-nfd.git", "2023-06-06T06:59:04.058Z", "sha512-lIUvcQ+wqtConpPQU2YwEJl2dRcRyyrxPYZ3V76UwnkVg++XPLIrE5mLDgyNE/UIQ34e/KitJfMLqKWvnkFbNQ=="],
+  D003: ["@textlint-rule/textlint-rule-no-unmatched-pair", "2.0.4", "git+https://github.com/textlint-rule/textlint-rule-no-unmatched-pair.git", "2024-11-07T01:16:27.784Z", "sha512-g9Ge1xUV9xJy8T7nuutF/2J6Cg2mmPx4gKsC3dCdxVxuL0wMqOOnAi8l6psFpAQ5UFtQuAzwkdclrehPtBT5tg=="],
+  D004: ["textlint-rule-ng-word", "1.0.0", "git+https://github.com/KeitaMoromizato/textlint-rule-ng-word.git", "2022-06-27T05:46:57.121Z", "sha512-YG4voM6jjN1aJ3/bOstXW/sf6aUDhiBoOCN52AKk7njxLqYkYJ3GcKTz/79ZMv2PoNa88pm0JuFglU7fTWmtYg=="],
+  D005: ["textlint-rule-prh", "6.1.0", "git+https://github.com/textlint-rule/textlint-rule-prh.git", "2025-04-20T11:47:38.762Z", "sha512-KrchADHw1/LZ/tAQ2XwL/XdUhunKCvlNmwgp+6hdyzuWX7uojOkDdJWWV0KAN4XWsK6Te5w/SZcYwQ7X6i3B0A=="],
+  D006: ["textlint-rule-ja-no-successive-word", "2.0.1", "git+https://github.com/textlint-ja/textlint-rule-ja-no-successive-word.git", "2023-03-13T06:38:56.594Z", "sha512-XKTXkHwMu86SnGaj73B67U4apDdTquDKF3SfG24tRbzMyJoGe/Iba5VMId8sp8QHeTonp1bYOSxjZsbkpGyCNw=="],
+  D007: ["textlint-rule-no-double-negative-ja", "2.0.1", "git+https://github.com/textlint-ja/textlint-rule-no-double-negative-ja.git", "2022-06-27T05:46:59.120Z", "sha512-LRofmNt+nd2mp+AHmG0ltk9AlbzKbWPE+EToYQ1zORCd8N8suE1YxNEplz9OeQ59ea9ITtudDIWoqeHaZnbDsg=="],
+  D008: ["textlint-rule-ja-no-redundant-expression", "4.0.1", "git+https://github.com/textlint-ja/textlint-rule-ja-no-redundant-expression.git", "2022-06-27T05:46:36.125Z", "sha512-r8Qe6S7u9N97wD0gcrASqBUdZs5CMEVlgc8Ul+D2NQFiOi1BoseOMo5I9yUsEZMAL46yh/eaw9+EWz6IDlPWeA=="],
+};
+const sourceFields = ["name", "version", "license", "repository.url", "time.modified", "deprecated", "dist.integrity"];
 
 const clone = (value) => structuredClone(value);
 const isNonEmptyString = (value) => typeof value === "string" && value.trim().length > 0;
@@ -16,7 +27,7 @@ const isEvidence = (value) => Array.isArray(value) && value.length > 0 && value.
 function makeExternal(value, ruleIndex = 0) {
   const mutant = clone(value);
   for (const gate of Object.values(mutant.rules[ruleIndex].gates)) {
-    Object.assign(gate, { status: "PASS", command: "executed probe", exitCode: 0, artifact: "qualification report" });
+    Object.assign(gate, { status: "PASS", command: gate.command ?? "executed probe", exitCode: 0, artifact: gate.artifact ?? "qualification report" });
   }
   mutant.rules[ruleIndex].decision = { mode: "EXTERNAL", reasonCode: "ALL_GATES_PASS", implementationPbi: null };
   return mutant;
@@ -26,6 +37,7 @@ function validate(value) {
   const errors = [];
   if (value === null || typeof value !== "object" || Array.isArray(value)) return ["artifact-object"];
   if (!Object.hasOwn(value, "rules") || !Array.isArray(value.rules)) return ["rules-array"];
+  if (value.schemaVersion !== 2) errors.push("schema-version");
 
   if (JSON.stringify(value.rules.map((rule) => rule.ruleId)) !== JSON.stringify(ruleIds)) {
     errors.push("rule-catalog");
@@ -33,6 +45,8 @@ function validate(value) {
 
   for (const [index, rule] of value.rules.entries()) {
     const expectedId = ruleIds[index];
+    const [packageName, version, repositoryUrl, modified, distIntegrity] = candidates[expectedId];
+    if (JSON.stringify(rule.candidate) !== JSON.stringify({ package: packageName, version })) errors.push(`${expectedId}-candidate`);
     if (JSON.stringify(Object.keys(rule.gates ?? {}).sort()) !== JSON.stringify([...gateNames].sort())) {
       errors.push(`${expectedId}-gate-set`);
       continue;
@@ -40,7 +54,10 @@ function validate(value) {
     const statuses = [];
     for (const gateName of gateNames) {
       const gate = rule.gates[gateName];
-      if (!gate || JSON.stringify(Object.keys(gate).sort()) !== JSON.stringify(["artifact", "command", "evidence", "exitCode", "status"])) {
+      const expectedGateKeys = ["artifact", "command", "evidence", "exitCode", "status"];
+      if (gateName === "license") expectedGateKeys.push("licenseProvenance");
+      if (gateName === "maintainability") expectedGateKeys.push("maintenanceProvenance");
+      if (!gate || JSON.stringify(Object.keys(gate).sort()) !== JSON.stringify(expectedGateKeys.sort())) {
         errors.push(`${expectedId}-${gateName}-shape`);
         continue;
       }
@@ -56,6 +73,18 @@ function validate(value) {
         }
       } else {
         errors.push(`${expectedId}-${gateName}-status`);
+      }
+      if (gateName === "license") {
+        const retrievalCommand = `mise x node@24.19.0 -- npm view ${packageName}@${version} license --json`;
+        const expected = { expectedSpdx: "MIT", observedSpdx: "MIT", sourceType: "npm-registry", sourceField: "license", retrievalCommand };
+        if (gate.command !== retrievalCommand) errors.push(`${expectedId}-license-command`);
+        if (JSON.stringify(gate.licenseProvenance) !== JSON.stringify(expected)) errors.push(`${expectedId}-license-provenance`);
+      }
+      if (gateName === "maintainability") {
+        const retrievalCommand = `mise x node@24.19.0 -- npm view ${packageName}@${version} name version license repository.url time.modified deprecated dist.integrity --json`;
+        const expected = { queriedPackage: packageName, queriedVersion: version, registryVersion: version, repositoryUrl, modified, deprecated: null, distIntegrity, sourceFields, retrievalCommand };
+        if (gate.command !== retrievalCommand) errors.push(`${expectedId}-maintenance-command`);
+        if (JSON.stringify(gate.maintenanceProvenance) !== JSON.stringify(expected)) errors.push(`${expectedId}-maintenance-provenance`);
       }
     }
 
@@ -143,4 +172,34 @@ test("PBI06-M02 empty evidence and invalid external decisions are rejected", () 
   const errors = validate(mutant);
   assert.ok(errors.includes("D008-license-evidence"));
   assert.ok(errors.includes("D008-decision"));
+});
+
+test("PBI06-M03 candidate package tampering is rejected", () => {
+  const mutant = clone(artifact);
+  mutant.rules[0].candidate.package = "textlint-rule-wrong";
+  assert.ok(validate(mutant).includes("D001-candidate"));
+});
+
+test("PBI06-M04 candidate version tampering is rejected", () => {
+  const mutant = clone(artifact);
+  mutant.rules[1].candidate.version = "9.9.9";
+  assert.ok(validate(mutant).includes("D002-candidate"));
+});
+
+test("PBI06-M05 license provenance tampering is rejected", () => {
+  const mutant = clone(artifact);
+  mutant.rules[2].gates.license.licenseProvenance.observedSpdx = "Apache-2.0";
+  assert.ok(validate(mutant).includes("D003-license-provenance"));
+});
+
+test("PBI06-M06 registry command tampering is rejected", () => {
+  const mutant = clone(artifact);
+  mutant.rules[3].gates.license.command = "npm view latest license";
+  assert.ok(validate(mutant).includes("D004-license-command"));
+});
+
+test("PBI06-M07 integrity tampering is rejected", () => {
+  const mutant = clone(artifact);
+  mutant.rules[7].gates.maintainability.maintenanceProvenance.distIntegrity = "sha512-tampered";
+  assert.ok(validate(mutant).includes("D008-maintenance-provenance"));
 });
