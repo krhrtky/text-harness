@@ -59,6 +59,7 @@ PBI06D_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi06d.py"
 PBI06E_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi06e.py"
 PBI06F_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi06f.py"
 PBI06G_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi06g.py"
+PBI06H_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi06h.py"
 
 EXPECTED = {
     "drop-h113-falsification": "H113-FALSIFICATION",
@@ -197,6 +198,14 @@ EXPECTED = {
     "drop-pbi06g-green-falsification": "PBI06G-POST-IMPLEMENTATION-GREEN",
     "drop-pbi06g-b04-title": "PBI06G-B04-SUBSTANTIVE-ORACLE",
     "placeholder-pbi06g-b04-body": "PBI06G-B04-SUBSTANTIVE-ORACLE",
+    "drop-pbi06h-analyze-ownership": "PBI06H-OWNERSHIP",
+    "drop-pbi06h-no-match-guard": "PBI06H-ACCEPTANCE-ORACLE",
+    "drop-pbi06h-falsification-title": "PBI06H-ACCEPTANCE-ORACLE",
+    "weaken-pbi06h-range": "PBI06H-RULE-CONTRACT",
+    "reverse-pbi06h-mapping": "PBI06H-RULE-CONTRACT",
+    "permit-pbi06h-substring-composition": "PBI06H-RULE-CONTRACT",
+    "permit-pbi06h-regex": "PBI06H-RULE-CONTRACT",
+    "permit-pbi06h-external-dependency": "PBI06H-RULE-CONTRACT",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -876,5 +885,14 @@ test("D002-B03 multi-mark combining sequence reports exact source range", () => 
         self.assertEqual(tests, passed)
         self.assertEqual(0, failed)
         self.assertEqual(14, titles)
+
+    def test_pbi06h_registered_red_is_exact_and_reproducible(self) -> None:
+        state = verify_spec.read_state()
+        packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-06H")
+        self.assertEqual([], verify_spec.pbi06h_registration_errors(packet, PBI06H_VERIFIER.is_file(), False))
+        expected = (1, "PBI06H_RED missing packages/readability-core/src/rules/D008.ts\n", "")
+        for _ in range(2):
+            result = subprocess.run(["python3", str(PBI06H_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+            self.assertEqual(expected, (result.returncode, result.stdout, result.stderr))
 
 if __name__ == "__main__": unittest.main()
