@@ -6,6 +6,7 @@ import importlib.util
 import json
 import re
 import subprocess
+from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -44,16 +45,39 @@ TEST_COMMAND = (
 )
 
 
+def valid_evidence(value: object) -> bool:
+    return (
+        isinstance(value, list)
+        and bool(value)
+        and all(isinstance(item, str) and bool(item.strip()) for item in value)
+    )
+
+
 def validate_artifact(value: object) -> list[str]:
     if not isinstance(value, dict):
         return ["artifact-not-object"]
     errors: list[str] = []
+    if set(value) != {"candidate", "evaluatedAt", "toolchain", "gates", "decision", "fallbackContracts"}:
+        errors.append("artifact-keys")
     candidate = value.get("candidate", {})
     if candidate != {
         "package": "kuromoji", "version": "0.1.2", "dictionary": "bundled IPADIC",
         "releaseYear": 2018, "runtimeDependencyAllowed": False,
     }:
         errors.append("candidate-contract")
+    evaluated_at = value.get("evaluatedAt")
+    evaluated_date: date | None = None
+    if not isinstance(evaluated_at, str):
+        errors.append("evaluated-at")
+    else:
+        try:
+            evaluated_date = date.fromisoformat(evaluated_at)
+            if evaluated_date.isoformat() != evaluated_at:
+                errors.append("evaluated-at")
+        except ValueError:
+            errors.append("evaluated-at")
+    if value.get("toolchain") != {"node": "24.19.0", "pnpm": "11.22.0"}:
+        errors.append("toolchain-contract")
     gates = value.get("gates", {})
     expected_status = {
         "maintainability": "FAIL", "node24_performance": "UNKNOWN",
@@ -66,11 +90,38 @@ def validate_artifact(value: object) -> list[str]:
             result = gates.get(gate, {})
             if not isinstance(result, dict) or result.get("status") != status:
                 errors.append(f"gate-status-{gate}")
-            if not isinstance(result, dict) or not result.get("evidence"):
+            if not isinstance(result, dict) or not valid_evidence(result.get("evidence")):
                 errors.append(f"gate-evidence-{gate}")
         maintainability = gates.get("maintainability", {})
+        maintainability_keys = {"status", "reasonCode", "command", "exitCode", "artifact", "evidence"}
+        if not isinstance(maintainability, dict) or set(maintainability) != maintainability_keys:
+            errors.append("gate-keys-maintainability")
         if maintainability.get("reasonCode") != "RELEASE_AGE_GT_24_MONTHS":
             errors.append("maintainability-reason")
+        command = maintainability.get("command")
+        if not isinstance(command, str) or not command.strip() or "2018" not in command:
+            errors.append("maintainability-command")
+        exit_code = maintainability.get("exitCode")
+        if isinstance(exit_code, bool) or not isinstance(exit_code, int) or exit_code != 0:
+            errors.append("maintainability-exit-code")
+        if maintainability.get("artifact") != "docs/decision-evidence/DEC-002-006-objective-evidence.md":
+            errors.append("maintainability-artifact")
+        evidence = maintainability.get("evidence")
+        if valid_evidence(evidence):
+            joined = " ".join(evidence)
+            if "2018" not in joined or str(evaluated_at) not in joined or "24 months" not in joined:
+                errors.append("maintainability-evidence-meaning")
+        if evaluated_date is not None:
+            release_age_months = (evaluated_date.year - 2018) * 12 + evaluated_date.month - 1
+            if release_age_months <= 24:
+                errors.append("maintainability-release-age")
+        unknown_keys = {"status", "command", "exitCode", "artifact", "evidence"}
+        for gate in ("node24_performance", "range_conversion", "determinism", "offline"):
+            result = gates.get(gate, {})
+            if not isinstance(result, dict) or set(result) != unknown_keys:
+                errors.append(f"gate-keys-{gate}")
+            elif any(result.get(field) is not None for field in ("command", "exitCode", "artifact")):
+                errors.append(f"gate-unknown-execution-{gate}")
     if value.get("decision") != {
         "status": "REJECT", "rule": "ANY_FAIL_OR_UNKNOWN", "fallback": "internal",
     }:

@@ -24,6 +24,8 @@ MUTATIONS = (
     "drop-pbi03-runtime-dependency",
     "add-pbi03-third-direct-dependency",
     "drop-pbi04-known-fail", "permit-pbi04-runtime", "drop-pbi04-fallback-title",
+    "pbi04-empty-evidence-entry", "pbi04-string-evidence",
+    "pbi04-evaluated-at-conflict", "pbi04-toolchain-missing", "pbi04-toolchain-drift",
 )
 
 def read_state() -> dict:
@@ -264,6 +266,17 @@ def pbi04_transition_errors(body: str, oracle_exists: bool, artifact_exists: boo
         'decision: "REJECT by ANY_FAIL_OR_UNKNOWN"',
         'fallback: "internal H102/H106/H107_TOKEN/H108_TOKEN"',
     ))
+    evidence_schema = all(value in body for value in (
+        'evidence_contract: "each gate evidence is a non-empty array containing only non-empty strings; scalar string, wrong type, empty array, and blank element are invalid"',
+        'maintainability_result_keys: ["status", "reasonCode", "command", "exitCode", "artifact", "evidence"]',
+        'unknown_result_keys: ["status", "command", "exitCode", "artifact", "evidence"]',
+        'unknown_result_contract: "status=UNKNOWN; command=null; exitCode=null; artifact=null; evidence follows evidence_contract and explains why not executed"',
+    ))
+    evaluated_at_contract = (
+        'evaluated_at_contract: "strict ISO YYYY-MM-DD calendar date; release age months computed from releaseYear must be >24 for RELEASE_AGE_GT_24_MONTHS"'
+        in body
+    )
+    toolchain_contract = 'toolchain_exact: "node=24.19.0; pnpm=11.22.0"' in body
     acceptance = all(value in body for value in (
         'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi04.py"',
         'test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/analyzer/qualification.contract.test.ts test/analyzer/internal-token.contract.test.ts test/rules/H102.contract.test.ts test/rules/H106.contract.test.ts"',
@@ -284,6 +297,12 @@ def pbi04_transition_errors(body: str, oracle_exists: bool, artifact_exists: boo
         errors.append("PBI04-OWNERSHIP")
     if not qualification:
         errors.append("PBI04-QUALIFICATION-CONTRACT")
+    if not evidence_schema:
+        errors.append("PBI04-EVIDENCE-SCHEMA")
+    if not evaluated_at_contract:
+        errors.append("PBI04-EVALUATED-AT-CONTRACT")
+    if not toolchain_contract:
+        errors.append("PBI04-TOOLCHAIN-CONTRACT")
     if not runtime_rejection:
         errors.append("PBI04-RUNTIME-REJECTION")
     if not acceptance or not oracle_exists:
@@ -552,14 +571,28 @@ def apply_mutation(name: str, state: dict) -> None:
                 )
     elif name == "permit-pbi03-internal-scanner":
         t["dec6"] = t["dec6"].replace("独自Markdown block scanner", "許可済みMarkdown block scanner", 1).replace("禁止する", "許可する", 1)
-    elif name in ("drop-pbi04-known-fail", "permit-pbi04-runtime", "drop-pbi04-fallback-title"):
+    elif name in (
+        "drop-pbi04-known-fail", "permit-pbi04-runtime", "drop-pbi04-fallback-title",
+        "pbi04-empty-evidence-entry", "pbi04-string-evidence",
+        "pbi04-evaluated-at-conflict", "pbi04-toolchain-missing", "pbi04-toolchain-drift",
+    ):
         key = next(k for k, body in packets.items() if packet_id(body) == "PBI-04")
         if name == "drop-pbi04-known-fail":
             packets[key] = packets[key].replace("maintainability=FAIL(RELEASE_AGE_GT_24_MONTHS)", "maintainability=PASS", 1)
         elif name == "permit-pbi04-runtime":
             packets[key] = packets[key].replace('rejected_runtime_dependencies: ["kuromoji", ', 'rejected_runtime_dependencies: [', 1)
-        else:
+        elif name == "drop-pbi04-fallback-title":
             packets[key] = packets[key].replace('"H102-P01", ', "", 1)
+        elif name == "pbi04-empty-evidence-entry":
+            packets[key] = packets[key].replace("and blank element are invalid", "but blank elements are permitted", 1)
+        elif name == "pbi04-string-evidence":
+            packets[key] = packets[key].replace("scalar string, wrong type, ", "", 1)
+        elif name == "pbi04-evaluated-at-conflict":
+            packets[key] = packets[key].replace("must be >24", "may be <=24", 1)
+        elif name == "pbi04-toolchain-missing":
+            packets[key] = packets[key].replace('    toolchain_exact: "node=24.19.0; pnpm=11.22.0"\n', "", 1)
+        else:
+            packets[key] = packets[key].replace("node=24.19.0; pnpm=11.22.0", "node=24.18.0; pnpm=11.22.0", 1)
     else: raise ValueError(name)
 
 def main() -> int:

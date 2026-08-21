@@ -4,8 +4,8 @@
   "current_phase": "DA",
   "active_pbi": "PBI-04",
   "gate_type": "DELIVERY",
-  "strategy_id": "delivery-pbi04-analyzer-qualification-v2",
-  "iteration": 18,
+  "strategy_id": "delivery-pbi04-artifact-schema-v3",
+  "iteration": 19,
   "task_packet_ref": ".codex/task-packets/PBI-04-analyzer-qualification.md",
   "phase_history": [
     {
@@ -508,6 +508,23 @@
       ],
       "resume_point": ".codex/task-packets/PBI-04-analyzer-qualification.md",
       "timestamp": "2026-08-21T16:25:00+09:00"
+    },
+    {
+      "phase": "SDA",
+      "status": "SPEC_GAP_RESOLVED",
+      "agent": "/root/spec_finalize",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-04",
+      "decision": "PBI-04 qualification evidence now has an exact typed schema and calculated maintainability age contract without changing product artifacts",
+      "evidence": [
+        "each gate evidence must be a non-empty array containing only non-empty strings",
+        "evaluatedAt is a strict ISO calendar date and release age from releaseYear must exceed 24 months",
+        "toolchain is exact node 24.19.0 and pnpm 11.22.0",
+        "maintainability executed result and four unexecuted UNKNOWN results have distinct exact key/null contracts",
+        "artifact mutations cover evidence shape, evaluatedAt contradiction, and missing or drifted toolchain"
+      ],
+      "resume_point": ".codex/task-packets/PBI-04-analyzer-qualification.md",
+      "timestamp": "2026-08-21T16:40:00+09:00"
     }
   ],
   "blocker_history": [
@@ -585,5 +602,5 @@
     }
   ],
   "created_at": "2026-08-21T09:39:07+09:00",
-  "updated_at": "2026-08-21T16:25:00+09:00"
+  "updated_at": "2026-08-21T16:40:00+09:00"
 }

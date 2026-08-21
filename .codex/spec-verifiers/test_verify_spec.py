@@ -56,6 +56,11 @@ EXPECTED = {
     "drop-pbi04-known-fail": "PBI04-QUALIFICATION-CONTRACT",
     "permit-pbi04-runtime": "PBI04-RUNTIME-REJECTION",
     "drop-pbi04-fallback-title": "PBI04-ACCEPTANCE-ORACLE",
+    "pbi04-empty-evidence-entry": "PBI04-EVIDENCE-SCHEMA",
+    "pbi04-string-evidence": "PBI04-EVIDENCE-SCHEMA",
+    "pbi04-evaluated-at-conflict": "PBI04-EVALUATED-AT-CONTRACT",
+    "pbi04-toolchain-missing": "PBI04-TOOLCHAIN-CONTRACT",
+    "pbi04-toolchain-drift": "PBI04-TOOLCHAIN-CONTRACT",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -238,12 +243,19 @@ packages:
                 "package": "kuromoji", "version": "0.1.2", "dictionary": "bundled IPADIC",
                 "releaseYear": 2018, "runtimeDependencyAllowed": False,
             },
+            "evaluatedAt": "2026-08-21",
+            "toolchain": {"node": "24.19.0", "pnpm": "11.22.0"},
             "gates": {
-                "maintainability": {"status": "FAIL", "reasonCode": "RELEASE_AGE_GT_24_MONTHS", "evidence": ["releaseYear=2018"]},
-                "node24_performance": {"status": "UNKNOWN", "evidence": ["not run after rejection"]},
-                "range_conversion": {"status": "UNKNOWN", "evidence": ["not run after rejection"]},
-                "determinism": {"status": "UNKNOWN", "evidence": ["not run after rejection"]},
-                "offline": {"status": "UNKNOWN", "evidence": ["not run after rejection"]},
+                "maintainability": {
+                    "status": "FAIL", "reasonCode": "RELEASE_AGE_GT_24_MONTHS",
+                    "command": "rg releaseYear 2018", "exitCode": 0,
+                    "artifact": "docs/decision-evidence/DEC-002-006-objective-evidence.md",
+                    "evidence": ["releaseYear 2018; evaluated 2026-08-21; age exceeds 24 months"],
+                },
+                "node24_performance": {"status": "UNKNOWN", "command": None, "exitCode": None, "artifact": None, "evidence": ["not run after rejection"]},
+                "range_conversion": {"status": "UNKNOWN", "command": None, "exitCode": None, "artifact": None, "evidence": ["not run after rejection"]},
+                "determinism": {"status": "UNKNOWN", "command": None, "exitCode": None, "artifact": None, "evidence": ["not run after rejection"]},
+                "offline": {"status": "UNKNOWN", "command": None, "exitCode": None, "artifact": None, "evidence": ["not run after rejection"]},
             },
             "decision": {"status": "REJECT", "rule": "ANY_FAIL_OR_UNKNOWN", "fallback": "internal"},
             "fallbackContracts": ["H102", "H106", "H107_TOKEN", "H108_TOKEN"],
@@ -255,6 +267,21 @@ packages:
         runtime_allowed = json.loads(json.dumps(valid))
         runtime_allowed["candidate"]["runtimeDependencyAllowed"] = True
         self.assertIn("candidate-contract", verify_pbi04.validate_artifact(runtime_allowed))
+        empty_evidence = json.loads(json.dumps(valid))
+        empty_evidence["gates"]["maintainability"]["evidence"] = [""]
+        self.assertIn("gate-evidence-maintainability", verify_pbi04.validate_artifact(empty_evidence))
+        string_evidence = json.loads(json.dumps(valid))
+        string_evidence["gates"]["offline"]["evidence"] = "not run"
+        self.assertIn("gate-evidence-offline", verify_pbi04.validate_artifact(string_evidence))
+        evaluated_at_conflict = json.loads(json.dumps(valid))
+        evaluated_at_conflict["evaluatedAt"] = "2019-01-01"
+        self.assertIn("maintainability-release-age", verify_pbi04.validate_artifact(evaluated_at_conflict))
+        missing_toolchain = json.loads(json.dumps(valid))
+        del missing_toolchain["toolchain"]
+        self.assertIn("toolchain-contract", verify_pbi04.validate_artifact(missing_toolchain))
+        drifted_toolchain = json.loads(json.dumps(valid))
+        drifted_toolchain["toolchain"]["node"] = "24.18.0"
+        self.assertIn("toolchain-contract", verify_pbi04.validate_artifact(drifted_toolchain))
 
         state = verify_spec.read_state()
         packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-04")

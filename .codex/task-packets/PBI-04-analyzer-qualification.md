@@ -37,6 +37,14 @@ task_packet:
   qualification_artifact:
     path: "docs/decision-evidence/analyzer-qualification.json"
     candidate: "kuromoji@0.1.2 + bundled IPADIC; releaseYear=2018; runtimeDependencyAllowed=false"
+    required_top_level_keys: ["candidate", "evaluatedAt", "toolchain", "gates", "decision", "fallbackContracts"]
+    evaluated_at_contract: "strict ISO YYYY-MM-DD calendar date; release age months computed from releaseYear must be >24 for RELEASE_AGE_GT_24_MONTHS"
+    toolchain_exact: "node=24.19.0; pnpm=11.22.0"
+    evidence_contract: "each gate evidence is a non-empty array containing only non-empty strings; scalar string, wrong type, empty array, and blank element are invalid"
+    maintainability_result_keys: ["status", "reasonCode", "command", "exitCode", "artifact", "evidence"]
+    maintainability_result_contract: "status=FAIL; reasonCode=RELEASE_AGE_GT_24_MONTHS; command is non-empty and identifies releaseYear 2018; exitCode is integer 0; artifact=docs/decision-evidence/DEC-002-006-objective-evidence.md; evidence identifies releaseYear, evaluatedAt, and >24 months"
+    unknown_result_keys: ["status", "command", "exitCode", "artifact", "evidence"]
+    unknown_result_contract: "status=UNKNOWN; command=null; exitCode=null; artifact=null; evidence follows evidence_contract and explains why not executed"
     gate_statuses: "maintainability=FAIL(RELEASE_AGE_GT_24_MONTHS); node24_performance/range_conversion/determinism/offline=UNKNOWN with evidence"
     decision: "REJECT by ANY_FAIL_OR_UNKNOWN"
     fallback: "internal H102/H106/H107_TOKEN/H108_TOKEN"
