@@ -1,6 +1,9 @@
 name: Release contract
 
 on:
+  push:
+    branches:
+      - codex/release-candidate
   pull_request:
 
 permissions:
@@ -11,11 +14,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 24.19.0
-          cache: pnpm
       - run: corepack enable
       - run: corepack prepare pnpm@11.22.0 --activate
-      - run: pnpm install --frozen-lockfile
+      - name: Record native runner identity
+        run: |
+          echo "CANDIDATE_SHA=$GITHUB_SHA"
+          echo "RUNNER_OS=$RUNNER_OS RUNNER_ARCH=$RUNNER_ARCH"
+      - run: corepack pnpm install --frozen-lockfile
+      - name: Verify license and NOTICE
+        run: |
+          pnpm verify:license
+          echo "LICENSE=PASS"
+          test ! -e NOTICE
+          echo "NOTICE=ABSENT"
+      - name: Verify security
+        run: |
+          pnpm verify:security
+          echo "SECURITY=PASS"
       - run: pnpm verify:release
