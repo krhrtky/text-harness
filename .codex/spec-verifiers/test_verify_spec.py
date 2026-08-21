@@ -136,6 +136,12 @@ EXPECTED = {
     "weaken-pbi06b-range": "PBI06B-RULE-CONTRACT",
     "permit-pbi06b-external-dependency": "PBI06B-RULE-CONTRACT",
     "drift-pbi06b-normalization": "PBI06B-RULE-CONTRACT",
+    "drop-pbi06b-n03-title": "PBI06B-ACCEPTANCE-ORACLE",
+    "placeholder-pbi06b-n03-body": "PBI06B-RULE-CONTRACT",
+    "drop-pbi06b-multimark-title": "PBI06B-ACCEPTANCE-ORACLE",
+    "placeholder-pbi06b-multimark-body": "PBI06B-RULE-CONTRACT",
+    "drop-pbi06b-multimark-range": "PBI06B-RULE-CONTRACT",
+    "drop-pbi06b-combining-plus": "PBI06B-RULE-CONTRACT",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -615,25 +621,53 @@ packages:
         for path, expected in verify_pbi06a.UNCHANGED_HASHES.items():
             self.assertEqual(expected, hashlib.sha256((ROOT / path).read_bytes()).hexdigest())
 
-    def test_pbi06b_green_transition_preserves_registered_red(self) -> None:
+    def test_pbi06b_qga_fix_red_and_substantive_oracles(self) -> None:
         state = verify_spec.read_state()
         packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-06B")
         pre_implementation = packet.replace(
-            "expected_red: null",
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi06b.py; exit=1; signature=PBI06B_RED missing_required_title D002-B03 multi-mark combining sequence reports exact source range"',
             'expected_red: "python3 .codex/spec-verifiers/verify_pbi06b.py; exit=1; signature=PBI06B_RED missing packages/readability-core/src/rules/D002.ts"',
             1,
-        ).replace('red_status: "CONSUMED_GREEN"', 'red_status: "REGISTERED_RED"', 1)
+        ).replace('red_status: "REGISTERED_RED_QGA_FIX"', 'red_status: "REGISTERED_RED"', 1)
         self.assertEqual([], verify_spec.pbi06b_registration_errors(pre_implementation, True, False))
         self.assertEqual([], verify_spec.pbi06b_registration_errors(packet, PBI06B_VERIFIER.is_file(), True))
-        green = subprocess.run(["python3", str(PBI06B_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
-        self.assertEqual(0, green.returncode, green.stdout + green.stderr)
-        summary = re.search(r"PBI06B_GREEN tests=(\d+) pass=(\d+) fail=(\d+) required_titles=(\d+)", green.stdout)
-        self.assertIsNotNone(summary)
-        tests, passed, failed, titles = (int(value) for value in summary.groups())
-        self.assertGreaterEqual(tests, 11)
-        self.assertEqual(tests, passed)
-        self.assertEqual(0, failed)
-        self.assertEqual(10, titles)
+        first = subprocess.run(["python3", str(PBI06B_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        second = subprocess.run(["python3", str(PBI06B_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        expected = (1, "PBI06B_RED missing_required_title D002-B03 multi-mark combining sequence reports exact source range\n", "")
+        self.assertEqual(expected, (first.returncode, first.stdout, first.stderr))
+        self.assertEqual(expected, (second.returncode, second.stdout, second.stderr))
         self.assertIsNone(verify_pbi06b.unchanged_error())
+        test_source = (ROOT / verify_pbi06b.TEST).read_text()
+        rule_source = (ROOT / verify_pbi06b.SOURCE).read_text()
+        b03 = '''
+test("D002-B03 multi-mark combining sequence reports exact source range", () => {
+  const input = `${decomposedGa}\\u0301`;
+  const [finding] = analyze(input, config());
+  assert.deepEqual(finding?.range, { start: 0, end: 3 });
+  assert.equal(input.slice(finding!.range.start, finding!.range.end), input);
+});
+'''
+        future = test_source + b03
+        self.assertEqual([], verify_pbi06b.substantive_oracle_errors(future, rule_source))
+        self.assertIn("N03-title", verify_pbi06b.substantive_oracle_errors(
+            future.replace('D002-N03 Markdown code spans and blocks are excluded', 'REMOVED-N03', 1), rule_source
+        ))
+        n03_assertion = "assert.deepEqual(analyze(input, config()), []);"
+        n03_before, n03_after = future.rsplit(n03_assertion, 1)
+        self.assertIn("N03-body", verify_pbi06b.substantive_oracle_errors(
+            n03_before + "assert.ok(true);" + n03_after, rule_source
+        ))
+        self.assertIn("B03-title", verify_pbi06b.substantive_oracle_errors(
+            future.replace('D002-B03 multi-mark combining sequence reports exact source range', 'REMOVED-B03', 1), rule_source
+        ))
+        self.assertIn("B03-body-range", verify_pbi06b.substantive_oracle_errors(
+            future.replace("assert.deepEqual(finding?.range, { start: 0, end: 3 });", "assert.ok(true);", 1), rule_source
+        ))
+        self.assertIn("B03-body-range", verify_pbi06b.substantive_oracle_errors(
+            future.replace("assert.equal(input.slice(finding!.range.start, finding!.range.end), input);", "", 1), rule_source
+        ))
+        self.assertIn("combining-sequence-plus", verify_pbi06b.substantive_oracle_errors(
+            future, rule_source.replace("\\p{M}+", "\\p{M}", 1)
+        ))
 
 if __name__ == "__main__": unittest.main()

@@ -21,6 +21,8 @@ REQUIRED_TITLES = (
     "D002-F01 code-point offsets cannot substitute for UTF-16 code-unit offsets",
     "D002-M01 whole-document and normalized-output range mutants fail fixtures",
     "D002-D01 identical input and config are deterministic",
+    "D002-N03 Markdown code spans and blocks are excluded",
+    "D002-B03 multi-mark combining sequence reports exact source range",
 )
 TEST_COMMAND = (
     "mise", "x", "node@24.19.0", "--", "corepack", "pnpm",
@@ -40,6 +42,31 @@ def unchanged_error() -> str | None:
     return ",".join(errors) if errors else None
 
 
+def substantive_oracle_errors(test_source: str, rule_source: str) -> list[str]:
+    errors = []
+    n03_title = 'test("D002-N03 Markdown code spans and blocks are excluded"'
+    n03_block = test_source.split(n03_title, 1)[1].split("\ntest(", 1)[0] if n03_title in test_source else ""
+    if not n03_block:
+        errors.append("N03-title")
+    elif "assert.deepEqual(analyze(input, config()), []);" not in n03_block or "decomposedGa" not in n03_block:
+        errors.append("N03-body")
+    b03_title = 'test("D002-B03 multi-mark combining sequence reports exact source range"'
+    b03_block = test_source.split(b03_title, 1)[1].split("\ntest(", 1)[0] if b03_title in test_source else ""
+    if not b03_block:
+        errors.append("B03-title")
+    else:
+        fragments = (
+            'const input = `${decomposedGa}\\u0301`;',
+            "assert.deepEqual(finding?.range, { start: 0, end: 3 });",
+            "assert.equal(input.slice(finding!.range.start, finding!.range.end), input);",
+        )
+        if "assert.ok(true)" in b03_block or any(fragment not in b03_block for fragment in fragments):
+            errors.append("B03-body-range")
+    if "const COMBINING_SEQUENCE = /[^\\p{M}]\\p{M}+/gu;" not in rule_source:
+        errors.append("combining-sequence-plus")
+    return errors
+
+
 def main() -> int:
     for required in (SOURCE, TEST):
         if not (ROOT / required).is_file():
@@ -57,6 +84,14 @@ def main() -> int:
     if 'export { analyzeD002 } from "./rules/D002.ts"' not in index:
         print("PBI06B_FAIL public export missing D002")
         return 1
+    test_source = (ROOT / TEST).read_text()
+    substantive = substantive_oracle_errors(test_source, (ROOT / SOURCE).read_text())
+    if "B03-title" in substantive:
+        print("PBI06B_RED missing_required_title D002-B03 multi-mark combining sequence reports exact source range")
+        return 1
+    if substantive:
+        print("PBI06B_FAIL substantive_oracle " + ",".join(substantive))
+        return 1
     result = subprocess.run(TEST_COMMAND, cwd=ROOT, text=True, capture_output=True)
     output = result.stdout + result.stderr
     print(output, end="" if not output or output.endswith("\n") else "\n")
@@ -70,7 +105,7 @@ def main() -> int:
     }
     tests, passed, failed = totals.get("tests", -1), totals.get("pass", -1), totals.get("fail", -1)
     titles = sum(title in plain for title in REQUIRED_TITLES)
-    if tests < 11 or passed != tests or failed != 0 or titles != len(REQUIRED_TITLES):
+    if tests < 12 or passed != tests or failed != 0 or titles != len(REQUIRED_TITLES):
         print(f"PBI06B_FAIL tests={tests} pass={passed} fail={failed} required_titles={titles}/{len(REQUIRED_TITLES)}")
         return 1
     print(f"PBI06B_GREEN tests={tests} pass={passed} fail=0 required_titles={len(REQUIRED_TITLES)}")

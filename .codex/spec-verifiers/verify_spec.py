@@ -45,6 +45,9 @@ MUTATIONS = (
     "drop-pbi06b-analyze-ownership", "drop-pbi06b-no-match-guard",
     "drop-pbi06b-falsification-title", "weaken-pbi06b-range",
     "permit-pbi06b-external-dependency", "drift-pbi06b-normalization",
+    "drop-pbi06b-n03-title", "placeholder-pbi06b-n03-body",
+    "drop-pbi06b-multimark-title", "placeholder-pbi06b-multimark-body",
+    "drop-pbi06b-multimark-range", "drop-pbi06b-combining-plus",
 )
 
 def read_state() -> dict:
@@ -837,26 +840,31 @@ def pbi06b_registration_errors(body: str, oracle_exists: bool, source_exists: bo
     contract = all(value in body for value in (
         'input_contract: "U+304B か followed by U+3099 COMBINING KATAKANA-HIRAGANA VOICED SOUND MARK; two UTF-16 code units; NFC result が"',
         'config_contract: "{ruleId:D002, normalization:NFC, severity?:error|warning}; missing/unknown/non-NFC enum is rejected by existing config validator"',
-        'oracle_contract: "the U+304B U+3099 source sequence reports exactly one finding; NFC済みが and uncomposable combining input report zero; separated violating sequences report independently"',
-        'range_contract: "RNG-001 UTF-16 zero-based half-open minimal source sequence; base example [0,2); emoji-prefixed source reports [2,4) and input.slice(2,4) reconstructs U+304B U+3099"',
+        'oracle_contract: "the U+304B U+3099 source sequence reports exactly one finding; multi-mark U+304B U+3099 U+0301 reports one complete source sequence; NFC済みが and uncomposable combining input report zero; separated violating sequences report independently"',
+        'range_contract: "RNG-001 UTF-16 zero-based half-open minimal source sequence; base example [0,2); emoji-prefixed source reports [2,4); multi-mark U+304B U+3099 U+0301 reports [0,3) and slice reconstructs all three code units"',
         'severity_contract: "omitted=>error; explicit error|warning preserved exactly"',
         'external_dependency_contract: "PBI-06 decision INTERNAL/PBI-06B; package manifests and lockfile unchanged"',
-        'mutations: ["D002-M-CODE_POINT", "D002-M-WHOLE_DOCUMENT", "D002-M-NORMALIZED_OUTPUT"]',
+        'mutations: ["D002-M-CODE_POINT", "D002-M-WHOLE_DOCUMENT", "D002-M-NORMALIZED_OUTPUT", "D002-M-COMBINING-PLUS"]',
+        'N03: "title exact; body constructs Markdown code span/block/indented code containing decomposedGa and asserts analyze(input,config()) deep-equals []"',
+        'B03: "title exact; body constructs U+304B U+3099 U+0301 input, asserts range {start:0,end:3}, and asserts range slice equals complete input"',
+        'implementation: "D002 COMBINING_SEQUENCE requires one base followed by one-or-more marks; deleting the trailing quantifier plus is rejected"',
     ))
     acceptance = all(value in body for value in (
         'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi06b.py"',
         'test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/deterministic/D002.contract.test.ts"',
         'exact_test_file: "packages/readability-core/test/deterministic/D002.contract.test.ts"',
         'unchanged_contract: "PBI-06A verifier hashes for config/types/package/lock remain valid"',
-        'minimum_tests: 11', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 10',
+        'minimum_tests: 12', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 12',
         '"D002-P01 non-NFC combining sequence reports its minimal source range"',
         '"D002-N01 NFC-normalized input does not report"',
         '"D002-B01 emoji-prefixed UTF-16 half-open range reconstructs the combining sequence"',
         '"D002-B02 default error and explicit warning severity are preserved"',
         '"D002-F01 code-point offsets cannot substitute for UTF-16 code-unit offsets"',
         '"D002-M01 whole-document and normalized-output range mutants fail fixtures"',
+        '"D002-N03 Markdown code spans and blocks are excluded"',
+        '"D002-B03 multi-mark combining sequence reports exact source range"',
         'no_match_guard: "--fail-if-no-match plus exact test file, collected count, pass=tests, fail=0, and all required titles"',
-        'green_signature: "PBI06B_GREEN tests>=11 pass=tests fail=0 required_titles=10"',
+        'green_signature: "PBI06B_GREEN tests>=12 pass=tests fail=0 required_titles=12"',
     ))
     errors = []
     if not ownership:
@@ -875,6 +883,16 @@ def pbi06b_registration_errors(body: str, oracle_exists: bool, source_exists: bo
         ))
         if not registered:
             errors.append("PBI06B-PRE-IMPLEMENTATION-RED")
+        return errors
+    if 'red_status: "REGISTERED_RED_QGA_FIX"' in body:
+        qga_red = all(value in body for value in (
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi06b.py; exit=1; signature=PBI06B_RED missing_required_title D002-B03 multi-mark combining sequence reports exact source range"',
+            'phase: "PRE_FIX_IMPLEMENTATION"',
+            'stdout: "PBI06B_RED missing_required_title D002-B03 multi-mark combining sequence reports exact source range"',
+            'stderr: "<empty>"', 'measured_runs: 2',
+        ))
+        if not qga_red:
+            errors.append("PBI06B-QGA-FIX-RED")
         return errors
     green = all(value in body for value in (
         'expected_red: null', 'red_status: "CONSUMED_GREEN"',
@@ -1472,6 +1490,9 @@ def apply_mutation(name: str, state: dict) -> None:
         "drop-pbi06b-analyze-ownership", "drop-pbi06b-no-match-guard",
         "drop-pbi06b-falsification-title", "weaken-pbi06b-range",
         "permit-pbi06b-external-dependency", "drift-pbi06b-normalization",
+        "drop-pbi06b-n03-title", "placeholder-pbi06b-n03-body",
+        "drop-pbi06b-multimark-title", "placeholder-pbi06b-multimark-body",
+        "drop-pbi06b-multimark-range", "drop-pbi06b-combining-plus",
     ):
         key = next(k for k, body in packets.items() if packet_id(body) == "PBI-06B")
         if name == "drop-pbi06b-analyze-ownership":
@@ -1488,8 +1509,20 @@ def apply_mutation(name: str, state: dict) -> None:
                 "external dependency permitted",
                 1,
             )
-        else:
+        elif name == "drift-pbi06b-normalization":
             packets[key] = packets[key].replace("normalization:NFC", "normalization:NFKC", 1)
+        elif name == "drop-pbi06b-n03-title":
+            packets[key] = packets[key].replace(', "D002-N03 Markdown code spans and blocks are excluded"', "", 1)
+        elif name == "placeholder-pbi06b-n03-body":
+            packets[key] = packets[key].replace("and asserts analyze(input,config()) deep-equals []", "and uses assert.ok(true)", 1)
+        elif name == "drop-pbi06b-multimark-title":
+            packets[key] = packets[key].replace(', "D002-B03 multi-mark combining sequence reports exact source range"', "", 1)
+        elif name == "placeholder-pbi06b-multimark-body":
+            packets[key] = packets[key].replace("asserts range {start:0,end:3}", "uses assert.ok(true)", 1)
+        elif name == "drop-pbi06b-multimark-range":
+            packets[key] = packets[key].replace("reports [0,3)", "reports an unspecified range", 1)
+        else:
+            packets[key] = packets[key].replace("one-or-more marks", "exactly one mark", 1)
     else: raise ValueError(name)
 
 def main() -> int:
