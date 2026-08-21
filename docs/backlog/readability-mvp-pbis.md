@@ -36,7 +36,10 @@
 - H112/H113はMVP必須とし、PBI-05Pでparagraph boundary/projectionを先行、PBI-05I/Jでruleを分離する。
 - 各 PBI-06A〜06H は外部統合と独自実装のどちらでも同じ public contract と4 fixture種を所有する。
 - PBI-04はanalyzer candidateのgateを免除しない。kuromoji 0.1.2は現evidence上の保守性FAILを再現し、
-  runtime dependencyへ含めず独自実装fallbackを選ぶことをexpected RED/decision evidenceへ記録する。
+  runtime dependencyへ含めず独自実装fallbackを選ぶことをmachine-readable qualification artifactへ記録する。
+  artifactはmaintainability FAILと他4 gateの非PASS evidence、ANY_FAIL_OR_UNKNOWNによるREJECT、
+  internal H102/H106/H107_TOKEN/H108_TOKENを持つ。oracleはartifact、runtime依存不在、exact 4 test file、
+  tests 12件以上、全件pass、fail 0、必須12 titleを同時に検証する。
 - PBI-02は`packages/readability-core/package.json`、package `tsconfig.json`、`src/index.ts`を含むcore source/contract test、
   `pnpm-workspace.yaml`新規作成、PBI-02 importer/dependencyに必要な`pnpm-lock.yaml`生成差分を所有する。
   PBI-01が作成したroot `package.json`は変更せず、lockfileのPBI-01 ownership履歴も保持する。

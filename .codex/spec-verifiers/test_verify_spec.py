@@ -3,6 +3,7 @@ from __future__ import annotations
 import subprocess
 import unittest
 import importlib.util
+import json
 import sys
 import re
 from pathlib import Path
@@ -19,6 +20,11 @@ PBI03_SPEC = importlib.util.spec_from_file_location("verify_pbi03", PBI03_VERIFI
 assert PBI03_SPEC and PBI03_SPEC.loader
 verify_pbi03 = importlib.util.module_from_spec(PBI03_SPEC)
 PBI03_SPEC.loader.exec_module(verify_pbi03)
+PBI04_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi04.py"
+PBI04_SPEC = importlib.util.spec_from_file_location("verify_pbi04", PBI04_VERIFIER)
+assert PBI04_SPEC and PBI04_SPEC.loader
+verify_pbi04 = importlib.util.module_from_spec(PBI04_SPEC)
+PBI04_SPEC.loader.exec_module(verify_pbi04)
 
 EXPECTED = {
     "drop-h113-falsification": "H113-FALSIFICATION",
@@ -47,6 +53,9 @@ EXPECTED = {
     "drop-pbi03-code-range-title": "PBI03-ACCEPTANCE-ORACLE",
     "drop-pbi03-runtime-dependency": "PBI03-DEPENDENCY-CONTRACT",
     "add-pbi03-third-direct-dependency": "PBI03-EXACT-DIRECT-DEPENDENCIES",
+    "drop-pbi04-known-fail": "PBI04-QUALIFICATION-CONTRACT",
+    "permit-pbi04-runtime": "PBI04-RUNTIME-REJECTION",
+    "drop-pbi04-fallback-title": "PBI04-ACCEPTANCE-ORACLE",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -222,5 +231,41 @@ packages:
         self.assertEqual(tests, passed)
         self.assertEqual(0, failed)
         self.assertEqual(12, titles)
+
+    def test_pbi04_artifact_contract_and_registered_red(self) -> None:
+        valid = {
+            "candidate": {
+                "package": "kuromoji", "version": "0.1.2", "dictionary": "bundled IPADIC",
+                "releaseYear": 2018, "runtimeDependencyAllowed": False,
+            },
+            "gates": {
+                "maintainability": {"status": "FAIL", "reasonCode": "RELEASE_AGE_GT_24_MONTHS", "evidence": ["releaseYear=2018"]},
+                "node24_performance": {"status": "UNKNOWN", "evidence": ["not run after rejection"]},
+                "range_conversion": {"status": "UNKNOWN", "evidence": ["not run after rejection"]},
+                "determinism": {"status": "UNKNOWN", "evidence": ["not run after rejection"]},
+                "offline": {"status": "UNKNOWN", "evidence": ["not run after rejection"]},
+            },
+            "decision": {"status": "REJECT", "rule": "ANY_FAIL_OR_UNKNOWN", "fallback": "internal"},
+            "fallbackContracts": ["H102", "H106", "H107_TOKEN", "H108_TOKEN"],
+        }
+        self.assertEqual([], verify_pbi04.validate_artifact(valid))
+        maintainability_pass = json.loads(json.dumps(valid))
+        maintainability_pass["gates"]["maintainability"]["status"] = "PASS"
+        self.assertIn("gate-status-maintainability", verify_pbi04.validate_artifact(maintainability_pass))
+        runtime_allowed = json.loads(json.dumps(valid))
+        runtime_allowed["candidate"]["runtimeDependencyAllowed"] = True
+        self.assertIn("candidate-contract", verify_pbi04.validate_artifact(runtime_allowed))
+
+        state = verify_spec.read_state()
+        packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-04")
+        artifact = ROOT / "docs/decision-evidence/analyzer-qualification.json"
+        self.assertFalse(artifact.exists())
+        self.assertEqual([], verify_spec.pbi04_registration_errors(packet, PBI04_VERIFIER.is_file(), False))
+        for _ in range(2):
+            red = subprocess.run(["python3", str(PBI04_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+            self.assertEqual(
+                (1, "PBI04_RED missing docs/decision-evidence/analyzer-qualification.json\n", ""),
+                (red.returncode, red.stdout, red.stderr),
+            )
 
 if __name__ == "__main__": unittest.main()

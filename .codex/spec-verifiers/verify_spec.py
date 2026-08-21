@@ -23,6 +23,7 @@ MUTATIONS = (
     "permit-pbi03-internal-scanner", "drop-pbi03-code-range-title",
     "drop-pbi03-runtime-dependency",
     "add-pbi03-third-direct-dependency",
+    "drop-pbi04-known-fail", "permit-pbi04-runtime", "drop-pbi04-fallback-title",
 )
 
 def read_state() -> dict:
@@ -248,6 +249,50 @@ def pbi03_transition_errors(body: str, oracle_exists: bool, contract_tests_exist
         errors.append("PBI03-POST-IMPLEMENTATION-GREEN")
     return errors
 
+def pbi04_registration_errors(body: str, oracle_exists: bool, artifact_exists: bool) -> list[str]:
+    ownership = all(value in body for value in (
+        '"docs/decision-evidence/analyzer-qualification.md"',
+        '"docs/decision-evidence/analyzer-qualification.json"',
+        '"packages/readability-core/src/analyze.ts"',
+        '"packages/readability-core/src/index.ts"',
+        'forbidden_paths: ["docs/requirements/normative-contract-matrix.json", "packages/readability-core/package.json", "pnpm-lock.yaml"]',
+    ))
+    qualification = all(value in body for value in (
+        'path: "docs/decision-evidence/analyzer-qualification.json"',
+        'candidate: "kuromoji@0.1.2 + bundled IPADIC; releaseYear=2018; runtimeDependencyAllowed=false"',
+        'gate_statuses: "maintainability=FAIL(RELEASE_AGE_GT_24_MONTHS); node24_performance/range_conversion/determinism/offline=UNKNOWN with evidence"',
+        'decision: "REJECT by ANY_FAIL_OR_UNKNOWN"',
+        'fallback: "internal H102/H106/H107_TOKEN/H108_TOKEN"',
+    ))
+    acceptance = all(value in body for value in (
+        'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi04.py"',
+        'test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/analyzer/qualification.contract.test.ts test/analyzer/internal-token.contract.test.ts test/rules/H102.contract.test.ts test/rules/H106.contract.test.ts"',
+        'exact_test_files: ["packages/readability-core/test/analyzer/qualification.contract.test.ts", "packages/readability-core/test/analyzer/internal-token.contract.test.ts", "packages/readability-core/test/rules/H102.contract.test.ts", "packages/readability-core/test/rules/H106.contract.test.ts"]',
+        "minimum_tests: 12", "pass_equals_tests: true", "fail: 0", "required_titles: 12",
+        'required_title_ids: ["PBI04-Q01", "PBI04-Q02", "PBI04-Q03", "PBI04-Q04", "H102-B01", "H102-P01", "H102-F01", "H106-B01", "H106-P01", "H106-F01", "H107-T01", "H108-T01"]',
+        'green_signature: "PBI04_GREEN tests>=12 pass=tests fail=0 required_titles=12"',
+    ))
+    runtime_rejection = 'rejected_runtime_dependencies: ["kuromoji", "kuromojin", "@faanau/kuromoji"]' in body
+    registered = all(value in body for value in (
+        'expected_red: "python3 .codex/spec-verifiers/verify_pbi04.py; exit=1; signature=PBI04_RED missing docs/decision-evidence/analyzer-qualification.json"',
+        'red_status: "REGISTERED_RED"', 'phase: "PRE_IMPLEMENTATION"',
+        'command: "python3 .codex/spec-verifiers/verify_pbi04.py"', "exit: 1",
+        'stdout: "PBI04_RED missing docs/decision-evidence/analyzer-qualification.json"',
+        'stderr: "<empty>"', "measured_runs: 2",
+    ))
+    errors = []
+    if not ownership:
+        errors.append("PBI04-OWNERSHIP")
+    if not qualification:
+        errors.append("PBI04-QUALIFICATION-CONTRACT")
+    if not runtime_rejection:
+        errors.append("PBI04-RUNTIME-REJECTION")
+    if not acceptance or not oracle_exists:
+        errors.append("PBI04-ACCEPTANCE-ORACLE")
+    if not registered or artifact_exists:
+        errors.append("PBI04-PRE-IMPLEMENTATION-RED")
+    return errors
+
 def verify(state: dict) -> list[str]:
     m, t, packets, workflow = state["matrix"], state["text"], state["packets"], state["workflow"]
     errors: list[str] = []
@@ -355,6 +400,13 @@ def verify(state: dict) -> list[str]:
                 all(path.is_file() for path in pbi03_tests),
             ):
                 need(False, error)
+        if pid == "PBI-04":
+            for error in pbi04_registration_errors(
+                body,
+                (ROOT / ".codex/spec-verifiers/verify_pbi04.py").is_file(),
+                (ROOT / "docs/decision-evidence/analyzer-qualification.json").is_file(),
+            ):
+                need(False, error)
         need(not any(x in body for x in ("TBD", "placeholder", "実装開始時に")), f"PACKET-PLACEHOLDER-{name}")
 
     for gap in range(8, 18):
@@ -398,7 +450,18 @@ def verify(state: dict) -> list[str]:
             for item in workflow.get("phase_history", [])
         )
     )
-    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started, "WORKFLOW-GATE-TRANSITION")
+    pbi04_delivery_started = (
+        workflow.get("current_phase") == "DA"
+        and workflow.get("gate_type") == "DELIVERY"
+        and workflow.get("active_pbi") == "PBI-04"
+        and workflow.get("task_packet_ref") == ".codex/task-packets/PBI-04-analyzer-qualification.md"
+        and any(
+            item.get("phase") == "QGA" and item.get("status") == "APPROVE"
+            and item.get("gate_type") == "DELIVERY" and item.get("active_pbi") == "PBI-03"
+            for item in workflow.get("phase_history", [])
+        )
+    )
+    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started, "WORKFLOW-GATE-TRANSITION")
     return errors
 
 def apply_mutation(name: str, state: dict) -> None:
@@ -469,6 +532,14 @@ def apply_mutation(name: str, state: dict) -> None:
                 )
     elif name == "permit-pbi03-internal-scanner":
         t["dec6"] = t["dec6"].replace("独自Markdown block scanner", "許可済みMarkdown block scanner", 1).replace("禁止する", "許可する", 1)
+    elif name in ("drop-pbi04-known-fail", "permit-pbi04-runtime", "drop-pbi04-fallback-title"):
+        key = next(k for k, body in packets.items() if packet_id(body) == "PBI-04")
+        if name == "drop-pbi04-known-fail":
+            packets[key] = packets[key].replace("maintainability=FAIL(RELEASE_AGE_GT_24_MONTHS)", "maintainability=PASS", 1)
+        elif name == "permit-pbi04-runtime":
+            packets[key] = packets[key].replace('rejected_runtime_dependencies: ["kuromoji", ', 'rejected_runtime_dependencies: [', 1)
+        else:
+            packets[key] = packets[key].replace('"H102-P01", ', "", 1)
     else: raise ValueError(name)
 
 def main() -> int:
