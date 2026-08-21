@@ -68,8 +68,8 @@ task_packet:
     unique_notice_sha256: ["f5c708b59114507b8b27b48181b6883d106bbca0c1634bbee45b5e344237b66b"]
     notice_distribution_scope: "both packages are dev-only and their binary/NOTICE is not included in the public source repository release; distributable retention obligations=0"
   mutations: ["REL-M-DROP-INSTALL", "REL-M-INVALID-UPGRADE", "REL-M-DROP-RULE", "REL-M-SEMANTIC-HARD-ERROR", "REL-M-LICENSE-TEXT", "REL-M-COPYRIGHT", "REL-M-LOCK-HASH", "REL-M-LICENSE-COUNT", "REL-M-NOTICE-OMITTED-WITH-OBLIGATION", "REL-M-UNNEEDED-NOTICE", "REL-M-SECRET-FINDING", "REL-M-HIGH-AUDIT", "REL-M-EVIDENCE-SHA-DRIFT", "REL-M-BROKEN-LINK", "REL-M-MISSING-SCRIPT", "REL-M-FALSE-NO-MATCH", "REL-M-CI-SECRET", "REL-M-STALE-EVIDENCE"]
-  expected_red: "python3 .codex/spec-verifiers/verify_pbi09.py; exit=1; signature=PBI09_RED missing README.md"
-  red_status: "REGISTERED_RED"
+  expected_red: null
+  red_status: "CONSUMED_GREEN"
   expected_red_history:
     registration:
       phase: "PRE_IMPLEMENTATION"
@@ -78,6 +78,31 @@ task_packet:
       stdout: "PBI09_RED missing README.md"
       stderr: "<empty>"
       measured_runs: 2
+  green_transition:
+    phase: "POST_IMPLEMENTATION"
+    product_commit: "63555bd"
+    command: "python3 .codex/spec-verifiers/verify_pbi09.py"
+    exit: 0
+    signature: "PBI09_GREEN tests=12 pass=12 fail=0 required_titles=12 links=PASS commands=PASS license=PASS notice=ABSENT security=PASS"
+    release_input_sha256: "d2b07d7382d4aa38f1a20bf71baeb1a8e21485fa1845a14db435599df03e0a25"
+    root_package_hash_transition: "PBI-06〜PBI-08 delivery時=87d2ccaa29bd499df2777ed25614fd3e84a457a79ae5cc1d1581059dd7f62760; PBI-09 Green以降=aaaca4013b1553336b859b4fcf2a54eeb625181d7b10c16a735645565683ea43"
+    artifact_hashes:
+      README.md: "5a0e0b85110919040fe3342f7f00bcd178b256ee27cbfaaed7c307df238bf405"
+      LICENSE: "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+      SECURITY.md: "1a1c8be7fdd847d56a5d78b7bc9701c9613adc3aec2ec3e662c0ab78b970504e"
+      CONTRIBUTING.md: "88e49663bcfd061a85380e32a195d9786ba017e9f3b42229e5206256a7be2374"
+      CHANGELOG.md: "44d608182c8f3540ab9abdd0ba6991db34ac63c3c00db66edd2f51a80bbcfda0"
+      package.json: "aaaca4013b1553336b859b4fcf2a54eeb625181d7b10c16a735645565683ea43"
+      scripts/verify-release.mjs: "784f878dff9f78b67be9be154b8792f49da6bf2958da3e75a4aa736219385910"
+      tests/release/docs.contract.test.mjs: "fb930208fe218c30f8e4b5e849a31ea25d73c16df6c86c1b101567fd8e9c7184"
+      tests/release/license.contract.test.mjs: "16a30b8c426b3956c1c5a6807d7e64c047ecfb85294e434c9f5b5a444f0cbd1f"
+      tests/release/security.contract.test.mjs: "3a1f6872283c1b97e89c1d643907c358038055d64ac1587bfa244f97f758f859"
+      tests/release/commands.contract.test.mjs: "fbf5778027b385d29b0f8414e89baa448a8cac700f9e2a60010dccbb5000e0a6"
+      docs/release-evidence/release-input.json: "4e9869dce79955efb3c0f9e7cb8b10115fd8b40c60996e8f3e9190568809bed1"
+      docs/release-evidence/dependency-license-scan.json: "d6ec9c707b98902dbff1d9ab42c581afb52eeb1bb39c9c0a727f4ab005b6d0b2"
+      docs/release-evidence/security-scan.json: "b7adea144e9d7dd0747806451e2e0ad0af8fe6d2c98320520faca9c7fad32d43"
+      .github/workflows/release-contract.yml: "29bb21410eb4336faca56dd77ce3eacce3d4a71c2624b31521506ba3223c3b63"
+    evidence_contract: "license counts MIT=72/Apache-2.0=2/BSD-2-Clause=2; root NOTICE absent and distributable obligations=0; secret findings=0; unresolved audit high=0/critical=0; links=PASS; commands=PASS"
   red_registration_gate: "PBI開始時、依存PBI完了後かつ実装変更前に、実在する失敗test command・exit code・完全一致signatureを登録する"
   acceptance: ["O-01", "O-05", "O-06D", "O-06H", "O-10", "DEC-005", "README install/update/usage/rules/limitations", "Apache-2.0/NOTICE", "security/license evidence"]
   engineering_constraints: "docs/requirements/engineering-constraints.md A01-A08"

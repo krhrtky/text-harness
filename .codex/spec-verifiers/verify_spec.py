@@ -112,6 +112,7 @@ MUTATIONS = (
     "weaken-pbi09-notice-scope", "drop-pbi09-security-zero",
     "drop-pbi09-update-command", "drop-pbi09-required-title",
     "permit-pbi09-broken-link", "drop-pbi09-red-signature",
+    "drop-pbi09-post-hash", "drift-pbi09-release-input",
 )
 
 def read_state() -> dict:
@@ -1786,6 +1787,33 @@ def pbi09_registration_errors(body: str, oracle_exists: bool, readme_exists: boo
             'stdout: "PBI09_RED missing README.md"', 'stderr: "<empty>"', 'measured_runs: 2',
         ))
         if not registered: errors.append("PBI09-PRE-IMPLEMENTATION-RED")
+    else:
+        post_hashes = (
+            "5a0e0b85110919040fe3342f7f00bcd178b256ee27cbfaaed7c307df238bf405",
+            "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+            "1a1c8be7fdd847d56a5d78b7bc9701c9613adc3aec2ec3e662c0ab78b970504e",
+            "88e49663bcfd061a85380e32a195d9786ba017e9f3b42229e5206256a7be2374",
+            "44d608182c8f3540ab9abdd0ba6991db34ac63c3c00db66edd2f51a80bbcfda0",
+            "aaaca4013b1553336b859b4fcf2a54eeb625181d7b10c16a735645565683ea43",
+            "784f878dff9f78b67be9be154b8792f49da6bf2958da3e75a4aa736219385910",
+            "fb930208fe218c30f8e4b5e849a31ea25d73c16df6c86c1b101567fd8e9c7184",
+            "16a30b8c426b3956c1c5a6807d7e64c047ecfb85294e434c9f5b5a444f0cbd1f",
+            "3a1f6872283c1b97e89c1d643907c358038055d64ac1587bfa244f97f758f859",
+            "fbf5778027b385d29b0f8414e89baa448a8cac700f9e2a60010dccbb5000e0a6",
+            "4e9869dce79955efb3c0f9e7cb8b10115fd8b40c60996e8f3e9190568809bed1",
+            "d6ec9c707b98902dbff1d9ab42c581afb52eeb1bb39c9c0a727f4ab005b6d0b2",
+            "b7adea144e9d7dd0747806451e2e0ad0af8fe6d2c98320520faca9c7fad32d43",
+            "29bb21410eb4336faca56dd77ce3eacce3d4a71c2624b31521506ba3223c3b63",
+        )
+        green = all(value in body for value in (
+            "expected_red: null", 'red_status: "CONSUMED_GREEN"',
+            'product_commit: "63555bd"',
+            'signature: "PBI09_GREEN tests=12 pass=12 fail=0 required_titles=12 links=PASS commands=PASS license=PASS notice=ABSENT security=PASS"',
+            'release_input_sha256: "d2b07d7382d4aa38f1a20bf71baeb1a8e21485fa1845a14db435599df03e0a25"',
+            "PBI-06〜PBI-08 delivery時=87d2ccaa29bd499df2777ed25614fd3e84a457a79ae5cc1d1581059dd7f62760; PBI-09 Green以降=aaaca4013b1553336b859b4fcf2a54eeb625181d7b10c16a735645565683ea43",
+            "license counts MIT=72/Apache-2.0=2/BSD-2-Clause=2; root NOTICE absent and distributable obligations=0; secret findings=0; unresolved audit high=0/critical=0; links=PASS; commands=PASS",
+        )) and all(digest in body for digest in post_hashes)
+        if not green: errors.append("PBI09-POST-IMPLEMENTATION-GREEN")
     return errors
 
 def verify(state: dict) -> list[str]:
@@ -2914,6 +2942,7 @@ def apply_mutation(name: str, state: dict) -> None:
         "weaken-pbi09-notice-scope", "drop-pbi09-security-zero",
         "drop-pbi09-update-command", "drop-pbi09-required-title",
         "permit-pbi09-broken-link", "drop-pbi09-red-signature",
+        "drop-pbi09-post-hash", "drift-pbi09-release-input",
     ):
         key = next(k for k, body in packets.items() if packet_id(body) == "PBI-09")
         if name == "drop-pbi09-readme-ownership":
@@ -2930,6 +2959,10 @@ def apply_mutation(name: str, state: dict) -> None:
             packets[key] = packets[key].replace('"REL-LIC-04 dev-only duplicate TypeScript notices produce no distributable root NOTICE"', '"REL-LIC-04-REMOVED"')
         elif name == "permit-pbi09-broken-link":
             packets[key] = packets[key].replace("relative linkはtracked targetへ解決", "relative link may be broken", 1)
+        elif name == "drop-pbi09-post-hash":
+            packets[key] = packets[key].replace('      README.md: "5a0e0b85110919040fe3342f7f00bcd178b256ee27cbfaaed7c307df238bf405"\n', "", 1)
+        elif name == "drift-pbi09-release-input":
+            packets[key] = packets[key].replace("d2b07d7382d4aa38f1a20bf71baeb1a8e21485fa1845a14db435599df03e0a25", "0" * 64, 1)
         else:
             packets[key] = packets[key].replace('    red_signature: "PBI09_RED missing README.md"\n', "", 1)
     else: raise ValueError(name)

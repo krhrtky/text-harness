@@ -40,11 +40,15 @@ UNCHANGED_HASHES = {
     Path("packages/readability-core/src/types/range.ts"): "f77039d0cc681c2fd0564da9e245c92961c21273cfa573a496cd9f0aec973de5",
     Path("packages/readability-core/src/types/errors.ts"): "0d4f56962f75bc214964afa4aadd9de8e7c9627cf7bdb09f19892b6670cc2701",
 }
+PBI09_ROOT_PACKAGE_HASH = "aaaca4013b1553336b859b4fcf2a54eeb625181d7b10c16a735645565683ea43"
 
 
 def unchanged_errors(root: Path = ROOT) -> list[str]:
+    expected_hashes = dict(UNCHANGED_HASHES)
+    if (root / "README.md").is_file():
+        expected_hashes[Path("package.json")] = PBI09_ROOT_PACKAGE_HASH
     return [
-        str(path) for path, expected in UNCHANGED_HASHES.items()
+        str(path) for path, expected in expected_hashes.items()
         if not (root / path).is_file()
         or hashlib.sha256((root / path).read_bytes()).hexdigest() != expected
     ]

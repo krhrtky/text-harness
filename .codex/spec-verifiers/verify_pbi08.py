@@ -44,6 +44,7 @@ UNCHANGED_HASHES = {
     Path("packages/readability-core/src/types/errors.ts"): "0d4f56962f75bc214964afa4aadd9de8e7c9627cf7bdb09f19892b6670cc2701",
     Path("packages/textlint-adapter/tsconfig.json"): "1891f8459b7f3b1283c31c1340d4e340e893d89e67f13e4242eb57d77c2ba772",
 }
+PBI09_ROOT_PACKAGE_HASH = "aaaca4013b1553336b859b4fcf2a54eeb625181d7b10c16a735645565683ea43"
 DELIVERY_HASHES = {
     Path("packages/textlint-adapter/package.json"): "bfc3d793caadeb84ab6730a5ba2122a2bfe14c571fec301fcfa8f32841272414",
     Path("packages/textlint-adapter/src/index.ts"): "44e0de81038c8fa1406f21bd8f09e5d407c45dbef46a899b0ab1a2e076e63546",
@@ -171,7 +172,10 @@ def main() -> int:
     required = [CLI, INDEX, *TESTS, *FIXTURES, WORKFLOW]
     missing = [str(path) for path in required if not (ROOT / path).is_file()]
     if missing: return fail("missing " + ",".join(missing))
-    drift = [str(path) for path, expected in UNCHANGED_HASHES.items() if hashlib.sha256((ROOT / path).read_bytes()).hexdigest() != expected]
+    expected_hashes = dict(UNCHANGED_HASHES)
+    if (ROOT / "README.md").is_file():
+        expected_hashes[Path("package.json")] = PBI09_ROOT_PACKAGE_HASH
+    drift = [str(path) for path, expected in expected_hashes.items() if hashlib.sha256((ROOT / path).read_bytes()).hexdigest() != expected]
     if drift: return fail("forbidden_path_drift " + ",".join(drift))
     delivery_drift = [str(path) for path, expected in DELIVERY_HASHES.items() if hashlib.sha256((ROOT / path).read_bytes()).hexdigest() != expected]
     if delivery_drift: return fail("delivery_artifact_drift " + ",".join(delivery_drift))

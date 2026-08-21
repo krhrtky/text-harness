@@ -35,6 +35,23 @@ UNCHANGED_HASHES = {
     Path("AGENTS.md"): "5a28eb473c66cb2a0f08229e1ecdb134284ccd9d7655dc0f7a5a38e869846838",
     Path("scripts/text-harness-setup"): "b252a154665092dd1fa7cd25e9369bb9b2f2a0a513c2daf2f3b43ec562e09216",
 }
+DELIVERY_HASHES = {
+    Path("README.md"): "5a0e0b85110919040fe3342f7f00bcd178b256ee27cbfaaed7c307df238bf405",
+    Path("LICENSE"): "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    Path("SECURITY.md"): "1a1c8be7fdd847d56a5d78b7bc9701c9613adc3aec2ec3e662c0ab78b970504e",
+    Path("CONTRIBUTING.md"): "88e49663bcfd061a85380e32a195d9786ba017e9f3b42229e5206256a7be2374",
+    Path("CHANGELOG.md"): "44d608182c8f3540ab9abdd0ba6991db34ac63c3c00db66edd2f51a80bbcfda0",
+    Path("package.json"): "aaaca4013b1553336b859b4fcf2a54eeb625181d7b10c16a735645565683ea43",
+    Path("scripts/verify-release.mjs"): "784f878dff9f78b67be9be154b8792f49da6bf2958da3e75a4aa736219385910",
+    Path("tests/release/docs.contract.test.mjs"): "fb930208fe218c30f8e4b5e849a31ea25d73c16df6c86c1b101567fd8e9c7184",
+    Path("tests/release/license.contract.test.mjs"): "16a30b8c426b3956c1c5a6807d7e64c047ecfb85294e434c9f5b5a444f0cbd1f",
+    Path("tests/release/security.contract.test.mjs"): "3a1f6872283c1b97e89c1d643907c358038055d64ac1587bfa244f97f758f859",
+    Path("tests/release/commands.contract.test.mjs"): "fbf5778027b385d29b0f8414e89baa448a8cac700f9e2a60010dccbb5000e0a6",
+    Path("docs/release-evidence/release-input.json"): "4e9869dce79955efb3c0f9e7cb8b10115fd8b40c60996e8f3e9190568809bed1",
+    Path("docs/release-evidence/dependency-license-scan.json"): "d6ec9c707b98902dbff1d9ab42c581afb52eeb1bb39c9c0a727f4ab005b6d0b2",
+    Path("docs/release-evidence/security-scan.json"): "b7adea144e9d7dd0747806451e2e0ad0af8fe6d2c98320520faca9c7fad32d43",
+    Path(".github/workflows/release-contract.yml"): "29bb21410eb4336faca56dd77ce3eacce3d4a71c2624b31521506ba3223c3b63",
+}
 APACHE_SHA256 = "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
 LOCK_SHA256 = "f5cc3eea2d7a5c7e04810e44f6d31798094437e54bdfa519112788bdb0f773ba"
 NOTICE_SHA256 = "f5c708b59114507b8b27b48181b6883d106bbca0c1634bbee45b5e344237b66b"
@@ -116,6 +133,8 @@ def main() -> int:
     if missing: return fail("missing " + ",".join(missing))
     drift = [str(path) for path, expected in UNCHANGED_HASHES.items() if sha(path) != expected]
     if drift: return fail("forbidden_path_drift " + ",".join(drift))
+    delivery_drift = [str(path) for path, expected in DELIVERY_HASHES.items() if sha(path) != expected]
+    if delivery_drift: return fail("delivery_artifact_drift " + ",".join(delivery_drift))
     if (ROOT / "LICENSE").stat().st_size != 11358 or sha(Path("LICENSE")) != APACHE_SHA256: return fail("apache-license")
     try: errors = docs_errors() + package_errors() + evidence_errors()
     except (json.JSONDecodeError, OSError) as error: return fail("artifact-json " + str(error))

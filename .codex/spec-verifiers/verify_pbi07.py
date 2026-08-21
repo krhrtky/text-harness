@@ -58,6 +58,7 @@ UNCHANGED_HASHES = {
     Path("packages/readability-core/src/types/range.ts"): "f77039d0cc681c2fd0564da9e245c92961c21273cfa573a496cd9f0aec973de5",
     Path("packages/readability-core/src/types/errors.ts"): "0d4f56962f75bc214964afa4aadd9de8e7c9627cf7bdb09f19892b6670cc2701",
 }
+PBI09_ROOT_PACKAGE_HASH = "aaaca4013b1553336b859b4fcf2a54eeb625181d7b10c16a735645565683ea43"
 
 def fail(message: str) -> int:
     print("PBI07_FAIL " + message)
@@ -99,7 +100,10 @@ def main() -> int:
     required += [Path(f"skills/readability-review/evals/{rule}.json") for rule in ("S203", "S204")]
     missing = [str(path) for path in required if not (ROOT / path).is_file()]
     if missing: return fail("missing " + ",".join(missing))
-    drift = [str(path) for path, expected in UNCHANGED_HASHES.items() if hashlib.sha256((ROOT / path).read_bytes()).hexdigest() != expected]
+    expected_hashes = dict(UNCHANGED_HASHES)
+    if (ROOT / "README.md").is_file():
+        expected_hashes[Path("package.json")] = PBI09_ROOT_PACKAGE_HASH
+    drift = [str(path) for path, expected in expected_hashes.items() if hashlib.sha256((ROOT / path).read_bytes()).hexdigest() != expected]
     if drift: return fail("forbidden_path_drift " + ",".join(drift))
 
     skill = (ROOT / SKILL).read_text()

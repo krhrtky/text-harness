@@ -59,6 +59,7 @@ RUNTIME_DEPENDENCY_HASHES = {
     Path("pnpm-lock.yaml"): "f5cc3eea2d7a5c7e04810e44f6d31798094437e54bdfa519112788bdb0f773ba",
     Path("packages/readability-core/package.json"): "996ac24d4b0af2137c09c7ee84934fbd3db368c6db45347325441331685e9f55",
 }
+PBI09_ROOT_PACKAGE_HASH = "aaaca4013b1553336b859b4fcf2a54eeb625181d7b10c16a735645565683ea43"
 
 
 def evidence_valid(value: object) -> bool:
@@ -70,8 +71,11 @@ def evidence_valid(value: object) -> bool:
 def runtime_dependency_errors(
     root: Path, expected_hashes: dict[Path, str] = RUNTIME_DEPENDENCY_HASHES
 ) -> list[str]:
+    phase_hashes = dict(expected_hashes)
+    if expected_hashes is RUNTIME_DEPENDENCY_HASHES and (root / "README.md").is_file():
+        phase_hashes[Path("package.json")] = PBI09_ROOT_PACKAGE_HASH
     return [
-        str(path) for path, expected in expected_hashes.items()
+        str(path) for path, expected in phase_hashes.items()
         if not (root / path).is_file()
         or hashlib.sha256((root / path).read_bytes()).hexdigest() != expected
     ]

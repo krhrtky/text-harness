@@ -4,8 +4,8 @@
   "current_phase": "DA",
   "active_pbi": "PBI-09",
   "gate_type": "DELIVERY",
-  "strategy_id": "delivery-pbi09-release-evidence-v1",
-  "iteration": 65,
+  "strategy_id": "delivery-pbi09-green-transition-v2",
+  "iteration": 66,
   "task_packet_ref": ".codex/task-packets/PBI-09-release-evidence.md",
   "phase_history": [
     {
@@ -1805,6 +1805,27 @@
       ],
       "resume_point": ".codex/task-packets/PBI-09-release-evidence.md",
       "timestamp": "2026-08-22T03:05:00+09:00"
+    },
+    {
+      "phase": "DA",
+      "status": "PBI_GREEN_REPORTED",
+      "agent": "/root/delivery",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-09",
+      "task_packet_ref": ".codex/task-packets/PBI-09-release-evidence.md",
+      "decision": "PBI-09 release documentation, metadata, Apache-2.0, NOTICE scope, security evidence, and release commands satisfy the executable post-implementation contract",
+      "evidence": [
+        "DA product commit 63555bd",
+        "pre-implementation RED retained: PBI09_RED missing README.md; exit1; stderr empty; reproduced twice",
+        "python3 .codex/spec-verifiers/verify_pbi09.py => PBI09_GREEN tests=12 pass=12 fail=0 required_titles=12 links=PASS commands=PASS license=PASS notice=ABSENT security=PASS",
+        "15 delivery artifacts are fixed by exact SHA-256 values in the task packet and verifier",
+        "releaseInputSha256=d2b07d7382d4aa38f1a20bf71baeb1a8e21485fa1845a14db435599df03e0a25 is shared by license and security evidence",
+        "license counts are MIT=72, Apache-2.0=2, BSD-2-Clause=2; NOTICE distributable obligations=0 and root NOTICE is absent",
+        "secret findings=0 and unresolved audit high=0/critical=0; documentation links and setup/release commands pass",
+        "root package SHA-256 transition is phase-aware: PBI-06 through PBI-08 historical=87d2ccaa29bd499df2777ed25614fd3e84a457a79ae5cc1d1581059dd7f62760; PBI-09 post=aaaca4013b1553336b859b4fcf2a54eeb625181d7b10c16a735645565683ea43"
+      ],
+      "resume_point": ".codex/task-packets/PBI-09-release-evidence.md",
+      "timestamp": "2026-08-22T03:15:00+09:00"
     }
   ],
   "blocker_history": [
@@ -1882,5 +1903,5 @@
     }
   ],
   "created_at": "2026-08-21T09:39:07+09:00",
-  "updated_at": "2026-08-22T03:05:00+09:00"
+  "updated_at": "2026-08-22T03:15:00+09:00"
 }

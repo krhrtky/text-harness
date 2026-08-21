@@ -251,6 +251,8 @@ EXPECTED = {
     "drop-pbi09-required-title": "PBI09-ACCEPTANCE-ORACLE",
     "permit-pbi09-broken-link": "PBI09-RELEASE-CONTRACT",
     "drop-pbi09-red-signature": "PBI09-ACCEPTANCE-ORACLE",
+    "drop-pbi09-post-hash": "PBI09-POST-IMPLEMENTATION-GREEN",
+    "drift-pbi09-release-input": "PBI09-POST-IMPLEMENTATION-GREEN",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -697,6 +699,8 @@ packages:
         self.assertEqual(0, failed)
         self.assertEqual(12, titles)
         for path, expected in verify_pbi06.RUNTIME_DEPENDENCY_HASHES.items():
+            if path == Path("package.json"):
+                expected = verify_pbi06.PBI09_ROOT_PACKAGE_HASH
             self.assertEqual(expected, hashlib.sha256((ROOT / path).read_bytes()).hexdigest())
         with tempfile.TemporaryDirectory() as directory:
             temporary_root = Path(directory)
@@ -732,6 +736,8 @@ packages:
             verify_pbi06a.HISTORICAL_CONFIG_HASH,
         )
         for path, expected in verify_pbi06a.UNCHANGED_HASHES.items():
+            if path == Path("package.json"):
+                expected = verify_pbi06a.PBI09_ROOT_PACKAGE_HASH
             self.assertEqual(expected, hashlib.sha256((ROOT / path).read_bytes()).hexdigest())
         with tempfile.TemporaryDirectory() as directory:
             temporary_root = Path(directory)
@@ -739,6 +745,7 @@ packages:
                 target = temporary_root / path
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes((ROOT / path).read_bytes())
+            (temporary_root / "README.md").write_text("PBI-09 post-state\n")
             config = temporary_root / "packages/readability-core/src/config/validate.ts"
             config.write_text(config.read_text() + "\n// unauthorized drift\n")
             self.assertEqual(["packages/readability-core/src/config/validate.ts"], verify_pbi06a.unchanged_errors(temporary_root))
@@ -1028,13 +1035,19 @@ test("D002-B03 multi-mark combining sequence reports exact source range", () => 
         semantic["properties"]["confidence"].pop("maximum")
         self.assertIn("confidence", verify_pbi08.schema_errors(schema))
 
-    def test_pbi09_registered_red_is_reproducible(self) -> None:
+    def test_pbi09_red_history_transitions_to_reproducible_green(self) -> None:
         state = verify_spec.read_state()
         packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-09")
-        self.assertEqual([], verify_spec.pbi09_registration_errors(packet, PBI09_VERIFIER.is_file(), False))
+        pre = packet.replace("expected_red: null", 'expected_red: "python3 .codex/spec-verifiers/verify_pbi09.py; exit=1; signature=PBI09_RED missing README.md"', 1).replace('red_status: "CONSUMED_GREEN"', 'red_status: "REGISTERED_RED"', 1)
+        self.assertEqual([], verify_spec.pbi09_registration_errors(pre, PBI09_VERIFIER.is_file(), False))
+        self.assertEqual([], verify_spec.pbi09_registration_errors(packet, PBI09_VERIFIER.is_file(), True))
         first = subprocess.run(["python3", str(PBI09_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
         second = subprocess.run(["python3", str(PBI09_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
-        self.assertEqual((1, "PBI09_RED missing README.md\n", ""), (first.returncode, first.stdout, first.stderr))
-        self.assertEqual((first.returncode, first.stdout, first.stderr), (second.returncode, second.stdout, second.stderr))
+        self.assertEqual(0, first.returncode, first.stdout + first.stderr)
+        self.assertIn("PBI09_GREEN tests=12 pass=12 fail=0 required_titles=12 links=PASS commands=PASS license=PASS notice=ABSENT security=PASS", first.stdout)
+        self.assertEqual(0, second.returncode, second.stdout + second.stderr)
+        self.assertEqual(first.stdout.splitlines()[-1], second.stdout.splitlines()[-1])
+        self.assertEqual("", first.stderr)
+        self.assertEqual("", second.stderr)
 
 if __name__ == "__main__": unittest.main()
