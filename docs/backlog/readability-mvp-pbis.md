@@ -41,6 +41,9 @@
   `pnpm-workspace.yaml`新規作成、PBI-02 importer/dependencyに必要な`pnpm-lock.yaml`生成差分を所有する。
   PBI-01が作成したroot `package.json`は変更せず、lockfileのPBI-01 ownership履歴も保持する。
   acceptanceは`--fail-if-no-match`、contract test file、収集test数14件以上、全件pass、fail 0、AC titleを同時に検証する。
+- PBI-03はH101/H103/H104 rule・共通処理・exact contract testに加え、PBI-02が作成した`analyze.ts`と
+  `index.ts`への3 rule登録だけを限定共有変更として所有する。acceptanceは3 test fileを直接実行し、
+  `--fail-if-no-match`、9件以上の収集、全件pass、fail 0、境界・code除外・決定性を表す9 titleを検証する。
 - 全PBIは`.codex/task-packets/`に1 packetを持ち、`owned_paths`、`acceptance_command`、一意な
   `expected_red` exit/signature、`engineering_constraints`を欠落させない。
 - root `AGENTS.md`由来の制約は`docs/requirements/engineering-constraints.md`を介して全packetへ追跡する。

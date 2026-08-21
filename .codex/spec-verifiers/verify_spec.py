@@ -17,6 +17,8 @@ MUTATIONS = (
     "drift-mvp-range", "drift-dec002-range",
     "drop-pbi02-manifest-ownership", "drop-pbi02-no-match-guard",
     "drop-pbi02-required-title",
+    "drop-pbi03-analyze-ownership", "drop-pbi03-no-match-guard",
+    "drop-pbi03-required-title",
 )
 
 def read_state() -> dict:
@@ -156,6 +158,49 @@ def pbi02_transition_errors(
         errors.append("PBI02-POST-IMPLEMENTATION-GREEN")
     return errors
 
+def pbi03_registration_errors(body: str, oracle_exists: bool, contract_tests_exist: bool) -> list[str]:
+    ownership = all(value in body for value in (
+        'owned_paths: ["packages/readability-core/src/rules/H101*", "packages/readability-core/src/rules/H103*", "packages/readability-core/src/rules/H104*", "packages/readability-core/src/rules/shared/**", "packages/readability-core/src/analyze.ts", "packages/readability-core/src/index.ts", "packages/readability-core/test/heuristic/H101*", "packages/readability-core/test/heuristic/H103*", "packages/readability-core/test/heuristic/H104*"]',
+        'packages/readability-core/src/analyze.ts: "PBI-02 ownership履歴を維持し、H101/H103/H104 dispatch登録だけ変更する"',
+        'packages/readability-core/src/index.ts: "PBI-02 ownership履歴を維持し、H101/H103/H104 public exportだけ変更する"',
+    ))
+    acceptance = all(value in body for value in (
+        'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi03.py"',
+        'test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/heuristic/H101.contract.test.ts test/heuristic/H103.contract.test.ts test/heuristic/H104.contract.test.ts"',
+        'contract_test_files: ["packages/readability-core/test/heuristic/H101.contract.test.ts", "packages/readability-core/test/heuristic/H103.contract.test.ts", "packages/readability-core/test/heuristic/H104.contract.test.ts"]',
+        "minimum_tests: 9",
+        "pass_equals_tests: true",
+        "fail: 0",
+        '"AC-H101-01 H101 does not report length 100"',
+        '"AC-H101-02 H101 reports length 101 with actual and threshold"',
+        '"H101-AC05 H101 excludes code blocks"',
+        '"H101-AC06 H101 is deterministic"',
+        '"H103-B01 H103 does not report four Japanese commas"',
+        '"H103-P01 H103 reports five Japanese commas"',
+        '"H104-B01 H104 does not report nesting depth two"',
+        '"H104-P01 H104 reports nesting depth three"',
+        '"H104-F01 H104 leaves mismatched brackets to D003"',
+        'green_signature: "PBI03_GREEN tests>=9 pass=tests fail=0 required_titles=9"',
+    ))
+    registered = all(value in body for value in (
+        'expected_red: "python3 .codex/spec-verifiers/verify_pbi03.py; exit=1; signature=PBI03_RED missing packages/readability-core/test/heuristic/H101.contract.test.ts"',
+        'red_status: "REGISTERED_RED"',
+        'phase: "PRE_IMPLEMENTATION"',
+        'command: "python3 .codex/spec-verifiers/verify_pbi03.py"',
+        "exit: 1",
+        'stdout: "PBI03_RED missing packages/readability-core/test/heuristic/H101.contract.test.ts"',
+        'stderr: "<empty>"',
+        "measured_runs: 2",
+    ))
+    errors = []
+    if not ownership:
+        errors.append("PBI03-OWNERSHIP")
+    if not acceptance or not oracle_exists:
+        errors.append("PBI03-ACCEPTANCE-ORACLE")
+    if not registered or contract_tests_exist:
+        errors.append("PBI03-PRE-IMPLEMENTATION-RED")
+    return errors
+
 def verify(state: dict) -> list[str]:
     m, t, packets, workflow = state["matrix"], state["text"], state["packets"], state["workflow"]
     errors: list[str] = []
@@ -242,6 +287,18 @@ def verify(state: dict) -> list[str]:
                 (ROOT / "packages/readability-core/test/contract/core.contract.test.ts").is_file(),
             ):
                 need(False, error)
+        if pid == "PBI-03":
+            pbi03_tests = (
+                ROOT / "packages/readability-core/test/heuristic/H101.contract.test.ts",
+                ROOT / "packages/readability-core/test/heuristic/H103.contract.test.ts",
+                ROOT / "packages/readability-core/test/heuristic/H104.contract.test.ts",
+            )
+            for error in pbi03_registration_errors(
+                body,
+                (ROOT / ".codex/spec-verifiers/verify_pbi03.py").is_file(),
+                all(path.is_file() for path in pbi03_tests),
+            ):
+                need(False, error)
         need(not any(x in body for x in ("TBD", "placeholder", "実装開始時に")), f"PACKET-PLACEHOLDER-{name}")
 
     for gap in range(8, 18):
@@ -272,7 +329,20 @@ def verify(state: dict) -> list[str]:
             for item in workflow.get("phase_history", [])
         )
     )
-    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started, "WORKFLOW-GATE-TRANSITION")
+    pbi03_delivery_started = (
+        workflow.get("current_phase") == "DA"
+        and workflow.get("gate_type") == "DELIVERY"
+        and workflow.get("active_pbi") == "PBI-03"
+        and workflow.get("task_packet_ref") == ".codex/task-packets/PBI-03-basic-heuristics.md"
+        and any(
+            item.get("phase") == "QGA"
+            and item.get("status") == "APPROVE"
+            and item.get("gate_type") == "DELIVERY"
+            and item.get("active_pbi") == "PBI-02"
+            for item in workflow.get("phase_history", [])
+        )
+    )
+    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started, "WORKFLOW-GATE-TRANSITION")
     return errors
 
 def apply_mutation(name: str, state: dict) -> None:
@@ -304,6 +374,16 @@ def apply_mutation(name: str, state: dict) -> None:
         else:
             packets[key] = packets[key].replace(
                 "AC-FND-01 Finding uses UTF-16 zero-based half-open ranges", "REMOVED REQUIRED TITLE", 1
+            )
+    elif name in ("drop-pbi03-analyze-ownership", "drop-pbi03-no-match-guard", "drop-pbi03-required-title"):
+        key = next(k for k, body in packets.items() if packet_id(body) == "PBI-03")
+        if name == "drop-pbi03-analyze-ownership":
+            packets[key] = packets[key].replace('"packages/readability-core/src/analyze.ts", ', "", 1)
+        elif name == "drop-pbi03-no-match-guard":
+            packets[key] = packets[key].replace(" --fail-if-no-match", "", 1)
+        else:
+            packets[key] = packets[key].replace(
+                "AC-H101-01 H101 does not report length 100", "REMOVED REQUIRED TITLE", 1
             )
     else: raise ValueError(name)
 

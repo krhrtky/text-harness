@@ -33,6 +33,9 @@ EXPECTED = {
     "drop-pbi02-manifest-ownership": "PBI02-OWNERSHIP",
     "drop-pbi02-no-match-guard": "PBI02-ACCEPTANCE-ORACLE",
     "drop-pbi02-required-title": "PBI02-ACCEPTANCE-ORACLE",
+    "drop-pbi03-analyze-ownership": "PBI03-OWNERSHIP",
+    "drop-pbi03-no-match-guard": "PBI03-ACCEPTANCE-ORACLE",
+    "drop-pbi03-required-title": "PBI03-ACCEPTANCE-ORACLE",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -118,5 +121,23 @@ class SpecVerifierTest(unittest.TestCase):
             "AC-INT-01 findings are sorted deterministically across the adapter boundary",
         ):
             self.assertIn(title, green.stdout)
+
+    def test_pbi03_registered_red_matches_pre_implementation_baseline(self) -> None:
+        state = verify_spec.read_state()
+        packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-03")
+        oracle = ROOT / ".codex/spec-verifiers/verify_pbi03.py"
+        contract_tests = (
+            ROOT / "packages/readability-core/test/heuristic/H101.contract.test.ts",
+            ROOT / "packages/readability-core/test/heuristic/H103.contract.test.ts",
+            ROOT / "packages/readability-core/test/heuristic/H104.contract.test.ts",
+        )
+        self.assertFalse(any(path.exists() for path in contract_tests))
+        self.assertEqual([], verify_spec.pbi03_registration_errors(packet, oracle.is_file(), False))
+        for _ in range(2):
+            red = subprocess.run(["python3", str(oracle)], cwd=ROOT, text=True, capture_output=True)
+            self.assertEqual(
+                (1, "PBI03_RED missing packages/readability-core/test/heuristic/H101.contract.test.ts\n", ""),
+                (red.returncode, red.stdout, red.stderr),
+            )
 
 if __name__ == "__main__": unittest.main()

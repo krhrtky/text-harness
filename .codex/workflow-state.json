@@ -2,11 +2,11 @@
   "id": "wf-readability-mvp-20260821",
   "request": "Readability Engineering System要求の実現、setup/upgrade支援、反証必須の完了判定、public GitHub repositoryへのpush",
   "current_phase": "DA",
-  "active_pbi": "PBI-02",
+  "active_pbi": "PBI-03",
   "gate_type": "DELIVERY",
-  "strategy_id": "delivery-pbi02-core-v3",
-  "iteration": 12,
-  "task_packet_ref": ".codex/task-packets/PBI-02-core.md",
+  "strategy_id": "delivery-pbi03-basic-heuristics-v1",
+  "iteration": 13,
+  "task_packet_ref": ".codex/task-packets/PBI-03-basic-heuristics.md",
   "phase_history": [
     {
       "phase": "SDA",
@@ -352,6 +352,40 @@
       ],
       "resume_point": ".codex/task-packets/PBI-02-core.md",
       "timestamp": "2026-08-21T15:10:00+09:00"
+    },
+    {
+      "phase": "QGA",
+      "status": "APPROVE",
+      "agent": "/root/spec_qga",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-02",
+      "decision": "PBI-02 DELIVERY approved with no P0, P1, or P2 findings after independent contract and mutation verification",
+      "evidence": [
+        "PBI-02 verifier: tests 18; pass 18; fail 0; required titles present",
+        "previous 8 mutations and 7 independent D/H/S catalog, severity, and threshold drifts all rejected",
+        "lint, typecheck, offline frozen install, PBI-01 regression, spec verifier, and spec unit green",
+        "coverage: line 95.38%; branch 90.00%; functions 97.44%",
+        "expected RED history exact; current state Green",
+        "changes confined to PBI-02 owned paths; final worktree clean"
+      ],
+      "resume_point": ".codex/task-packets/PBI-03-basic-heuristics.md",
+      "timestamp": "2026-08-21T15:20:00+09:00"
+    },
+    {
+      "phase": "DA",
+      "status": "READY",
+      "agent": null,
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-03",
+      "task_packet_ref": ".codex/task-packets/PBI-03-basic-heuristics.md",
+      "decision": "PBI-03 pre-implementation RED registered after PBI-02 DELIVERY approval and before heuristic scaffold changes",
+      "evidence": [
+        "python3 .codex/spec-verifiers/verify_pbi03.py => exit 1",
+        "stdout: PBI03_RED missing packages/readability-core/test/heuristic/H101.contract.test.ts; stderr empty; reproduced twice",
+        "acceptance requires exact H101/H103/H104 files, --fail-if-no-match, tests >= 9, pass = tests, fail 0, and nine required titles"
+      ],
+      "resume_point": ".codex/task-packets/PBI-03-basic-heuristics.md",
+      "timestamp": "2026-08-21T15:25:00+09:00"
     }
   ],
   "blocker_history": [
@@ -429,5 +463,5 @@
     }
   ],
   "created_at": "2026-08-21T09:39:07+09:00",
-  "updated_at": "2026-08-21T15:10:00+09:00"
+  "updated_at": "2026-08-21T15:25:00+09:00"
 }
