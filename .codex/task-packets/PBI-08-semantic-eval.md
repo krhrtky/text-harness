@@ -9,7 +9,7 @@ task_packet:
     - "D errorだけがexit 1を生み、D warning、全H warning、Semantic violation/no_violation/uncertainはexit 0を維持する。入力・契約・CLI usage不正だけexit 2"
     - "SemanticNoticeはruleId/status/range/evidence/reason/confidence/suggestedAction?をlosslessに保持しlevel=notice固定。severity/error/autofix/rewriteを持たない"
     - "LintMessageはD/HのruleId/category/range/message/levelを保持し、Semantic status/evidence/confidenceを持たない"
-    - "D/HとSemanticは各々range.start/end/ruleId/statusによるstable orderingでcanonical JSONを生成し、同一入力のstdout byte列を決定的にする"
+    - "Lintはrange.start/end,ruleId,category,severity,message、Semanticはrange.start/end,ruleId,status,evidence lexicographic,reason,confidence,suggestedAction(undefined first)の順でtotal-orderし、statusはno_violation<uncertain<violationのUnicode lexical order。等値duplicateを削除しない"
     - "CLIは保存済みJSON inputだけを読み、stdoutはreport JSON 1件、validation failureはstdout空・stderr固定・exit 2。secret、credential、network、live model、時刻、乱数を使わない"
     - "PBI-07のSkill/schema/rules/fixtures/evals/CI、core types/config、root/workspace/lockは変更しない"
   active_pbi: "PBI-08"
@@ -34,25 +34,25 @@ task_packet:
   cli_contract: "text-harness-report --input <repository JSON fixture>; input contains input/findings/semanticFindings; valid stdout is one canonical ValidationReport JSON plus LF, stderr empty; invalid schema stdout empty and stderr starts TEXT_HARNESS_INPUT_ERROR; no network/credential/live evaluation"
   schema_contract: "JSON Schema draft 2020-12, additionalProperties=false recursively; separate lintMessages and semanticNotices required; semantic severity/error/autofix/rewrite forbidden; lint status/evidence/confidence forbidden; range uses RNG-001 UTF-16 zero-based half-open integer start/end"
   fixture_contract: "mixed-pass contains H warning plus S203 violation/S204 uncertain and exits0; mixed-fail adds D004 error and exits1; invalid-semantic-severity injects severity=error into semanticFinding and is rejected with exit2/no stdout"
-  ordering_contract: "lintMessagesはrange.start/end,ruleId,category,severity,message、semanticNoticesはrange.start/end,ruleId,status,evidence lexicographic,reason,confidence,suggestedAction(undefined first)のfull payload total-order。等値duplicateをdedupeせずlossless保持し、APIとCLIそれぞれforward/reverse permutationがbyte-identical canonical JSONを返す"
+  ordering_contract: "lintMessagesはrange.start/end,ruleId,category,severity,message、semanticNoticesはrange.start/end,ruleId,status,evidence lexicographic,reason,confidence,suggestedAction(undefined first)のfull payload total-order。status lexical orderはno_violation<uncertain<violation。等値duplicateをdedupeせずlossless保持し、APIとCLIそれぞれforward/reverse permutationがbyte-identical canonical JSONを返す"
   ci_contract: ".github/workflows/integration-contract.yml pull_request required candidate, permissions contents:read, Node24.19.0/corepack pnpm11.22.0, exact PBI-08 verifier; verifierはclean checkoutでfrozen-lockfile install後にprobe/testを行う; no secrets/API/network/live model"
   external_dependency_contract: "runtime/dev dependency追加なし; root/workspace/core/package lock and textlint-adapter tsconfig unchanged; Node built-ins and existing workspace dependency only"
   acceptance_command: "python3 .codex/spec-verifiers/verify_pbi08.py"
   acceptance_oracle:
     test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/textlint-adapter --fail-if-no-match exec node --test test/integration/report.contract.test.ts test/integration/cli.contract.test.ts test/integration/e2e.contract.test.ts test/integration/ci.contract.test.ts"
     exact_test_files: ["packages/textlint-adapter/test/integration/report.contract.test.ts", "packages/textlint-adapter/test/integration/cli.contract.test.ts", "packages/textlint-adapter/test/integration/e2e.contract.test.ts", "packages/textlint-adapter/test/integration/ci.contract.test.ts"]
-    minimum_tests: 15
+    minimum_tests: 16
     pass_equals_tests: true
     fail: 0
-    required_titles: 15
-    required_title_text: ["INT-TYPE-01 D H and Semantic remain distinct public report types", "INT-REPORT-01 separate arrays preserve category status evidence and confidence", "INT-EXIT-01 only deterministic error produces exit one", "INT-EXIT-02 H warning and Semantic violation remain exit zero", "INT-EXIT-03 all three Semantic statuses remain notices", "INT-SCHEMA-01 valid separated report satisfies the exact schema", "INT-SCHEMA-02 merged or cross-contaminated result shapes are rejected", "INT-ORDER-01 report output is canonical for input permutations", "INT-ORDER-02 same primary keys use full payload tie-breakers without deduplication", "INT-CLI-01 mixed pass fixture writes one report and exits zero", "INT-CLI-02 mixed fail fixture exits one solely for D error", "INT-CLI-03 invalid Semantic severity exits two without partial stdout", "INT-E2E-01 core D H and saved Semantic findings stay separated", "INT-F01 Semantic violation cannot be promoted to lint error", "INT-CI-01 integration contract is exact credential-free and offline"]
+    required_titles: 16
+    required_title_text: ["INT-TYPE-01 D H and Semantic remain distinct public report types", "INT-REPORT-01 separate arrays preserve category status evidence and confidence", "INT-EXIT-01 only deterministic error produces exit one", "INT-EXIT-02 H warning and Semantic violation remain exit zero", "INT-EXIT-03 all three Semantic statuses remain notices", "INT-SCHEMA-01 valid separated report satisfies the exact schema", "INT-SCHEMA-02 merged or cross-contaminated result shapes are rejected", "INT-ORDER-01 report output is canonical for input permutations", "INT-ORDER-02 same primary keys use full payload tie-breakers without deduplication", "INT-ORDER-03 Semantic statuses are an explicit lexical tie-breaker without deduplication", "INT-CLI-01 mixed pass fixture writes one report and exits zero", "INT-CLI-02 mixed fail fixture exits one solely for D error", "INT-CLI-03 invalid Semantic severity exits two without partial stdout", "INT-E2E-01 core D H and saved Semantic findings stay separated", "INT-F01 Semantic violation cannot be promoted to lint error", "INT-CI-01 integration contract is exact credential-free and offline"]
     fixture_count: 3
-    no_match_guard: "exact package filter with --fail-if-no-match, exact four test files, tests>=15, pass=tests, fail=0, all 15 titles, exact three fixtures, schema/CLI/workflow presence, and independent runtime behavior probe including tie total-order/no-dedupe"
+    no_match_guard: "exact package filter with --fail-if-no-match, exact four test files, tests>=16, pass=tests, fail=0, all 16 titles, exact three fixtures, schema/CLI/workflow presence, and independent runtime probes including full tie total-order and status-only lexical order/no-dedupe"
     red_signature: "PBI08_RED missing packages/textlint-adapter/schema/validation-report.schema.json"
-    green_signature: "PBI08_GREEN tests>=15 pass=tests fail=0 required_titles=15 fixtures=3 probe=PASS"
-  mutations: ["INT-M-MERGE-ARRAYS", "INT-M-SEMANTIC-EXIT1", "INT-M-HEURISTIC-EXIT1", "INT-M-SEMANTIC-ERROR-LEVEL", "INT-M-DROP-SEMANTIC-EVIDENCE", "INT-M-PERMIT-CROSS-SCHEMA", "INT-M-NONDETERMINISTIC-ORDER", "INT-M-TIE-PARTIAL-ORDER", "INT-M-DEDUPE", "INT-M-API-CLI-BYTE-DRIFT", "INT-M-CLI-PARTIAL-OUTPUT", "INT-M-CLI-INVALID-EXIT1", "INT-M-CLI-NETWORK", "INT-M-DROP-E2E-TITLE", "INT-M-FILTER-NO-MATCH"]
-  expected_red: null
-  red_status: "CONSUMED_GREEN"
+    green_signature: "PBI08_GREEN tests>=16 pass=tests fail=0 required_titles=16 fixtures=3 probe=PASS"
+  mutations: ["INT-M-MERGE-ARRAYS", "INT-M-SEMANTIC-EXIT1", "INT-M-HEURISTIC-EXIT1", "INT-M-SEMANTIC-ERROR-LEVEL", "INT-M-DROP-SEMANTIC-EVIDENCE", "INT-M-PERMIT-CROSS-SCHEMA", "INT-M-NONDETERMINISTIC-ORDER", "INT-M-TIE-PARTIAL-ORDER", "INT-M-STATUS-COMPARATOR-REMOVED", "INT-M-DEDUPE", "INT-M-API-CLI-BYTE-DRIFT", "INT-M-CLI-PARTIAL-OUTPUT", "INT-M-CLI-INVALID-EXIT1", "INT-M-CLI-NETWORK", "INT-M-DROP-E2E-TITLE", "INT-M-FILTER-NO-MATCH"]
+  expected_red: "python3 .codex/spec-verifiers/verify_pbi08.py; exit=1; signature=PBI08_FAIL tests=15 pass=15 fail=0 required_titles=15/16"
+  red_status: "REGISTERED_RED_QGA_FIX_2"
   expected_red_history:
     registration:
       phase: "PRE_IMPLEMENTATION"
@@ -61,6 +61,14 @@ task_packet:
       stdout: "PBI08_RED missing packages/textlint-adapter/schema/validation-report.schema.json"
       stderr: "<empty>"
       measured_runs: 2
+    qga_fix_2_registration:
+      phase: "POST_IMPLEMENTATION_QGA_FIX_2"
+      command: "python3 .codex/spec-verifiers/verify_pbi08.py"
+      exit: 1
+      stdout_last_line: "PBI08_FAIL tests=15 pass=15 fail=0 required_titles=15/16"
+      stderr: "<empty>"
+      measured_runs: 2
+      missing_title: "INT-ORDER-03 Semantic statuses are an explicit lexical tie-breaker without deduplication"
   green_transition:
     command: "python3 .codex/spec-verifiers/verify_pbi08.py"
     exit: 0

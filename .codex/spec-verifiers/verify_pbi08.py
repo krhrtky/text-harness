@@ -24,6 +24,7 @@ REQUIRED_TITLES = (
     "INT-SCHEMA-02 merged or cross-contaminated result shapes are rejected",
     "INT-ORDER-01 report output is canonical for input permutations",
     "INT-ORDER-02 same primary keys use full payload tie-breakers without deduplication",
+    "INT-ORDER-03 Semantic statuses are an explicit lexical tie-breaker without deduplication",
     "INT-CLI-01 mixed pass fixture writes one report and exits zero",
     "INT-CLI-02 mixed fail fixture exits one solely for D error",
     "INT-CLI-03 invalid Semantic severity exits two without partial stdout",
@@ -108,9 +109,9 @@ def source_contract_errors(index: str, cli: str, workflow: str) -> list[str]:
     if not all(term in workflow for term in required_ci) or any(term in workflow.lower() for term in ("secrets.", "api_key", "curl ", "wget ", "live model")): errors.append("ci")
     return errors
 
-def run_behavioral_probe() -> tuple[list[str], str]:
-    script = r'''
-import { buildValidationReport } from "./packages/textlint-adapter/src/index.ts";
+def run_behavioral_probe(index_path: Path = INDEX) -> tuple[list[str], str]:
+    module_specifier = "./" + index_path.as_posix()
+    script = f'import {{ buildValidationReport }} from {json.dumps(module_specifier)};\n' + r'''
 const d = { ruleId:"D004", category:"deterministic", range:{start:8,end:10}, severity:"error", message:"D" };
 const h = { ruleId:"H101", category:"heuristic", range:{start:4,end:5}, severity:"warning", actual:101, threshold:100, message:"H" };
 const semantic = [
@@ -130,7 +131,13 @@ const semanticTies = [
   {ruleId:"S203",status:"violation",range:{start:1,end:2},evidence:["a"],reason:"A",confidence:0.2,suggestedAction:"A"},
   {ruleId:"S203",status:"violation",range:{start:1,end:2},evidence:["a"],reason:"A",confidence:0.2,suggestedAction:"A"},
 ];
-console.log(JSON.stringify({ mixed:buildValidationReport([d,h],semantic), pass:buildValidationReport([h],semantic), tieForward:buildValidationReport(lintTies,semanticTies), tieReverse:buildValidationReport([...lintTies].reverse(),[...semanticTies].reverse()) }));
+const statusTies = [
+  {ruleId:"S203",status:"violation",range:{start:1,end:2},evidence:["a"],reason:"A",confidence:0.2},
+  {ruleId:"S203",status:"no_violation",range:{start:1,end:2},evidence:["a"],reason:"A",confidence:0.2},
+  {ruleId:"S203",status:"uncertain",range:{start:1,end:2},evidence:["a"],reason:"A",confidence:0.2},
+  {ruleId:"S203",status:"violation",range:{start:1,end:2},evidence:["a"],reason:"A",confidence:0.2},
+];
+console.log(JSON.stringify({ mixed:buildValidationReport([d,h],semantic), pass:buildValidationReport([h],semantic), tieForward:buildValidationReport(lintTies,semanticTies), tieReverse:buildValidationReport([...lintTies].reverse(),[...semanticTies].reverse()), statusForward:buildValidationReport([],statusTies), statusReverse:buildValidationReport([],[...statusTies].reverse()) }));
 '''
     result = subprocess.run(("mise", "x", "node@24.19.0", "--", "node", "--input-type=module", "--eval", script), cwd=ROOT, text=True, capture_output=True)
     if result.returncode != 0: return [f"probe-exit-{result.returncode}"], result.stdout + result.stderr
@@ -151,6 +158,10 @@ console.log(JSON.stringify({ mixed:buildValidationReport([d,h],semantic), pass:b
     tie_lint, tie_semantic = tie_forward.get("lintMessages", []), tie_forward.get("semanticNotices", [])
     if len(tie_lint) != 4 or [f"{item.get('level')}:{item.get('message')}" for item in tie_lint] != ["error:A", "error:A", "error:B", "warning:Z"]: errors.append("tie-lint-lossless")
     if len(tie_semantic) != 4 or [item.get("evidence") for item in tie_semantic] != [["a"], ["a"], ["a"], ["b"]]: errors.append("tie-semantic-lossless")
+    status_forward, status_reverse = value.get("statusForward", {}), value.get("statusReverse", {})
+    if json.dumps(status_forward, separators=(",", ":"), ensure_ascii=False) != json.dumps(status_reverse, separators=(",", ":"), ensure_ascii=False): errors.append("status-total-order-byte-identity")
+    status_notices = status_forward.get("semanticNotices", [])
+    if len(status_notices) != 4 or [item.get("status") for item in status_notices] != ["no_violation", "uncertain", "violation", "violation"]: errors.append("status-lexical-order-no-dedupe")
     return errors, result.stdout + result.stderr
 
 def main() -> int:
@@ -184,8 +195,8 @@ def main() -> int:
     totals = {name: int(value) for name, value in re.findall(r"^(?:ℹ|#)\s+(tests|pass|fail)\s+(\d+)\s*$", plain, re.MULTILINE)}
     tests, passed, failed = totals.get("tests", -1), totals.get("pass", -1), totals.get("fail", -1)
     titles = sum(title in plain for title in REQUIRED_TITLES)
-    if tests < 15 or passed != tests or failed != 0 or titles != len(REQUIRED_TITLES): return fail(f"tests={tests} pass={passed} fail={failed} required_titles={titles}/{len(REQUIRED_TITLES)}")
-    print(f"PBI08_GREEN tests={tests} pass={passed} fail=0 required_titles=15 fixtures=3 probe=PASS")
+    if tests < 16 or passed != tests or failed != 0 or titles != len(REQUIRED_TITLES): return fail(f"tests={tests} pass={passed} fail={failed} required_titles={titles}/{len(REQUIRED_TITLES)}")
+    print(f"PBI08_GREEN tests={tests} pass={passed} fail=0 required_titles=16 fixtures=3 probe=PASS")
     return 0
 
 if __name__ == "__main__": raise SystemExit(main())

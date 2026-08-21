@@ -107,6 +107,7 @@ MUTATIONS = (
     "drop-pbi08-invalid-cli-title", "drop-pbi08-red-signature",
     "drop-pbi08-order02-title", "weaken-pbi08-tie-order",
     "permit-pbi08-dedupe", "weaken-pbi08-byte-identity",
+    "drop-pbi08-order03-title", "drop-pbi08-status-order-invariant",
 )
 
 def read_state() -> dict:
@@ -1646,23 +1647,25 @@ def pbi08_registration_errors(body: str, oracle_exists: bool, schema_exists: boo
         'D/H FindingとSemanticFindingはpublic type、report field、JSON Schemaで分離',
         'D errorだけがexit 1', '入力・契約・CLI usage不正だけexit 2',
         'SemanticNoticeはruleId/status/range/evidence/reason/confidence/suggestedAction?をlosslessに保持しlevel=notice固定。severity/error/autofix/rewriteを持たない',
+        'Lintはrange.start/end,ruleId,category,severity,message、Semanticはrange.start/end,ruleId,status,evidence lexicographic,reason,confidence,suggestedAction(undefined first)の順でtotal-orderし、statusはno_violation<uncertain<violationのUnicode lexical order。等値duplicateを削除しない',
         'type_contract: "ValidationReport schemaVersion=1.0.0, exitCode 0|1, lintMessages:LintMessage[], semanticNotices:SemanticNotice[]',
         'exit_contract: "AC-INT-01: D error + H warning + Semantic violation => exit1 solely because of D; removing D => exit0; semantic status/confidence cannot affect exit; invalid CLI payload/usage => process exit2 with no partial report"',
         'schema_contract: "JSON Schema draft 2020-12, additionalProperties=false recursively; separate lintMessages and semanticNotices required; semantic severity/error/autofix/rewrite forbidden; lint status/evidence/confidence forbidden',
-        'ordering_contract: "lintMessagesはrange.start/end,ruleId,category,severity,message、semanticNoticesはrange.start/end,ruleId,status,evidence lexicographic,reason,confidence,suggestedAction(undefined first)のfull payload total-order。等値duplicateをdedupeせずlossless保持し、APIとCLIそれぞれforward/reverse permutationがbyte-identical canonical JSONを返す"',
+        'ordering_contract: "lintMessagesはrange.start/end,ruleId,category,severity,message、semanticNoticesはrange.start/end,ruleId,status,evidence lexicographic,reason,confidence,suggestedAction(undefined first)のfull payload total-order。status lexical orderはno_violation<uncertain<violation。等値duplicateをdedupeせずlossless保持し、APIとCLIそれぞれforward/reverse permutationがbyte-identical canonical JSONを返す"',
         'ci_contract: ".github/workflows/integration-contract.yml pull_request required candidate, permissions contents:read, Node24.19.0/corepack pnpm11.22.0, exact PBI-08 verifier; verifierはclean checkoutでfrozen-lockfile install後にprobe/testを行う; no secrets/API/network/live model"',
         'external_dependency_contract: "runtime/dev dependency追加なし; root/workspace/core/package lock and textlint-adapter tsconfig unchanged',
     ))
     acceptance = all(value in body for value in (
         'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi08.py"',
         '--filter @text-harness/textlint-adapter --fail-if-no-match',
-        'minimum_tests: 15', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 15', 'fixture_count: 3',
+        'minimum_tests: 16', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 16', 'fixture_count: 3',
         '"INT-ORDER-02 same primary keys use full payload tie-breakers without deduplication"',
+        '"INT-ORDER-03 Semantic statuses are an explicit lexical tie-breaker without deduplication"',
         '"INT-CLI-03 invalid Semantic severity exits two without partial stdout"',
         '"INT-F01 Semantic violation cannot be promoted to lint error"',
         'red_signature: "PBI08_RED missing packages/textlint-adapter/schema/validation-report.schema.json"',
-        'no_match_guard: "exact package filter with --fail-if-no-match, exact four test files, tests>=15, pass=tests, fail=0, all 15 titles, exact three fixtures, schema/CLI/workflow presence, and independent runtime behavior probe including tie total-order/no-dedupe"',
-        'green_signature: "PBI08_GREEN tests>=15 pass=tests fail=0 required_titles=15 fixtures=3 probe=PASS"',
+        'no_match_guard: "exact package filter with --fail-if-no-match, exact four test files, tests>=16, pass=tests, fail=0, all 16 titles, exact three fixtures, schema/CLI/workflow presence, and independent runtime probes including full tie total-order and status-only lexical order/no-dedupe"',
+        'green_signature: "PBI08_GREEN tests>=16 pass=tests fail=0 required_titles=16 fixtures=3 probe=PASS"',
     ))
     errors: list[str] = []
     if not ownership: errors.append("PBI08-OWNERSHIP")
@@ -1677,6 +1680,17 @@ def pbi08_registration_errors(body: str, oracle_exists: bool, schema_exists: boo
             'stderr: "<empty>"', 'measured_runs: 2',
         ))
         if not registered: errors.append("PBI08-PRE-IMPLEMENTATION-RED")
+        return errors
+    if 'red_status: "REGISTERED_RED_QGA_FIX_2"' in body:
+        registered_fix = all(value in body for value in (
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi08.py; exit=1; signature=PBI08_FAIL tests=15 pass=15 fail=0 required_titles=15/16"',
+            'phase: "POST_IMPLEMENTATION_QGA_FIX_2"',
+            'command: "python3 .codex/spec-verifiers/verify_pbi08.py"', 'exit: 1',
+            'stdout_last_line: "PBI08_FAIL tests=15 pass=15 fail=0 required_titles=15/16"',
+            'stderr: "<empty>"', 'measured_runs: 2',
+            'missing_title: "INT-ORDER-03 Semantic statuses are an explicit lexical tie-breaker without deduplication"',
+        ))
+        if not registered_fix: errors.append("PBI08-QGA-FIX-2-RED")
         return errors
     green = all(value in body for value in (
         'expected_red: null', 'red_status: "CONSUMED_GREEN"',
@@ -2788,6 +2802,7 @@ def apply_mutation(name: str, state: dict) -> None:
         "drop-pbi08-invalid-cli-title", "drop-pbi08-red-signature",
         "drop-pbi08-order02-title", "weaken-pbi08-tie-order",
         "permit-pbi08-dedupe", "weaken-pbi08-byte-identity",
+        "drop-pbi08-order03-title", "drop-pbi08-status-order-invariant",
     ):
         key = next(k for k, body in packets.items() if packet_id(body) == "PBI-08")
         if name == "drop-pbi08-cli-ownership":
@@ -2806,12 +2821,20 @@ def apply_mutation(name: str, state: dict) -> None:
             packets[key] = packets[key].replace(', "INT-CLI-03 invalid Semantic severity exits two without partial stdout"', "", 1)
         elif name == "drop-pbi08-order02-title":
             packets[key] = packets[key].replace(', "INT-ORDER-02 same primary keys use full payload tie-breakers without deduplication"', "", 1)
+        elif name == "drop-pbi08-order03-title":
+            packets[key] = packets[key].replace('"INT-ORDER-03 Semantic statuses are an explicit lexical tie-breaker without deduplication"', '"INT-ORDER-03-REMOVED"')
+        elif name == "drop-pbi08-status-order-invariant":
+            packets[key] = packets[key].replace(
+                '    - "Lintはrange.start/end,ruleId,category,severity,message、Semanticはrange.start/end,ruleId,status,evidence lexicographic,reason,confidence,suggestedAction(undefined first)の順でtotal-orderし、statusはno_violation<uncertain<violationのUnicode lexical order。等値duplicateを削除しない"\n',
+                "",
+                1,
+            )
         elif name == "weaken-pbi08-tie-order":
             packets[key] = packets[key].replace("full payload total-order", "primary-key partial order", 1)
         elif name == "permit-pbi08-dedupe":
-            packets[key] = packets[key].replace("duplicates retained", "duplicates deduplicated", 1)
+            packets[key] = packets[key].replace("等値duplicateをdedupeせずlossless保持", "等値duplicateをdedupeする", 1)
         elif name == "weaken-pbi08-byte-identity":
-            packets[key] = packets[key].replace("API and CLI permutation outputs byte-identical", "API and CLI output order unspecified", 1)
+            packets[key] = packets[key].replace("byte-identical canonical JSONを返す", "output orderは未規定", 1)
         else:
             packets[key] = packets[key].replace('    red_signature: "PBI08_RED missing packages/textlint-adapter/schema/validation-report.schema.json"\n', "", 1)
     else: raise ValueError(name)
