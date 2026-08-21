@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://text-harness.local/schema/validation-report.schema.json",
+  "title": "ValidationReport",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "exitCode", "lintMessages", "semanticNotices"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "exitCode": { "type": "integer", "enum": [0, 1] },
+    "lintMessages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ruleId", "category", "range", "message", "level"],
+        "properties": {
+          "ruleId": { "type": "string", "enum": ["D001", "D002", "D003", "D004", "D005", "D006", "D007", "D008", "H101", "H102", "H103", "H104", "H106", "H107", "H108", "H112", "H113"] },
+          "category": { "type": "string", "enum": ["deterministic", "heuristic"] },
+          "range": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["start", "end"],
+            "properties": {
+              "start": { "type": "integer", "minimum": 0 },
+              "end": { "type": "integer", "minimum": 1 }
+            }
+          },
+          "message": { "type": "string", "minLength": 1 },
+          "level": { "type": "string", "enum": ["error", "warning"] }
+        }
+      }
+    },
+    "semanticNotices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ruleId", "status", "range", "evidence", "reason", "confidence", "level"],
+        "properties": {
+          "ruleId": { "type": "string", "enum": ["S201", "S202", "S203", "S204", "S205", "S206", "S207", "S208"] },
+          "status": { "type": "string", "enum": ["violation", "no_violation", "uncertain"] },
+          "range": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["start", "end"],
+            "properties": {
+              "start": { "type": "integer", "minimum": 0 },
+              "end": { "type": "integer", "minimum": 1 }
+            }
+          },
+          "evidence": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+          "reason": { "type": "string", "minLength": 1 },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "suggestedAction": { "type": "string", "minLength": 1 },
+          "level": { "const": "notice" }
+        }
+      }
+    }
+  }
+}

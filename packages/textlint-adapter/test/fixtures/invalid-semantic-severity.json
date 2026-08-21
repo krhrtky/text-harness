@@ -1,0 +1,7 @@
+{
+  "input": "需要が増えた。価格が上がった。",
+  "findings": [],
+  "semanticFindings": [
+    { "ruleId": "S203", "status": "violation", "range": { "start": 0, "end": 15 }, "evidence": ["需要が増えた。価格が上がった。"], "reason": "causeとindependentの両labelが成立する", "confidence": 0.82, "severity": "error" }
+  ]
+}

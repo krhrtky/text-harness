@@ -3,8 +3,15 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "exports": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./schema/validation-report.schema.json"
+  },
+  "bin": {
+    "text-harness-report": "./src/cli.ts"
+  },
   "scripts": {
+    "test:integration": "node --test test/integration/report.contract.test.ts test/integration/cli.contract.test.ts test/integration/e2e.contract.test.ts test/integration/ci.contract.test.ts",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit"
   },

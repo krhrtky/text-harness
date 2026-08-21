@@ -1,0 +1,10 @@
+{
+  "input": "必ず確認する。需要が増えた。価格が上がった。サーバーと監視装置を交換した。これは故障していた。",
+  "findings": [
+    { "ruleId": "H101", "category": "heuristic", "range": { "start": 0, "end": 7 }, "severity": "warning", "actual": 7, "threshold": 5, "message": "この文は7文字です。設定上限は5文字です。" }
+  ],
+  "semanticFindings": [
+    { "ruleId": "S204", "status": "uncertain", "range": { "start": 22, "end": 47 }, "evidence": ["サーバー", "監視装置", "これ"], "reason": "参照対象を一意に絞る文脈が不足している", "confidence": 0.45 },
+    { "ruleId": "S203", "status": "violation", "range": { "start": 7, "end": 22 }, "evidence": ["需要が増えた。価格が上がった。"], "reason": "causeとindependentの両labelが成立する", "confidence": 0.82, "suggestedAction": "文間の関係を明示する" }
+  ]
+}
