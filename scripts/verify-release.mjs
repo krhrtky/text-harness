@@ -123,9 +123,9 @@ function verifyLicense() {
 
 export function detectSecretKinds(source) {
   const patterns = [
-    ["GitHub PAT", /(?:gh[pousr]_[A-Za-z0-9]{36,255}|github_pat_[A-Za-z0-9_]{82,255})/],
-    ["AWS access key", /AKIA[A-Z0-9]{16}/],
-    ["PEM private key", /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/],
+    ["GitHub PAT", /(?<![A-Za-z0-9_])(?:gh[pousr]_[A-Za-z0-9]{36,255}|github_pat_[A-Za-z0-9_]{82,255})(?![A-Za-z0-9_])/],
+    ["AWS access key", /(?<![A-Z0-9])(?:AKIA|ASIA)[A-Z0-9]{16}(?![A-Z0-9])/],
+    ["PEM private key", /-----BEGIN (?:(?:RSA|EC|OPENSSH|ENCRYPTED|DSA) )?PRIVATE KEY-----/],
     ["generic assignment", /(api[_-]?key|secret|token|password)\s*[:=]\s*["']?[A-Za-z0-9+/=_-]{16,}/i],
   ];
   return patterns.filter(([, pattern]) => pattern.test(source)).map(([kind]) => kind);
