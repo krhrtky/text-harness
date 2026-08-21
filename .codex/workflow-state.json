@@ -2,11 +2,11 @@
   "id": "wf-readability-mvp-20260821",
   "request": "Readability Engineering System要求の実現、setup/upgrade支援、反証必須の完了判定、public GitHub repositoryへのpush",
   "current_phase": "DA",
-  "active_pbi": "PBI-06B",
+  "active_pbi": "PBI-06C",
   "gate_type": "DELIVERY",
-  "strategy_id": "delivery-pbi06b-independent-probe-qga-fix-v3",
-  "iteration": 41,
-  "task_packet_ref": ".codex/task-packets/PBI-06B-d002.md",
+  "strategy_id": "delivery-pbi06c-d003-contract-v1",
+  "iteration": 42,
+  "task_packet_ref": ".codex/task-packets/PBI-06C-d003.md",
   "phase_history": [
     {
       "phase": "SDA",
@@ -1125,6 +1125,39 @@
       ],
       "resume_point": ".codex/task-packets/PBI-06B-d002.md",
       "timestamp": "2026-08-21T22:40:00+09:00"
+    },
+    {
+      "phase": "QGA",
+      "status": "APPROVE",
+      "agent": "/root/spec_qga",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-06B",
+      "decision": "PBI-06B independently proves D002 code exclusion and complete combining-sequence ranges through canonical fixtures and a public runtime probe",
+      "evidence": [
+        "DA fix commit 33839a8 and SDA transition commit 1766cc8",
+        "python3 .codex/spec-verifiers/verify_pbi06b.py => PBI06B_GREEN tests=12 pass=12 fail=0 required_titles=12",
+        "canonical D002 fixture, real-analyze N03/B03 runners, and independent public analyzeD002 probe all pass",
+        "plain-input N03 and fabricated-finding B03 counterexamples are rejected"
+      ],
+      "resume_point": ".codex/task-packets/PBI-06C-d003.md",
+      "timestamp": "2026-08-21T22:50:00+09:00"
+    },
+    {
+      "phase": "DA",
+      "status": "READY_FOR_IMPLEMENTATION",
+      "agent": null,
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-06C",
+      "task_packet_ref": ".codex/task-packets/PBI-06C-d003.md",
+      "decision": "Implement D003 with DEC-007 default pairs, LIFO mismatch and unclosed behavior, exact bracket ranges, severity propagation, and Markdown code exclusion",
+      "evidence": [
+        "python3 .codex/spec-verifiers/verify_pbi06c.py => exit 1",
+        "stdout: PBI06C_RED missing packages/readability-core/src/rules/D003.ts; stderr empty; reproduced twice",
+        "acceptance rejects filter no-match and requires tests>=12, pass=tests, fail=0, and 12 exact titles",
+        "packet owns only D003 source/test and constrained analyze/index registration; package, lock, config, and types remain forbidden"
+      ],
+      "resume_point": ".codex/task-packets/PBI-06C-d003.md",
+      "timestamp": "2026-08-21T22:55:00+09:00"
     }
   ],
   "blocker_history": [
@@ -1202,5 +1235,5 @@
     }
   ],
   "created_at": "2026-08-21T09:39:07+09:00",
-  "updated_at": "2026-08-21T22:40:00+09:00"
+  "updated_at": "2026-08-21T22:55:00+09:00"
 }

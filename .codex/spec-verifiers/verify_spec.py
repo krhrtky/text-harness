@@ -49,6 +49,9 @@ MUTATIONS = (
     "drop-pbi06b-multimark-title", "placeholder-pbi06b-multimark-body",
     "drop-pbi06b-multimark-range", "drop-pbi06b-combining-plus",
     "drop-pbi06b-runtime-probe", "pbi06b-plain-input-n03", "pbi06b-fabricated-b03-finding",
+    "drop-pbi06c-analyze-ownership", "drop-pbi06c-no-match-guard",
+    "drop-pbi06c-falsification-title", "drop-pbi06c-ascii-pair",
+    "weaken-pbi06c-range", "permit-pbi06c-external-dependency",
 )
 
 def read_state() -> dict:
@@ -948,6 +951,66 @@ def pbi06b_registration_errors(body: str, oracle_exists: bool, source_exists: bo
         errors.append("PBI06B-POST-IMPLEMENTATION-GREEN")
     return errors
 
+
+def pbi06c_registration_errors(body: str, oracle_exists: bool, source_exists: bool) -> list[str]:
+    ownership = all(value in body for value in (
+        '    - "packages/readability-core/src/rules/D003.ts"',
+        '    - "packages/readability-core/test/deterministic/D003.contract.test.ts"',
+        '    - "packages/readability-core/src/analyze.ts"',
+        '    - "packages/readability-core/src/index.ts"',
+        'packages/readability-core/src/analyze.ts: "既存D001/D002/H dispatchを維持し、validated D003 pairs/severityをanalyzeD003へ渡すcaseだけ追加する"',
+        'packages/readability-core/src/index.ts: "既存public exportsを維持し、analyzeD003 exportだけ追加する"',
+    ))
+    contract = all(value in body for value in (
+        'DEC-007 default pairsはexactly （）「」『』【】[]で、ASCII ]は既知closeとして扱う',
+        'input_contract: "（本文] with DEC-007 default pairs （）「」『』【】[]"',
+        'config_contract: "{ruleId:D003, pairs?:readonly [string,string][], severity?:error|warning}; omitted pairs use exact DEC-007 defaults; empty/malformed pairs and unknown fields are rejected by existing validator"',
+        'oracle_contract: "（本文] reports exactly known mismatched close ]; unclosed opener reports its opener; unexpected close reports itself; [本文] and correctly nested mixed default pairs report zero"',
+        'nesting_contract: "LIFO stack; a mismatched known close reports that close at its source position and cannot be reclassified as an unknown character or only an unclosed opener"',
+        'range_contract: "RNG-001 UTF-16 zero-based half-open one-bracket range; （本文] reports [3,4) and input.slice(3,4)=]; start/end boundary fixtures reconstruct the reported opener or close"',
+        'severity_contract: "omitted=>error; explicit error|warning preserved exactly"',
+        'markdown_contract: "inline/fenced/indented code brackets are excluded and break prose stack continuity"',
+        'external_dependency_contract: "PBI-06 decision INTERNAL/PBI-06C; package manifests and lockfile unchanged"',
+        'mutations: ["D003-M-DROP-ASCII-PAIR", "D003-M-UNKNOWN-CLOSE", "D003-M-UNCLOSED-ONLY", "D003-M-FIFO-NESTING", "D003-M-WHOLE-RANGE", "D003-M-INCLUDE-CODE"]',
+    ))
+    acceptance = all(value in body for value in (
+        'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi06c.py"',
+        'test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/deterministic/D003.contract.test.ts"',
+        'exact_test_file: "packages/readability-core/test/deterministic/D003.contract.test.ts"',
+        'minimum_tests: 12', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 12',
+        '"D003-P01 known mismatched close reports the closing bracket"',
+        '"D003-N01 balanced ASCII square brackets do not report"',
+        '"D003-B01 correctly nested mixed pairs do not report"',
+        '"D003-B02 nested mismatch reports exact UTF-16 half-open closing range"',
+        '"D003-B03 default error and explicit warning severity are preserved"',
+        '"D003-C01 custom pairs are honored and invalid D003 config is rejected"',
+        '"D003-F01 Markdown code spans and blocks are excluded"',
+        '"D003-M01 unknown-close unclosed-opener nesting and range mutants fail fixtures"',
+        'no_match_guard: "--fail-if-no-match plus exact test file, collected count, pass=tests, fail=0, and all required titles"',
+        'green_signature: "PBI06C_GREEN tests>=12 pass=tests fail=0 required_titles=12"',
+    ))
+    errors = []
+    if not ownership:
+        errors.append("PBI06C-OWNERSHIP")
+    if not contract:
+        errors.append("PBI06C-RULE-CONTRACT")
+    if not acceptance or not oracle_exists:
+        errors.append("PBI06C-ACCEPTANCE-ORACLE")
+    if not source_exists:
+        registered = all(value in body for value in (
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi06c.py; exit=1; signature=PBI06C_RED missing packages/readability-core/src/rules/D003.ts"',
+            'red_status: "REGISTERED_RED"', 'phase: "PRE_IMPLEMENTATION"',
+            'command: "python3 .codex/spec-verifiers/verify_pbi06c.py"', 'exit: 1',
+            'stdout: "PBI06C_RED missing packages/readability-core/src/rules/D003.ts"',
+            'stderr: "<empty>"', 'measured_runs: 2',
+        ))
+        if not registered:
+            errors.append("PBI06C-PRE-IMPLEMENTATION-RED")
+        return errors
+    if 'expected_red: null' not in body or 'red_status: "CONSUMED_GREEN"' not in body or 'green_transition:' not in body:
+        errors.append("PBI06C-POST-IMPLEMENTATION-GREEN")
+    return errors
+
 def verify(state: dict) -> list[str]:
     m, t, packets, workflow = state["matrix"], state["text"], state["packets"], state["workflow"]
     errors: list[str] = []
@@ -1126,6 +1189,13 @@ def verify(state: dict) -> list[str]:
                 (ROOT / "packages/readability-core/src/rules/D002.ts").is_file(),
             ):
                 need(False, error)
+        if pid == "PBI-06C":
+            for error in pbi06c_registration_errors(
+                body,
+                (ROOT / ".codex/spec-verifiers/verify_pbi06c.py").is_file(),
+                (ROOT / "packages/readability-core/src/rules/D003.ts").is_file(),
+            ):
+                need(False, error)
         need(not any(x in body for x in ("TBD", "placeholder", "実装開始時に")), f"PACKET-PLACEHOLDER-{name}")
 
     for gap in range(8, 18):
@@ -1257,7 +1327,18 @@ def verify(state: dict) -> list[str]:
             for item in workflow.get("phase_history", [])
         )
     )
-    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started or pbi05j_delivery_started or pbi06_delivery_started or pbi06a_delivery_started or pbi06b_delivery_started, "WORKFLOW-GATE-TRANSITION")
+    pbi06c_delivery_started = (
+        workflow.get("current_phase") == "DA"
+        and workflow.get("gate_type") == "DELIVERY"
+        and workflow.get("active_pbi") == "PBI-06C"
+        and workflow.get("task_packet_ref") == ".codex/task-packets/PBI-06C-d003.md"
+        and any(
+            item.get("phase") == "QGA" and item.get("status") == "APPROVE"
+            and item.get("gate_type") == "DELIVERY" and item.get("active_pbi") == "PBI-06B"
+            for item in workflow.get("phase_history", [])
+        )
+    )
+    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started or pbi05j_delivery_started or pbi06_delivery_started or pbi06a_delivery_started or pbi06b_delivery_started or pbi06c_delivery_started, "WORKFLOW-GATE-TRANSITION")
     return errors
 
 def apply_mutation(name: str, state: dict) -> None:
@@ -1562,6 +1643,28 @@ def apply_mutation(name: str, state: dict) -> None:
             packets[key] = packets[key].replace("N03 passes fixtures.codeExclusion.codeOnly to real analyze", "N03 passes a plain input to analyze", 1)
         else:
             packets[key] = packets[key].replace("B03 passes fixtures.multiMark.input to real analyze", "B03 fabricates a finding object", 1)
+    elif name in (
+        "drop-pbi06c-analyze-ownership", "drop-pbi06c-no-match-guard",
+        "drop-pbi06c-falsification-title", "drop-pbi06c-ascii-pair",
+        "weaken-pbi06c-range", "permit-pbi06c-external-dependency",
+    ):
+        key = next(k for k, body in packets.items() if packet_id(body) == "PBI-06C")
+        if name == "drop-pbi06c-analyze-ownership":
+            packets[key] = packets[key].replace('    - "packages/readability-core/src/analyze.ts"\n', "", 1)
+        elif name == "drop-pbi06c-no-match-guard":
+            packets[key] = packets[key].replace(" --fail-if-no-match", "", 1)
+        elif name == "drop-pbi06c-falsification-title":
+            packets[key] = packets[key].replace(', "D003-F01 Markdown code spans and blocks are excluded"', "", 1)
+        elif name == "drop-pbi06c-ascii-pair":
+            packets[key] = packets[key].replace("exactly （）「」『』【】[]", "exactly （）「」『』【】", 1)
+        elif name == "weaken-pbi06c-range":
+            packets[key] = packets[key].replace("reports [3,4) and input.slice(3,4)=]", "reports an unspecified range", 1)
+        else:
+            packets[key] = packets[key].replace(
+                "PBI-06 decision INTERNAL/PBI-06C; package manifests and lockfile unchanged",
+                "external dependency permitted",
+                1,
+            )
     else: raise ValueError(name)
 
 def main() -> int:

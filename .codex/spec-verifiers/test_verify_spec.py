@@ -54,6 +54,7 @@ PBI06B_SPEC = importlib.util.spec_from_file_location("verify_pbi06b", PBI06B_VER
 assert PBI06B_SPEC and PBI06B_SPEC.loader
 verify_pbi06b = importlib.util.module_from_spec(PBI06B_SPEC)
 PBI06B_SPEC.loader.exec_module(verify_pbi06b)
+PBI06C_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi06c.py"
 
 EXPECTED = {
     "drop-h113-falsification": "H113-FALSIFICATION",
@@ -145,6 +146,12 @@ EXPECTED = {
     "drop-pbi06b-runtime-probe": "PBI06B-RULE-CONTRACT",
     "pbi06b-plain-input-n03": "PBI06B-RULE-CONTRACT",
     "pbi06b-fabricated-b03-finding": "PBI06B-RULE-CONTRACT",
+    "drop-pbi06c-analyze-ownership": "PBI06C-OWNERSHIP",
+    "drop-pbi06c-no-match-guard": "PBI06C-ACCEPTANCE-ORACLE",
+    "drop-pbi06c-falsification-title": "PBI06C-ACCEPTANCE-ORACLE",
+    "drop-pbi06c-ascii-pair": "PBI06C-RULE-CONTRACT",
+    "weaken-pbi06c-range": "PBI06C-RULE-CONTRACT",
+    "permit-pbi06c-external-dependency": "PBI06C-RULE-CONTRACT",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -711,5 +718,14 @@ test("D002-B03 multi-mark combining sequence reports exact source range", () => 
         self.assertIn("B03-fixture-runner", verify_pbi06b.test_fixture_oracle_errors(
             fixture_runner.replace("const [finding] = analyze(input, config());", "const finding = { range: fixtures.multiMark.expectedRange };", 1)
         ))
+
+    def test_pbi06c_registered_red_is_exact_and_reproducible(self) -> None:
+        state = verify_spec.read_state()
+        packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-06C")
+        self.assertEqual([], verify_spec.pbi06c_registration_errors(packet, PBI06C_VERIFIER.is_file(), False))
+        expected = (1, "PBI06C_RED missing packages/readability-core/src/rules/D003.ts\n", "")
+        for _ in range(2):
+            result = subprocess.run(["python3", str(PBI06C_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+            self.assertEqual(expected, (result.returncode, result.stdout, result.stderr))
 
 if __name__ == "__main__": unittest.main()
