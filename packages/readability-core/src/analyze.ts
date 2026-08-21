@@ -1,5 +1,6 @@
 import { validateReadabilityConfig } from "./config/validate.ts";
 import { analyzeD001 } from "./rules/D001.ts";
+import { analyzeD002 } from "./rules/D002.ts";
 import { analyzeH101 } from "./rules/H101.ts";
 import { analyzeH102 } from "./rules/H102.ts";
 import { analyzeH103 } from "./rules/H103.ts";
@@ -22,6 +23,7 @@ export function analyze(input: unknown, config: ReadabilityConfig | ValidatedRea
     const threshold = "threshold" in rule ? rule.threshold : undefined;
     switch (rule.ruleId) {
       case "D001": return analyzeD001(input, rule.style, rule.severity);
+      case "D002": return analyzeD002(input, rule.normalization, rule.severity);
       case "H101": return threshold === undefined ? [] : analyzeH101(input, threshold, excludeCodeBlocks);
       case "H102": return threshold === undefined ? [] : analyzeH102(input, threshold, excludeCodeBlocks);
       case "H103": return threshold === undefined ? [] : analyzeH103(input, threshold, excludeCodeBlocks);
