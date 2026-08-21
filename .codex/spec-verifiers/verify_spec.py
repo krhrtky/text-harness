@@ -35,6 +35,8 @@ MUTATIONS = (
     "drop-pbi05i-boundary-title", "drift-pbi05i-threshold", "drop-pbi05i-mutation-title",
     "drop-pbi05j-analyze-ownership", "drop-pbi05j-no-match-guard",
     "drop-pbi05j-boundary-title", "permit-pbi05j-splitast", "drop-pbi05j-splitast-mutation",
+    "drop-pbi06-gate", "weaken-pbi06-evidence", "permit-pbi06-nonpass-external",
+    "drop-pbi06-rule-id", "drop-pbi06-required-title",
 )
 
 def read_state() -> dict:
@@ -620,6 +622,54 @@ def pbi05j_registration_errors(body: str, oracle_exists: bool, implementation_ex
         errors.append("PBI05J-POST-IMPLEMENTATION-GREEN")
     return errors
 
+
+def pbi06_registration_errors(body: str, oracle_exists: bool, artifact_exists: bool) -> list[str]:
+    ownership = (
+        'owned_paths: ["docs/decision-evidence/deterministic-qualification.md", "docs/decision-evidence/deterministic-qualification.json", "tests/qualification/deterministic.contract.test.mjs"]'
+        in body
+    )
+    schema = all(value in body for value in (
+        'top_level_keys_exact: ["schemaVersion", "evaluatedAt", "toolchain", "rules"]',
+        'toolchain_exact: "node=24.19.0; pnpm=11.22.0"',
+        'rule_keys_exact: ["ruleId", "candidate", "gates", "decision"]',
+        'gate_keys_exact: ["status", "command", "exitCode", "artifact", "evidence"]',
+        'gate_status: "PASS|FAIL|UNKNOWN; UNKNOWN requires command/exitCode/artifact null; PASS/FAIL require non-empty command/artifact and integer exitCode"',
+        'evidence_contract: "non-empty array containing only non-empty strings; config evidence names ruleId; range evidence names RNG-001 UTF-16 half-open"',
+        'decision_contract: "candidate non-null and all five PASS => EXTERNAL/ALL_GATES_PASS with implementationPbi null; otherwise INTERNAL/NON_PASS_GATE with exact PBI-06A through PBI-06H mapping"',
+    ))
+    acceptance = all(value in body for value in (
+        'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi06.py"',
+        'test_command: "mise x node@24.19.0 -- node --test tests/qualification/deterministic.contract.test.mjs"',
+        'exact_test_file: "tests/qualification/deterministic.contract.test.mjs"',
+        'artifact: "docs/decision-evidence/deterministic-qualification.json"',
+        'report: "docs/decision-evidence/deterministic-qualification.md"',
+        'exact_rule_ids: ["D001", "D002", "D003", "D004", "D005", "D006", "D007", "D008"]',
+        'exact_gates: ["functional", "configCompatibility", "license", "maintainability", "range"]',
+        'minimum_tests: 12', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 12',
+        '"PBI06-Q05 external mode requires a pinned candidate and five PASS gates"',
+        '"PBI06-Q07 any UNKNOWN gate selects internal implementation"',
+        '"PBI06-Q10 all internal decisions route to PBI-06A through PBI-06H"',
+        'green_signature: "PBI06_GREEN tests>=12 pass=tests fail=0 required_titles=12"',
+    ))
+    errors = []
+    if not ownership:
+        errors.append("PBI06-OWNERSHIP")
+    if not schema:
+        errors.append("PBI06-EVIDENCE-SCHEMA")
+    if not acceptance or not oracle_exists:
+        errors.append("PBI06-ACCEPTANCE-ORACLE")
+    if not artifact_exists:
+        registered = all(value in body for value in (
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi06.py; exit=1; signature=PBI06_RED missing docs/decision-evidence/deterministic-qualification.json"',
+            'red_status: "REGISTERED_RED"',
+            'command: "python3 .codex/spec-verifiers/verify_pbi06.py"', 'exit: 1',
+            'stdout: "PBI06_RED missing docs/decision-evidence/deterministic-qualification.json"',
+            'stderr: "<empty>"', 'measured_runs: 2',
+        ))
+        if not registered:
+            errors.append("PBI06-PRE-IMPLEMENTATION-RED")
+    return errors
+
 def verify(state: dict) -> list[str]:
     m, t, packets, workflow = state["matrix"], state["text"], state["packets"], state["workflow"]
     errors: list[str] = []
@@ -775,6 +825,13 @@ def verify(state: dict) -> list[str]:
                 (ROOT / "packages/readability-core/src/rules/H113.ts").is_file(),
             ):
                 need(False, error)
+        if pid == "PBI-06":
+            for error in pbi06_registration_errors(
+                body,
+                (ROOT / ".codex/spec-verifiers/verify_pbi06.py").is_file(),
+                (ROOT / "docs/decision-evidence/deterministic-qualification.json").is_file(),
+            ):
+                need(False, error)
         need(not any(x in body for x in ("TBD", "placeholder", "実装開始時に")), f"PACKET-PLACEHOLDER-{name}")
 
     for gap in range(8, 18):
@@ -873,7 +930,18 @@ def verify(state: dict) -> list[str]:
             for item in workflow.get("phase_history", [])
         )
     )
-    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started or pbi05j_delivery_started, "WORKFLOW-GATE-TRANSITION")
+    pbi06_delivery_started = (
+        workflow.get("current_phase") == "DA"
+        and workflow.get("gate_type") == "DELIVERY"
+        and workflow.get("active_pbi") == "PBI-06"
+        and workflow.get("task_packet_ref") == ".codex/task-packets/PBI-06-qualification.md"
+        and any(
+            item.get("phase") == "QGA" and item.get("status") == "APPROVE"
+            and item.get("gate_type") == "DELIVERY" and item.get("active_pbi") == "PBI-05J"
+            for item in workflow.get("phase_history", [])
+        )
+    )
+    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started or pbi05j_delivery_started or pbi06_delivery_started, "WORKFLOW-GATE-TRANSITION")
     return errors
 
 def apply_mutation(name: str, state: dict) -> None:
@@ -1067,6 +1135,25 @@ def apply_mutation(name: str, state: dict) -> None:
             )
         else:
             packets[key] = packets[key].replace("H113-M-SPLIT_AST", "REMOVED-M-SPLIT_AST")
+    elif name in (
+        "drop-pbi06-gate", "weaken-pbi06-evidence", "permit-pbi06-nonpass-external",
+        "drop-pbi06-rule-id", "drop-pbi06-required-title",
+    ):
+        key = next(k for k, body in packets.items() if packet_id(body) == "PBI-06")
+        if name == "drop-pbi06-gate":
+            packets[key] = packets[key].replace(', "range"]', "]", 1)
+        elif name == "weaken-pbi06-evidence":
+            packets[key] = packets[key].replace(
+                "non-empty array containing only non-empty strings", "any truthy evidence value", 1
+            )
+        elif name == "permit-pbi06-nonpass-external":
+            packets[key] = packets[key].replace("otherwise INTERNAL/NON_PASS_GATE", "otherwise EXTERNAL permitted", 1)
+        elif name == "drop-pbi06-rule-id":
+            packets[key] = packets[key].replace(', "D008"]', "]", 1)
+        else:
+            packets[key] = packets[key].replace(
+                '"PBI06-Q07 any UNKNOWN gate selects internal implementation", ', "", 1
+            )
     else: raise ValueError(name)
 
 def main() -> int:

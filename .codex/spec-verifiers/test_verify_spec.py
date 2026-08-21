@@ -37,6 +37,11 @@ verify_pbi05p = importlib.util.module_from_spec(PBI05P_SPEC)
 PBI05P_SPEC.loader.exec_module(verify_pbi05p)
 PBI05I_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi05i.py"
 PBI05J_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi05j.py"
+PBI06_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi06.py"
+PBI06_SPEC = importlib.util.spec_from_file_location("verify_pbi06", PBI06_VERIFIER)
+assert PBI06_SPEC and PBI06_SPEC.loader
+verify_pbi06 = importlib.util.module_from_spec(PBI06_SPEC)
+PBI06_SPEC.loader.exec_module(verify_pbi06)
 
 EXPECTED = {
     "drop-h113-falsification": "H113-FALSIFICATION",
@@ -96,6 +101,11 @@ EXPECTED = {
     "drop-pbi05j-boundary-title": "PBI05J-ACCEPTANCE-ORACLE",
     "permit-pbi05j-splitast": "PBI05J-ACCEPTANCE-ORACLE",
     "drop-pbi05j-splitast-mutation": "PBI05J-MUTATION-CONTRACT",
+    "drop-pbi06-gate": "PBI06-ACCEPTANCE-ORACLE",
+    "weaken-pbi06-evidence": "PBI06-EVIDENCE-SCHEMA",
+    "permit-pbi06-nonpass-external": "PBI06-EVIDENCE-SCHEMA",
+    "drop-pbi06-rule-id": "PBI06-ACCEPTANCE-ORACLE",
+    "drop-pbi06-required-title": "PBI06-ACCEPTANCE-ORACLE",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -457,5 +467,50 @@ packages:
         self.assertEqual(tests, passed)
         self.assertEqual(0, failed)
         self.assertEqual(14, titles)
+
+    def test_pbi06_schema_and_registered_red_match_repository_state(self) -> None:
+        def unknown_gate(rule_id: str, gate: str) -> dict:
+            evidence = (
+                [f"{rule_id} RNG-001 UTF-16 half-open reconstruction not executed"]
+                if gate == "range" else [f"{rule_id} {gate} has no nominated lossless candidate"]
+            )
+            return {"status": "UNKNOWN", "command": None, "exitCode": None, "artifact": None, "evidence": evidence}
+
+        valid = {
+            "schemaVersion": 1,
+            "evaluatedAt": "2026-08-21",
+            "toolchain": {"node": "24.19.0", "pnpm": "11.22.0"},
+            "rules": [
+                {
+                    "ruleId": rule_id,
+                    "candidate": None,
+                    "gates": {gate: unknown_gate(rule_id, gate) for gate in verify_pbi06.GATES},
+                    "decision": {
+                        "mode": "INTERNAL",
+                        "reasonCode": "NON_PASS_GATE",
+                        "implementationPbi": f"PBI-06{chr(ord('A') + index)}",
+                    },
+                }
+                for index, rule_id in enumerate(verify_pbi06.RULE_IDS)
+            ],
+        }
+        self.assertEqual([], verify_pbi06.validate_artifact(valid))
+        invalid_external = json.loads(json.dumps(valid))
+        invalid_external["rules"][0]["decision"] = {
+            "mode": "EXTERNAL", "reasonCode": "ALL_GATES_PASS", "implementationPbi": None,
+        }
+        self.assertIn("decision-D001", verify_pbi06.validate_artifact(invalid_external))
+        empty_evidence = json.loads(json.dumps(valid))
+        empty_evidence["rules"][0]["gates"]["functional"]["evidence"] = [""]
+        self.assertIn("gate-evidence-D001-functional", verify_pbi06.validate_artifact(empty_evidence))
+
+        state = verify_spec.read_state()
+        packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-06")
+        self.assertEqual([], verify_spec.pbi06_registration_errors(packet, PBI06_VERIFIER.is_file(), False))
+        first = subprocess.run(["python3", str(PBI06_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        second = subprocess.run(["python3", str(PBI06_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        expected = (1, "PBI06_RED missing docs/decision-evidence/deterministic-qualification.json\n", "")
+        self.assertEqual(expected, (first.returncode, first.stdout, first.stderr))
+        self.assertEqual(expected, (second.returncode, second.stdout, second.stderr))
 
 if __name__ == "__main__": unittest.main()

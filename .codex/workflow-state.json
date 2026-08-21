@@ -2,11 +2,11 @@
   "id": "wf-readability-mvp-20260821",
   "request": "Readability Engineering System要求の実現、setup/upgrade支援、反証必須の完了判定、public GitHub repositoryへのpush",
   "current_phase": "DA",
-  "active_pbi": "PBI-05J",
+  "active_pbi": "PBI-06",
   "gate_type": "DELIVERY",
-  "strategy_id": "delivery-pbi05j-h113-v2",
-  "iteration": 29,
-  "task_packet_ref": ".codex/task-packets/PBI-05J-h113.md",
+  "strategy_id": "delivery-pbi06-deterministic-qualification-v1",
+  "iteration": 30,
+  "task_packet_ref": ".codex/task-packets/PBI-06-qualification.md",
   "phase_history": [
     {
       "phase": "SDA",
@@ -772,6 +772,41 @@
       ],
       "resume_point": ".codex/task-packets/PBI-05J-h113.md",
       "timestamp": "2026-08-21T19:05:00+09:00"
+    },
+    {
+      "phase": "QGA",
+      "status": "APPROVE",
+      "agent": "/root/spec_qga",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-05J",
+      "decision": "PBI-05J DELIVERY approved with projected sentence boundaries, splitAST prohibition, and all mutation contracts Green",
+      "evidence": [
+        "PBI05J_GREEN tests=14 pass=14 fail=0 required_titles=14",
+        "8 non-match, 9 finding, trailing fragment, formatting, pair mark, link, code, and Paragraph range contracts verified",
+        "H113 uses split(projected text), contains no splitAST, and preserves exact dependencies",
+        "GTE, document, punctuation, block, and splitAST substitutes verified",
+        "all PBI verifiers, spec unit suite, JSON validation, and clean worktree confirmed"
+      ],
+      "resume_point": ".codex/task-packets/PBI-06-qualification.md",
+      "timestamp": "2026-08-21T19:15:00+09:00"
+    },
+    {
+      "phase": "DA",
+      "status": "READY",
+      "agent": null,
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-06",
+      "task_packet_ref": ".codex/task-packets/PBI-06-qualification.md",
+      "decision": "PBI-06 is dependency-ready with an executable missing-artifact RED and strict rule-level five-gate qualification schema",
+      "evidence": [
+        "python3 .codex/spec-verifiers/verify_pbi06.py => exit 1",
+        "stdout: PBI06_RED missing docs/decision-evidence/deterministic-qualification.json; stderr empty; reproduced twice",
+        "D001 through D008 each require functional, configCompatibility, license, maintainability, and range gates",
+        "candidate plus all five PASS is the only EXTERNAL path; FAIL or UNKNOWN selects INTERNAL/NON_PASS_GATE",
+        "post-state oracle requires strict JSON types, rule-specific config and RNG-001 evidence, exact catalog/gates, tests >=12, pass=tests, fail 0, and twelve qualification/mutation titles"
+      ],
+      "resume_point": ".codex/task-packets/PBI-06-qualification.md",
+      "timestamp": "2026-08-21T19:20:00+09:00"
     }
   ],
   "blocker_history": [
@@ -849,5 +884,5 @@
     }
   ],
   "created_at": "2026-08-21T09:39:07+09:00",
-  "updated_at": "2026-08-21T19:05:00+09:00"
+  "updated_at": "2026-08-21T19:20:00+09:00"
 }
