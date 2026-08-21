@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "releaseInputSha256": "d2b07d7382d4aa38f1a20bf71baeb1a8e21485fa1845a14db435599df03e0a25",
+  "evaluatedAt": "2026-08-21T20:24:13+09:00",
+  "secretScan": {
+    "command": "git grep -nEI <secret-patterns> -- tracked files",
+    "tool": "git 2.51.0 tracked-file scan",
+    "findings": 0
+  },
+  "dependencyAudit": {
+    "command": "mise x node@24.19.0 -- corepack pnpm audit --audit-level high",
+    "toolchain": "Node 24.19.0; pnpm 11.22.0",
+    "unresolvedHigh": 0,
+    "unresolvedCritical": 0
+  }
+}

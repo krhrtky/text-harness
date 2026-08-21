@@ -4,6 +4,15 @@
   "private": true,
   "description": "Deterministic and semantic readability engineering workspace",
   "license": "Apache-2.0",
+  "author": "krhrtky",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/krhrtky/text-harness.git"
+  },
+  "homepage": "https://github.com/krhrtky/text-harness#readme",
+  "bugs": {
+    "url": "https://github.com/krhrtky/text-harness/issues"
+  },
   "packageManager": "pnpm@11.22.0",
   "engines": {
     "node": ">=24.19.0 <25",
@@ -14,6 +23,11 @@
     "test:ops": "node --test tests/ops/*.test.mjs",
     "test:smoke": "node --test tests/ops/smoke.test.mjs && printf 'SMOKE PASS\\n'",
     "lint": "sh -n scripts/text-harness-setup && node --check tests/ops/setup.test.mjs && node --check tests/ops/smoke.test.mjs",
-    "typecheck": "node --check tests/ops/setup.test.mjs && node --check tests/ops/smoke.test.mjs"
+    "typecheck": "node --check tests/ops/setup.test.mjs && node --check tests/ops/smoke.test.mjs",
+    "verify:docs": "node scripts/verify-release.mjs docs",
+    "verify:license": "node scripts/verify-release.mjs license",
+    "verify:security": "node scripts/verify-release.mjs security",
+    "verify:artifacts": "node scripts/verify-release.mjs artifacts",
+    "verify:release": "node scripts/verify-release.mjs release"
   }
 }
