@@ -1,0 +1,58 @@
+{
+  "candidate": {
+    "package": "kuromoji",
+    "version": "0.1.2",
+    "dictionary": "bundled IPADIC",
+    "releaseYear": 2018,
+    "runtimeDependencyAllowed": false
+  },
+  "evaluatedAt": "2026-08-21",
+  "toolchain": {
+    "node": "24.19.0",
+    "pnpm": "11.22.0"
+  },
+  "gates": {
+    "maintainability": {
+      "status": "FAIL",
+      "reasonCode": "RELEASE_AGE_GT_24_MONTHS",
+      "command": "rg -n 'releaseは2018年' docs/decision-evidence/DEC-002-006-objective-evidence.md",
+      "exitCode": 0,
+      "artifact": "docs/decision-evidence/DEC-002-006-objective-evidence.md",
+      "evidence": ["npm release year 2018; evaluated 2026-08-21; age exceeds 24 months"]
+    },
+    "node24_performance": {
+      "status": "UNKNOWN",
+      "command": null,
+      "exitCode": null,
+      "artifact": null,
+      "evidence": ["candidate rejected before installation; required Node 24 cold/warm 30-run benchmark not executed"]
+    },
+    "range_conversion": {
+      "status": "UNKNOWN",
+      "command": null,
+      "exitCode": null,
+      "artifact": null,
+      "evidence": ["candidate rejected before installation; UTF-16 adapter fixtures not executed"]
+    },
+    "determinism": {
+      "status": "UNKNOWN",
+      "command": null,
+      "exitCode": null,
+      "artifact": null,
+      "evidence": ["candidate rejected before installation; ten-process normalized hash probe not executed"]
+    },
+    "offline": {
+      "status": "UNKNOWN",
+      "command": null,
+      "exitCode": null,
+      "artifact": null,
+      "evidence": ["candidate rejected before installation; bundled dictionary network-denial probe not executed"]
+    }
+  },
+  "decision": {
+    "status": "REJECT",
+    "rule": "ANY_FAIL_OR_UNKNOWN",
+    "fallback": "internal"
+  },
+  "fallbackContracts": ["H102", "H106", "H107_TOKEN", "H108_TOKEN"]
+}

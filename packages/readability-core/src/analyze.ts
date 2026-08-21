@@ -1,7 +1,9 @@
 import { validateReadabilityConfig } from "./config/validate.ts";
 import { analyzeH101 } from "./rules/H101.ts";
+import { analyzeH102 } from "./rules/H102.ts";
 import { analyzeH103 } from "./rules/H103.ts";
 import { analyzeH104 } from "./rules/H104.ts";
+import { analyzeH106 } from "./rules/H106.ts";
 import { sortFindings, type Finding } from "./types/findings.ts";
 import { assertInputText } from "./types/range.ts";
 import { type ReadabilityConfig, type ValidatedReadabilityConfig } from "./types/rules.ts";
@@ -15,8 +17,10 @@ export function analyze(input: unknown, config: ReadabilityConfig | ValidatedRea
     const threshold = "threshold" in rule ? rule.threshold : undefined;
     switch (rule.ruleId) {
       case "H101": return threshold === undefined ? [] : analyzeH101(input, threshold, excludeCodeBlocks);
+      case "H102": return threshold === undefined ? [] : analyzeH102(input, threshold, excludeCodeBlocks);
       case "H103": return threshold === undefined ? [] : analyzeH103(input, threshold, excludeCodeBlocks);
       case "H104": return threshold === undefined ? [] : analyzeH104(input, threshold, excludeCodeBlocks);
+      case "H106": return threshold === undefined ? [] : analyzeH106(input, threshold, excludeCodeBlocks);
       default: return [];
     }
   });

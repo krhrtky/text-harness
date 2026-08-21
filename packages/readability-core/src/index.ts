@@ -1,7 +1,11 @@
 export { analyze } from "./analyze.ts";
+export { analyzeInternalSentence } from "./analyzer/internal.ts";
+export { selectAnalyzer } from "./analyzer/qualification.ts";
 export { analyzeH101 } from "./rules/H101.ts";
+export { analyzeH102 } from "./rules/H102.ts";
 export { analyzeH103 } from "./rules/H103.ts";
 export { analyzeH104 } from "./rules/H104.ts";
+export { analyzeH106 } from "./rules/H106.ts";
 export { assertReadabilityConfig, validateReadabilityConfig } from "./config/validate.ts";
 export {
   createDeterministicFinding,
@@ -36,3 +40,5 @@ export type {
   ValidatedReadabilityConfig,
   ValidatedRuleConfig,
 } from "./types/rules.ts";
+export type { InternalSentenceAnalysis, InternalToken, InternalTokenRole } from "./analyzer/internal.ts";
+export type { AnalyzerSelection, QualificationGate, QualificationStatus } from "./analyzer/qualification.ts";
