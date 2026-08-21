@@ -42,6 +42,20 @@ UNCHANGED_HASHES = {
     Path("packages/readability-core/src/types/errors.ts"): "0d4f56962f75bc214964afa4aadd9de8e7c9627cf7bdb09f19892b6670cc2701",
     Path("packages/textlint-adapter/tsconfig.json"): "1891f8459b7f3b1283c31c1340d4e340e893d89e67f13e4242eb57d77c2ba772",
 }
+DELIVERY_HASHES = {
+    Path("packages/textlint-adapter/package.json"): "bfc3d793caadeb84ab6730a5ba2122a2bfe14c571fec301fcfa8f32841272414",
+    Path("packages/textlint-adapter/src/index.ts"): "3edac8f15e10d5b6fba00b1897b2c6557ee210cb92f663f8e4d1a29ef27c8850",
+    Path("packages/textlint-adapter/src/cli.ts"): "90b1c03cdc7210b483e6650632d52b4fde062ffb5f00fd154beb8c0610ffca79",
+    Path("packages/textlint-adapter/schema/validation-report.schema.json"): "8a0d545278e7222f7144ca8b719afbf289903ab4b4f2b6d5f7a35a753b0b6023",
+    Path("packages/textlint-adapter/test/integration/report.contract.test.ts"): "de3ebb53800c7aa8ea1b4c73982bcb8a98f50b5b84881815ce3dfc286996de1f",
+    Path("packages/textlint-adapter/test/integration/cli.contract.test.ts"): "7b75c82936e41adc2e598acc55b757585d6f5468eaac4ab6fb0c0ac656257094",
+    Path("packages/textlint-adapter/test/integration/e2e.contract.test.ts"): "1b5aec7e5fc67af07aa15c89d50bfb492f046d32401487d254110463eec42d97",
+    Path("packages/textlint-adapter/test/integration/ci.contract.test.ts"): "985c8a56d3740b8bdf9c52eec69f2f87ca2e11c5d6d59a9952dd2f0dda5df9cd",
+    Path("packages/textlint-adapter/test/fixtures/mixed-pass.json"): "cb08948df2ef6a28ad124444682abbd0f1eac91e8f458cf428564ece03bbcffa",
+    Path("packages/textlint-adapter/test/fixtures/mixed-fail.json"): "b39e8fdde7a60bba4d23c5c62deeac310a9550bd7a224db93c0f50ae0aad7421",
+    Path("packages/textlint-adapter/test/fixtures/invalid-semantic-severity.json"): "d97383a93850b97bb0e9d70f298d745ba750ecb2660a092b6afc0d682cdb8c61",
+    Path(".github/workflows/integration-contract.yml"): "d0712df9f704569953a234f6f30cb1f5d9a097f154e650b3f9ed121e4ab55e32",
+}
 
 def fail(message: str) -> int:
     print("PBI08_FAIL " + message)
@@ -130,6 +144,8 @@ def main() -> int:
     if missing: return fail("missing " + ",".join(missing))
     drift = [str(path) for path, expected in UNCHANGED_HASHES.items() if hashlib.sha256((ROOT / path).read_bytes()).hexdigest() != expected]
     if drift: return fail("forbidden_path_drift " + ",".join(drift))
+    delivery_drift = [str(path) for path, expected in DELIVERY_HASHES.items() if hashlib.sha256((ROOT / path).read_bytes()).hexdigest() != expected]
+    if delivery_drift: return fail("delivery_artifact_drift " + ",".join(delivery_drift))
     try:
         schema = json.loads((ROOT / SCHEMA).read_text())
         package = json.loads((ROOT / "packages/textlint-adapter/package.json").read_text())
@@ -137,6 +153,8 @@ def main() -> int:
     except (json.JSONDecodeError, OSError) as error: return fail("invalid_json " + str(error))
     errors = schema_errors(schema) + package_errors(package) + source_contract_errors((ROOT / INDEX).read_text(), (ROOT / CLI).read_text(), (ROOT / WORKFLOW).read_text())
     if errors: return fail("contract " + ",".join(errors))
+    setup = subprocess.run(("mise", "x", "node@24.19.0", "--", "corepack", "pnpm", "install", "--frozen-lockfile"), cwd=ROOT, text=True, capture_output=True)
+    if setup.returncode != 0: return fail(f"install_exit={setup.returncode} output=" + (setup.stdout + setup.stderr).strip())
     probe_errors, probe_output = run_behavioral_probe()
     if probe_errors: return fail("behavior_probe " + ",".join(probe_errors) + " output=" + probe_output.strip())
     command = ("mise", "x", "node@24.19.0", "--", "corepack", "pnpm", "--filter", "@text-harness/textlint-adapter", "--fail-if-no-match", "exec", "node", "--test", *(str(path.relative_to("packages/textlint-adapter")) for path in TESTS))

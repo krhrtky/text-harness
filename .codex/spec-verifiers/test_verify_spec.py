@@ -235,7 +235,7 @@ EXPECTED = {
     "permit-pbi08-semantic-severity": "PBI08-INTEGRATION-CONTRACT",
     "permit-pbi08-network": "PBI08-INTEGRATION-CONTRACT",
     "drop-pbi08-invalid-cli-title": "PBI08-ACCEPTANCE-ORACLE",
-    "drop-pbi08-red-signature": "PBI08-PRE-IMPLEMENTATION-RED",
+    "drop-pbi08-red-signature": "PBI08-ACCEPTANCE-ORACLE",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -961,12 +961,23 @@ test("D002-B03 multi-mark combining sequence reports exact source range", () => 
     def test_pbi08_registered_red_and_contract_mutations(self) -> None:
         state = verify_spec.read_state()
         packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-08")
-        self.assertEqual([], verify_spec.pbi08_registration_errors(packet, PBI08_VERIFIER.is_file(), False))
-        first = subprocess.run(["python3", str(PBI08_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
-        second = subprocess.run(["python3", str(PBI08_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
-        expected = "PBI08_RED missing packages/textlint-adapter/schema/validation-report.schema.json\n"
-        self.assertEqual((1, expected, ""), (first.returncode, first.stdout, first.stderr))
-        self.assertEqual((first.returncode, first.stdout, first.stderr), (second.returncode, second.stdout, second.stderr))
+        pre_implementation = packet.replace(
+            "expected_red: null",
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi08.py; exit=1; signature=PBI08_RED missing packages/textlint-adapter/schema/validation-report.schema.json"',
+            1,
+        ).replace('red_status: "CONSUMED_GREEN"', 'red_status: "REGISTERED_RED"', 1)
+        self.assertEqual([], verify_spec.pbi08_registration_errors(pre_implementation, PBI08_VERIFIER.is_file(), False))
+        self.assertEqual([], verify_spec.pbi08_registration_errors(packet, PBI08_VERIFIER.is_file(), True))
+        green = subprocess.run(["python3", str(PBI08_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        self.assertEqual(0, green.returncode, green.stdout + green.stderr)
+        summary = re.search(r"PBI08_GREEN tests=(\d+) pass=(\d+) fail=(\d+) required_titles=(\d+) fixtures=(\d+) probe=PASS", green.stdout)
+        self.assertIsNotNone(summary)
+        tests, passed, failed, titles, fixtures = (int(value) for value in summary.groups())
+        self.assertGreaterEqual(tests, 14)
+        self.assertEqual(tests, passed)
+        self.assertEqual(0, failed)
+        self.assertEqual(14, titles)
+        self.assertEqual(3, fixtures)
 
     def test_pbi08_schema_oracle_rejects_cross_contamination(self) -> None:
         range_schema = {"type": "object", "additionalProperties": False, "required": ["start", "end"], "properties": {"start": {"type": "integer", "minimum": 0}, "end": {"type": "integer", "minimum": 1}}}
