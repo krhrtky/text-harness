@@ -44,6 +44,91 @@ TEST_COMMAND = (
 )
 
 
+def _yaml_scalar(value: str) -> str:
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] == "'":
+        return value[1:-1].replace("''", "'")
+    if len(value) >= 2 and value[0] == value[-1] == '"':
+        parsed = json.loads(value)
+        if not isinstance(parsed, str):
+            raise ValueError("YAML key must decode to a string")
+        return parsed
+    return value
+
+
+def _mapping_key(line: str, indent: int) -> str | None:
+    if len(line) - len(line.lstrip(" ")) != indent:
+        return None
+    content = line[indent:]
+    if not content.endswith(":"):
+        return None
+    return _yaml_scalar(content[:-1])
+
+
+def _block(lines: list[str], start: int, indent: int, key: str) -> tuple[int, int] | None:
+    for index in range(start, len(lines)):
+        line = lines[index]
+        if not line.strip():
+            continue
+        current_indent = len(line) - len(line.lstrip(" "))
+        if current_indent < indent:
+            return None
+        if _mapping_key(line, indent) != key:
+            continue
+        end = index + 1
+        while end < len(lines):
+            candidate = lines[end]
+            if candidate.strip() and len(candidate) - len(candidate.lstrip(" ")) <= indent:
+                break
+            end += 1
+        return index + 1, end
+    return None
+
+
+def lock_importer_dependencies(lockfile: str, importer: str) -> dict[str, dict[str, str]]:
+    """Read one canonical pnpm 10/11 importer dependency map without a general YAML loader."""
+    lines = lockfile.splitlines()
+    importers = _block(lines, 0, 0, "importers")
+    if importers is None:
+        return {}
+    importer_block = _block(lines, importers[0], 2, importer)
+    if importer_block is None or importer_block[1] > importers[1]:
+        return {}
+    dependencies = _block(lines, importer_block[0], 4, "dependencies")
+    if dependencies is None or dependencies[1] > importer_block[1]:
+        return {}
+
+    result: dict[str, dict[str, str]] = {}
+    index = dependencies[0]
+    while index < dependencies[1]:
+        package = _mapping_key(lines[index], 6)
+        if package is None:
+            index += 1
+            continue
+        fields: dict[str, str] = {}
+        index += 1
+        while index < dependencies[1]:
+            line = lines[index]
+            current_indent = len(line) - len(line.lstrip(" "))
+            if line.strip() and current_indent <= 6:
+                break
+            if current_indent == 8 and ":" in line:
+                field, value = line.strip().split(":", 1)
+                fields[field] = _yaml_scalar(value)
+            index += 1
+        result[package] = fields
+    return result
+
+
+def lock_dependencies_match(lockfile: str) -> tuple[bool, str | None]:
+    dependencies = lock_importer_dependencies(lockfile, "packages/readability-core")
+    for package, version in RUNTIME_DEPENDENCIES:
+        entry = dependencies.get(package, {})
+        if entry.get("specifier") != version or entry.get("version") != version:
+            return False, package
+    return True, None
+
+
 def main() -> int:
     for required in (PACKAGE_MANIFEST, LOCKFILE):
         if not (ROOT / required).is_file():
@@ -58,11 +143,11 @@ def main() -> int:
             return 1
 
     lockfile = (ROOT / LOCKFILE).read_text()
-    for package, version in RUNTIME_DEPENDENCIES:
-        lock_entry = rf"(?m)^\s+{re.escape(package)}:\s*$\n\s+specifier: {re.escape(version)}\s*$\n\s+version: {re.escape(version)}(?:\s|$)"
-        if re.search(lock_entry, lockfile) is None:
-            print(f"PBI03_RED lock dependency {package} expected {version}")
-            return 1
+    lock_matches, invalid_package = lock_dependencies_match(lockfile)
+    if not lock_matches:
+        expected_version = dict(RUNTIME_DEPENDENCIES)[invalid_package]
+        print(f"PBI03_RED lock dependency {invalid_package} expected {expected_version}")
+        return 1
 
     for required in CONTRACT_TESTS:
         if not (ROOT / required).is_file():

@@ -14,6 +14,11 @@ SPEC = importlib.util.spec_from_file_location("verify_spec", VERIFIER)
 assert SPEC and SPEC.loader
 verify_spec = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(verify_spec)
+PBI03_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi03.py"
+PBI03_SPEC = importlib.util.spec_from_file_location("verify_pbi03", PBI03_VERIFIER)
+assert PBI03_SPEC and PBI03_SPEC.loader
+verify_pbi03 = importlib.util.module_from_spec(PBI03_SPEC)
+PBI03_SPEC.loader.exec_module(verify_pbi03)
 
 EXPECTED = {
     "drop-h113-falsification": "H113-FALSIFICATION",
@@ -40,6 +45,7 @@ EXPECTED = {
     "drift-pbi03-sentence-version": "PBI03-DEPENDENCY-CONTRACT",
     "permit-pbi03-internal-scanner": "PBI03-MARKDOWN-CONTRACT",
     "drop-pbi03-code-range-title": "PBI03-ACCEPTANCE-ORACLE",
+    "drop-pbi03-runtime-dependency": "PBI03-DEPENDENCY-CONTRACT",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -126,22 +132,59 @@ class SpecVerifierTest(unittest.TestCase):
         ):
             self.assertIn(title, green.stdout)
 
-    def test_pbi03_registered_red_matches_pre_implementation_baseline(self) -> None:
+    def test_pbi03_lock_parser_accepts_canonical_quoted_and_unquoted_exact_keys(self) -> None:
+        quoted = """lockfileVersion: '9.0'
+importers:
+  packages/readability-core:
+    dependencies:
+      '@textlint/markdown-to-ast':
+        specifier: 15.8.0
+        version: 15.8.0
+      sentence-splitter:
+        specifier: 5.0.1
+        version: 5.0.1
+"""
+        expected = {
+            "@textlint/markdown-to-ast": {"specifier": "15.8.0", "version": "15.8.0"},
+            "sentence-splitter": {"specifier": "5.0.1", "version": "5.0.1"},
+        }
+        self.assertEqual(expected, verify_pbi03.lock_importer_dependencies(quoted, "packages/readability-core"))
+        self.assertEqual((True, None), verify_pbi03.lock_dependencies_match(quoted))
+        unquoted = quoted.replace("'@textlint/markdown-to-ast':", "@textlint/markdown-to-ast:")
+        self.assertEqual(expected, verify_pbi03.lock_importer_dependencies(unquoted, "packages/readability-core"))
+        self.assertEqual((True, None), verify_pbi03.lock_dependencies_match(unquoted))
+        invalid_version = quoted.replace("version: 15.8.0", "version: 15.8.1", 1)
+        self.assertEqual((False, "@textlint/markdown-to-ast"), verify_pbi03.lock_dependencies_match(invalid_version))
+        missing_dependency = quoted.replace("'@textlint/markdown-to-ast':", "removed-markdown-dependency:", 1)
+        self.assertEqual((False, "@textlint/markdown-to-ast"), verify_pbi03.lock_dependencies_match(missing_dependency))
+
+    def test_pbi03_red_history_and_green_transition_match_repository_state(self) -> None:
         state = verify_spec.read_state()
         packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-03")
-        oracle = ROOT / ".codex/spec-verifiers/verify_pbi03.py"
+        oracle = PBI03_VERIFIER
         contract_tests = (
             ROOT / "packages/readability-core/test/heuristic/H101.contract.test.ts",
             ROOT / "packages/readability-core/test/heuristic/H103.contract.test.ts",
             ROOT / "packages/readability-core/test/heuristic/H104.contract.test.ts",
         )
-        self.assertFalse(any(path.exists() for path in contract_tests))
-        self.assertEqual([], verify_spec.pbi03_registration_errors(packet, oracle.is_file(), False))
-        for _ in range(2):
-            red = subprocess.run(["python3", str(oracle)], cwd=ROOT, text=True, capture_output=True)
-            self.assertEqual(
-                (1, "PBI03_RED dependency sentence-splitter expected 5.0.1\n", ""),
-                (red.returncode, red.stdout, red.stderr),
-            )
+        pre_implementation = packet.replace(
+            "expected_red: null",
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi03.py; exit=1; signature=PBI03_RED dependency sentence-splitter expected 5.0.1"',
+            1,
+        ).replace('red_status: "CONSUMED_GREEN"', 'red_status: "REGISTERED_RED"', 1)
+        self.assertEqual([], verify_spec.pbi03_transition_errors(pre_implementation, True, False))
+        self.assertTrue(all(path.is_file() for path in contract_tests))
+        self.assertEqual([], verify_spec.pbi03_transition_errors(packet, oracle.is_file(), True))
+        green = subprocess.run(["python3", str(oracle)], cwd=ROOT, text=True, capture_output=True)
+        self.assertEqual(0, green.returncode, green.stdout + green.stderr)
+        summary = re.search(
+            r"PBI03_GREEN tests=(\d+) pass=(\d+) fail=(\d+) required_titles=(\d+)", green.stdout
+        )
+        self.assertIsNotNone(summary)
+        tests, passed, failed, titles = (int(value) for value in summary.groups())
+        self.assertGreaterEqual(tests, 12)
+        self.assertEqual(tests, passed)
+        self.assertEqual(0, failed)
+        self.assertEqual(12, titles)
 
 if __name__ == "__main__": unittest.main()

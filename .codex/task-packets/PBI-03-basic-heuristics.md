@@ -37,18 +37,34 @@ task_packet:
       - "H104-P01 H104 reports nesting depth three"
       - "H104-F01 H104 leaves mismatched brackets to D003"
     green_signature: "PBI03_GREEN tests>=12 pass=tests fail=0 required_titles=12"
-  expected_red: "python3 .codex/spec-verifiers/verify_pbi03.py; exit=1; signature=PBI03_RED dependency sentence-splitter expected 5.0.1"
-  red_status: "REGISTERED_RED"
-  expected_red_evidence:
-    phase: "PRE_IMPLEMENTATION"
-    command: "python3 .codex/spec-verifiers/verify_pbi03.py"
-    exit: 1
-    stdout: "PBI03_RED dependency sentence-splitter expected 5.0.1"
-    stderr: "<empty>"
-    measured_runs: 2
+  expected_red: null
+  red_status: "CONSUMED_GREEN"
   expected_red_history:
-    superseded_oracle: "python3 .codex/spec-verifiers/verify_pbi03.py; exit=1; signature=PBI03_RED missing packages/readability-core/test/heuristic/H101.contract.test.ts"
-    reason: "dependency ownership gap was discovered before scaffold; the revised oracle validates exact runtime pins and lock entries before test existence"
+    registration:
+      phase: "PRE_IMPLEMENTATION"
+      command: "python3 .codex/spec-verifiers/verify_pbi03.py"
+      exit: 1
+      stdout: "PBI03_RED dependency sentence-splitter expected 5.0.1"
+      stderr: "<empty>"
+      measured_runs: 2
+    superseded_registration:
+      oracle: "python3 .codex/spec-verifiers/verify_pbi03.py; exit=1; signature=PBI03_RED missing packages/readability-core/test/heuristic/H101.contract.test.ts"
+      reason: "dependency ownership gap was discovered before scaffold; the revised oracle validates exact runtime pins and lock entries before test existence"
+  green_transition:
+    package_manifest: "packages/readability-core/package.json"
+    lock_importer: "packages/readability-core"
+    lock_key_contract: "canonical pnpm 10/11 quoted or unquoted YAML dependency keys; exact specifier and version"
+    contract_test_files: ["packages/readability-core/test/heuristic/H101.contract.test.ts", "packages/readability-core/test/heuristic/H103.contract.test.ts", "packages/readability-core/test/heuristic/H104.contract.test.ts"]
+    command: "python3 .codex/spec-verifiers/verify_pbi03.py"
+    exit: 0
+    minimum_tests: 12
+    pass_equals_tests: true
+    fail: 0
+    required_titles: 12
+    signature: "PBI03_GREEN tests>=12 pass=tests fail=0 required_titles=12"
+  green_history:
+    initial_da_green: "tests 17; pass 17; fail 0; required_titles 12"
+    latest_da_green: "tests 18; pass 18; fail 0; required_titles 12"
   red_registration_gate: "PBI開始時、依存PBI完了後かつ実装変更前に、実在する失敗test command・exit code・完全一致signatureを登録する"
   acceptance: ["AC-H101-01", "AC-H101-02", "H101-AC05a fenced code excluded", "H101-AC05b indented code excluded", "H101-AC05c prose ranges before/after code restore by input.slice", "H101-AC05d exclusion disabled includes code", "H103-B01 actual=4 finding=0", "H103-P01 actual=5 finding=1", "AC-H104-01", "H104-B01 actual=2 finding=0", "H104-P01 actual=3 finding=1", "H104-F01 mismatch finding=0"]
   engineering_constraints: "docs/requirements/engineering-constraints.md"

@@ -21,6 +21,7 @@ MUTATIONS = (
     "drop-pbi03-required-title",
     "drop-pbi03-package-ownership", "drift-pbi03-sentence-version",
     "permit-pbi03-internal-scanner", "drop-pbi03-code-range-title",
+    "drop-pbi03-runtime-dependency",
 )
 
 def read_state() -> dict:
@@ -160,7 +161,7 @@ def pbi02_transition_errors(
         errors.append("PBI02-POST-IMPLEMENTATION-GREEN")
     return errors
 
-def pbi03_registration_errors(body: str, oracle_exists: bool, contract_tests_exist: bool) -> list[str]:
+def pbi03_transition_errors(body: str, oracle_exists: bool, contract_tests_exist: bool) -> list[str]:
     ownership = all(value in body for value in (
         'owned_paths: ["packages/readability-core/package.json", "pnpm-lock.yaml", "packages/readability-core/src/rules/H101*", "packages/readability-core/src/rules/H103*", "packages/readability-core/src/rules/H104*", "packages/readability-core/src/rules/shared/**", "packages/readability-core/src/analyze.ts", "packages/readability-core/src/index.ts", "packages/readability-core/test/heuristic/H101*", "packages/readability-core/test/heuristic/H103*", "packages/readability-core/test/heuristic/H104*"]',
         'packages/readability-core/package.json: "PBI-02 ownership履歴を維持し、runtime dependenciesへsentence-splitter=5.0.1と@textlint/markdown-to-ast=15.8.0だけ追加する"',
@@ -194,16 +195,14 @@ def pbi03_registration_errors(body: str, oracle_exists: bool, contract_tests_exi
         '"H104-F01 H104 leaves mismatched brackets to D003"',
         'green_signature: "PBI03_GREEN tests>=12 pass=tests fail=0 required_titles=12"',
     ))
-    registered = all(value in body for value in (
-        'expected_red: "python3 .codex/spec-verifiers/verify_pbi03.py; exit=1; signature=PBI03_RED dependency sentence-splitter expected 5.0.1"',
-        'red_status: "REGISTERED_RED"',
+    historical = all(value in body for value in (
         'phase: "PRE_IMPLEMENTATION"',
         'command: "python3 .codex/spec-verifiers/verify_pbi03.py"',
         "exit: 1",
         'stdout: "PBI03_RED dependency sentence-splitter expected 5.0.1"',
         'stderr: "<empty>"',
         "measured_runs: 2",
-        'superseded_oracle: "python3 .codex/spec-verifiers/verify_pbi03.py; exit=1; signature=PBI03_RED missing packages/readability-core/test/heuristic/H101.contract.test.ts"',
+        'oracle: "python3 .codex/spec-verifiers/verify_pbi03.py; exit=1; signature=PBI03_RED missing packages/readability-core/test/heuristic/H101.contract.test.ts"',
     ))
     errors = []
     if not ownership:
@@ -212,8 +211,34 @@ def pbi03_registration_errors(body: str, oracle_exists: bool, contract_tests_exi
         errors.append("PBI03-DEPENDENCY-CONTRACT")
     if not acceptance or not oracle_exists:
         errors.append("PBI03-ACCEPTANCE-ORACLE")
-    if not registered or contract_tests_exist:
-        errors.append("PBI03-PRE-IMPLEMENTATION-RED")
+    if not historical:
+        errors.append("PBI03-RED-HISTORY")
+    if not contract_tests_exist:
+        registered = all(value in body for value in (
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi03.py; exit=1; signature=PBI03_RED dependency sentence-splitter expected 5.0.1"',
+            'red_status: "REGISTERED_RED"',
+        ))
+        if not registered:
+            errors.append("PBI03-PRE-IMPLEMENTATION-RED")
+        return errors
+    green = all(value in body for value in (
+        "expected_red: null",
+        'red_status: "CONSUMED_GREEN"',
+        'package_manifest: "packages/readability-core/package.json"',
+        'lock_importer: "packages/readability-core"',
+        'lock_key_contract: "canonical pnpm 10/11 quoted or unquoted YAML dependency keys; exact specifier and version"',
+        'command: "python3 .codex/spec-verifiers/verify_pbi03.py"',
+        "exit: 0",
+        "minimum_tests: 12",
+        "pass_equals_tests: true",
+        "fail: 0",
+        "required_titles: 12",
+        'signature: "PBI03_GREEN tests>=12 pass=tests fail=0 required_titles=12"',
+        'initial_da_green: "tests 17; pass 17; fail 0; required_titles 12"',
+        'latest_da_green: "tests 18; pass 18; fail 0; required_titles 12"',
+    ))
+    if not green:
+        errors.append("PBI03-POST-IMPLEMENTATION-GREEN")
     return errors
 
 def verify(state: dict) -> list[str]:
@@ -317,7 +342,7 @@ def verify(state: dict) -> list[str]:
                 ROOT / "packages/readability-core/test/heuristic/H103.contract.test.ts",
                 ROOT / "packages/readability-core/test/heuristic/H104.contract.test.ts",
             )
-            for error in pbi03_registration_errors(
+            for error in pbi03_transition_errors(
                 body,
                 (ROOT / ".codex/spec-verifiers/verify_pbi03.py").is_file(),
                 all(path.is_file() for path in pbi03_tests),
@@ -402,6 +427,7 @@ def apply_mutation(name: str, state: dict) -> None:
     elif name in (
         "drop-pbi03-analyze-ownership", "drop-pbi03-no-match-guard", "drop-pbi03-required-title",
         "drop-pbi03-package-ownership", "drift-pbi03-sentence-version", "drop-pbi03-code-range-title",
+        "drop-pbi03-runtime-dependency",
     ):
         key = next(k for k, body in packets.items() if packet_id(body) == "PBI-03")
         if name == "drop-pbi03-analyze-ownership":
@@ -416,6 +442,12 @@ def apply_mutation(name: str, state: dict) -> None:
             elif name == "drop-pbi03-code-range-title":
                 packets[key] = packets[key].replace(
                     "H101-AC05c H101 preserves prose source ranges around code blocks", "REMOVED RANGE TITLE", 1
+                )
+            elif name == "drop-pbi03-runtime-dependency":
+                packets[key] = packets[key].replace(
+                    'runtime_dependencies: ["sentence-splitter@5.0.1", "@textlint/markdown-to-ast@15.8.0"]',
+                    'runtime_dependencies: ["sentence-splitter@5.0.1"]',
+                    1,
                 )
             else:
                 packets[key] = packets[key].replace(
