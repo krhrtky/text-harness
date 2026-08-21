@@ -82,6 +82,16 @@ config_path() {
   fi
 }
 
+sha256_file() {
+  target=$1
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$target" | awk '{print $1}'
+    return
+  fi
+  command -v shasum >/dev/null 2>&1 || return 1
+  shasum -a 256 "$target" | awk '{print $1}'
+}
+
 hash_file() {
   target=$1
   if [ ! -e "$target" ]; then
@@ -89,12 +99,16 @@ hash_file() {
     return
   fi
   [ -f "$target" ] || fail 2 "config is not a regular file: $target"
-  if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "$target" | awk '{print $1}'
+  sha256_file "$target" || fail 2 'SHA-256 calculation failed'
+}
+
+file_mode() {
+  target=$1
+  if stat -f '%Lp' "$target" >/dev/null 2>&1; then
+    stat -f '%Lp' "$target"
     return
   fi
-  command -v shasum >/dev/null 2>&1 || fail 2 'SHA-256 utility unavailable'
-  shasum -a 256 "$target" | awk '{print $1}'
+  stat -c '%a' "$target" 2>/dev/null
 }
 
 rollback_modules() {
@@ -114,8 +128,104 @@ discard_rollback() {
   fi
 }
 
+prepare_config_guard() {
+  config_backup_dir=$(mktemp -d "${TMPDIR:-/tmp}/text-harness-config.XXXXXX") || fail 5 'cannot create config backup directory'
+  config_backup_file="$config_backup_dir/config.json"
+  config_existed=0
+  config_hash_before='<absent>'
+  config_mode_before='<absent>'
+  if [ -e "$current_config" ]; then
+    config_existed=1
+    cp -p -- "$current_config" "$config_backup_file" || fail 5 'cannot back up user config'
+    config_hash_before=$(sha256_file "$config_backup_file") || fail 5 'cannot hash config backup'
+    config_mode_before=$(file_mode "$config_backup_file") || fail 5 'cannot read config mode'
+  fi
+  transaction_active=1
+  trap 'transaction_exit' 0
+  trap 'exit 5' 1 2 15
+}
+
+config_is_unchanged() {
+  if [ "$config_existed" = 0 ]; then
+    [ ! -e "$current_config" ] && [ ! -L "$current_config" ]
+    return
+  fi
+  [ -f "$current_config" ] || return 1
+  config_hash_after=$(sha256_file "$current_config") || return 1
+  config_mode_after=$(file_mode "$current_config") || return 1
+  [ "$config_hash_after" = "$config_hash_before" ] || return 1
+  [ "$config_mode_after" = "$config_mode_before" ] || return 1
+  cmp -s -- "$config_backup_file" "$current_config"
+}
+
+restore_config() {
+  if [ "$config_existed" = 0 ]; then
+    if [ -e "$current_config" ] || [ -L "$current_config" ]; then
+      rm -rf -- "$current_config" || return 1
+    fi
+    return
+  fi
+
+  config_parent=$(dirname -- "$current_config")
+  config_name=$(basename -- "$current_config")
+  restore_path="$config_parent/.${config_name}.text-harness-restore.$$"
+  altered_path="$config_parent/.${config_name}.text-harness-altered.$$"
+  [ ! -e "$restore_path" ] && [ ! -e "$altered_path" ] || return 1
+  cp -p -- "$config_backup_file" "$restore_path" || return 1
+  if [ -d "$current_config" ] && [ ! -L "$current_config" ]; then
+    mv -- "$current_config" "$altered_path" || return 1
+    if ! mv -- "$restore_path" "$current_config"; then
+      mv -- "$altered_path" "$current_config" 2>/dev/null
+      return 1
+    fi
+    rm -rf -- "$altered_path" || return 1
+    return
+  fi
+  mv -f -- "$restore_path" "$current_config"
+}
+
+cleanup_config_guard() {
+  if [ -n "${config_backup_dir:-}" ] && [ -d "$config_backup_dir" ]; then
+    rm -rf -- "$config_backup_dir"
+  fi
+}
+
+transaction_exit() {
+  original_exit=$?
+  trap - 0 1 2 15
+  [ "${transaction_active:-0}" = 1 ] || exit "$original_exit"
+
+  config_changed=0
+  config_is_unchanged || config_changed=1
+  rollback_modules
+  restore_failed=0
+  if [ "$config_changed" = 1 ]; then
+    restore_config || restore_failed=1
+  fi
+  if [ "$restore_failed" = 0 ]; then
+    cleanup_config_guard
+  fi
+  transaction_active=0
+  if [ "$config_changed" = 1 ] || [ "$restore_failed" = 1 ]; then
+    if [ "$restore_failed" = 1 ]; then
+      printf 'SETUP ERROR code=5 user config changed; restoration failed; backup=%s\n' "$config_backup_file" >&2
+    else
+      printf 'SETUP ERROR code=5 user config changed and was restored\n' >&2
+    fi
+    exit 5
+  fi
+  exit "$original_exit"
+}
+
+complete_transaction() {
+  config_is_unchanged || fail 5 'user config changed during setup'
+  discard_rollback
+  cleanup_config_guard
+  transaction_active=0
+  trap - 0 1 2 15
+}
+
 install_and_verify() {
-  config_before=$(hash_file "$current_config")
   rollback_dir=
   had_modules=0
   if [ -e node_modules ]; then
@@ -123,23 +233,19 @@ install_and_verify() {
     had_modules=1
     rollback_dir="$repository_root/.text-harness-node-modules.rollback.$$"
     [ ! -e "$rollback_dir" ] || fail 5 'rollback path already exists'
+  fi
+  prepare_config_guard
+  if [ "$had_modules" = 1 ]; then
     mv -- node_modules "$rollback_dir" || fail 5 'cannot prepare dependency rollback'
   fi
 
   if ! pnpm install --frozen-lockfile; then
-    rollback_modules
     fail 5 'dependency install failed; previous dependencies restored'
   fi
   if ! pnpm test:smoke; then
-    rollback_modules
     fail 5 'smoke verification failed; previous dependencies restored'
   fi
-  config_after=$(hash_file "$current_config")
-  if [ "$config_before" != "$config_after" ]; then
-    rollback_modules
-    fail 5 'user config SHA-256 changed; previous dependencies restored'
-  fi
-  discard_rollback
+  complete_transaction
 }
 
 main() {

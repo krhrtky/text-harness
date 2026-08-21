@@ -9,6 +9,7 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -54,10 +55,24 @@ printf '%s\\n' "$*" >> "\${FAKE_PNPM_LOG:?}"
 if [ "\${1-}" = "install" ]; then
   mkdir -p node_modules
   printf 'changed\\n' > node_modules/state
+  if [ "\${FAKE_CONFIG_MUTATE_ON:-}" = install ]; then
+    mkdir -p "\${TEXT_HARNESS_CONFIG_HOME:?}"
+    printf 'mutated-by-install\\n' > "\${TEXT_HARNESS_CONFIG_HOME}/config.json"
+    chmod 600 "\${TEXT_HARNESS_CONFIG_HOME}/config.json"
+  fi
+  if [ "\${FAKE_SIGNAL_AFTER_MUTATION:-0}" = 1 ]; then
+    kill -TERM "$PPID"
+    exit 0
+  fi
   [ "\${FAKE_INSTALL_FAIL:-0}" = 1 ] && exit 42
   exit 0
 fi
 if [ "\${1-}" = "test:smoke" ]; then
+  if [ "\${FAKE_CONFIG_MUTATE_ON:-}" = smoke ]; then
+    mkdir -p "\${TEXT_HARNESS_CONFIG_HOME:?}"
+    printf 'mutated-by-smoke\\n' > "\${TEXT_HARNESS_CONFIG_HOME}/config.json"
+    chmod 600 "\${TEXT_HARNESS_CONFIG_HOME}/config.json"
+  fi
   [ "\${FAKE_SMOKE_FAIL:-0}" = 1 ] && exit 43
   printf 'SMOKE PASS\\n'
   exit 0
@@ -136,11 +151,21 @@ test("--upgrade validates a fixture-derived previous baseline without changing c
   const context = createRepository();
   try {
     assert.equal(JSON.parse(readFileSync(join(fixtureSource, "package.json"))).version, "0.0.0-baseline");
-    const baselineTree = join(context.repo, ".baseline-tree");
-    cpSync(fixtureSource, baselineTree, { recursive: true });
-    git(context.repo, "add", ".baseline-tree");
-    git(context.repo, "commit", "-m", "add fixture baseline");
+    for (const name of ["package.json", "pnpm-lock.yaml", ".node-version"]) {
+      cpSync(join(fixtureSource, name), join(context.repo, name));
+    }
+    git(context.repo, "add", "package.json", "pnpm-lock.yaml", ".node-version");
+    git(context.repo, "commit", "-m", "previous fixture baseline at repository root");
     git(context.repo, "tag", "v0.0.0-baseline");
+    assert.equal(
+      JSON.parse(git(context.repo, "show", "v0.0.0-baseline:package.json")).version,
+      "0.0.0-baseline",
+    );
+    for (const name of ["package.json", "pnpm-lock.yaml", ".node-version"]) {
+      cpSync(join(root, name), join(context.repo, name));
+    }
+    git(context.repo, "add", "package.json", "pnpm-lock.yaml", ".node-version");
+    git(context.repo, "commit", "-m", "upgrade to current checkout");
     const configBefore = sha256(context.configPath);
     const result = run(context, ["--upgrade", "--from", "v0.0.0-baseline"]);
     assert.equal(result.status, 0, result.stderr);
@@ -224,6 +249,99 @@ test("install and offline failures return exit 5 and restore node_modules", () =
     assert.equal(sha256(context.configPath), configBefore);
     const failedSmoke = run(context, ["--install"], { FAKE_SMOKE_FAIL: "1" });
     assert.equal(failedSmoke.status, 5);
+    assert.equal(readFileSync(join(context.repo, "node_modules/state"), "utf8"), "original\n");
+  } finally {
+    cleanup(context);
+  }
+});
+
+test("a non-directory node_modules fails without deleting it or changing config", () => {
+  const context = createRepository();
+  try {
+    writeFileSync(join(context.repo, "node_modules"), "preserve-me\n");
+    const configBefore = readFileSync(context.configPath);
+    const result = run(context, ["--install"]);
+    assert.equal(result.status, 5);
+    assert.equal(readFileSync(join(context.repo, "node_modules"), "utf8"), "preserve-me\n");
+    assert.deepEqual(readFileSync(context.configPath), configBefore);
+  } finally {
+    cleanup(context);
+  }
+});
+
+test("a successful dependency flow that mutates config restores bytes and mode", () => {
+  const context = createRepository();
+  try {
+    chmodSync(context.configPath, 0o640);
+    mkdirSync(join(context.repo, "node_modules"));
+    writeFileSync(join(context.repo, "node_modules/state"), "original\n");
+    const bytesBefore = readFileSync(context.configPath);
+    const modeBefore = statSync(context.configPath).mode & 0o777;
+    const result = run(context, ["--install"], { FAKE_CONFIG_MUTATE_ON: "install" });
+    assert.equal(result.status, 5);
+    assert.doesNotMatch(result.stdout, /SETUP OK/);
+    assert.match(result.stderr, /user config changed and was restored/);
+    assert.deepEqual(readFileSync(context.configPath), bytesBefore);
+    assert.equal(statSync(context.configPath).mode & 0o777, modeBefore);
+    assert.equal(readFileSync(join(context.repo, "node_modules/state"), "utf8"), "original\n");
+  } finally {
+    cleanup(context);
+  }
+});
+
+test("an install failure that mutates config restores bytes and mode", () => {
+  const context = createRepository();
+  try {
+    chmodSync(context.configPath, 0o644);
+    const bytesBefore = readFileSync(context.configPath);
+    const modeBefore = statSync(context.configPath).mode & 0o777;
+    const result = run(context, ["--install"], {
+      FAKE_CONFIG_MUTATE_ON: "install",
+      FAKE_INSTALL_FAIL: "1",
+    });
+    assert.equal(result.status, 5);
+    assert.match(result.stderr, /user config changed and was restored/);
+    assert.deepEqual(readFileSync(context.configPath), bytesBefore);
+    assert.equal(statSync(context.configPath).mode & 0o777, modeBefore);
+    assert.equal(existsSync(join(context.repo, "node_modules")), false);
+  } finally {
+    cleanup(context);
+  }
+});
+
+test("a smoke failure removes config that did not exist before the transaction", () => {
+  const context = createRepository();
+  try {
+    rmSync(context.configPath);
+    const result = run(context, ["--install"], {
+      FAKE_CONFIG_MUTATE_ON: "smoke",
+      FAKE_SMOKE_FAIL: "1",
+    });
+    assert.equal(result.status, 5);
+    assert.match(result.stderr, /user config changed and was restored/);
+    assert.equal(existsSync(context.configPath), false);
+    assert.equal(existsSync(join(context.repo, "node_modules")), false);
+  } finally {
+    cleanup(context);
+  }
+});
+
+test("a signal after config mutation restores config and dependencies", () => {
+  const context = createRepository();
+  try {
+    chmodSync(context.configPath, 0o640);
+    mkdirSync(join(context.repo, "node_modules"));
+    writeFileSync(join(context.repo, "node_modules/state"), "original\n");
+    const bytesBefore = readFileSync(context.configPath);
+    const modeBefore = statSync(context.configPath).mode & 0o777;
+    const result = run(context, ["--install"], {
+      FAKE_CONFIG_MUTATE_ON: "install",
+      FAKE_SIGNAL_AFTER_MUTATION: "1",
+    });
+    assert.equal(result.status, 5);
+    assert.match(result.stderr, /user config changed and was restored/);
+    assert.deepEqual(readFileSync(context.configPath), bytesBefore);
+    assert.equal(statSync(context.configPath).mode & 0o777, modeBefore);
     assert.equal(readFileSync(join(context.repo, "node_modules/state"), "utf8"), "original\n");
   } finally {
     cleanup(context);
