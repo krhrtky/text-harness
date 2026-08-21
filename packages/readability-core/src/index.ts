@@ -9,6 +9,7 @@ export { analyzeH106 } from "./rules/H106.ts";
 export { analyzeH107 } from "./rules/H107.ts";
 export { analyzeH108 } from "./rules/H108.ts";
 export { analyzeH112 } from "./rules/H112.ts";
+export { analyzeH113 } from "./rules/H113.ts";
 export { projectParagraphs } from "./paragraph/project.ts";
 export { assertReadabilityConfig, validateReadabilityConfig } from "./config/validate.ts";
 export {
