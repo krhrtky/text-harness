@@ -4,8 +4,8 @@
   "current_phase": "DA",
   "active_pbi": "PBI-01",
   "gate_type": "DELIVERY",
-  "strategy_id": "delivery-pbi01-setup-v2",
-  "iteration": 8,
+  "strategy_id": "delivery-pbi01-setup-v3",
+  "iteration": 9,
   "task_packet_ref": ".codex/task-packets/PBI-01-setup.md",
   "phase_history": [
     {
@@ -248,6 +248,26 @@
         "trace: D=8 MVP_H=9 S=8 AGENTS=8 PACKETS=30"
       ],
       "timestamp": "2026-08-21T13:15:00+09:00"
+    },
+    {
+      "phase": "DA",
+      "status": "PBI_GREEN_QGA_HARDENED",
+      "agent": "/root/pbi01_da",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-01",
+      "decision": "PBI-01 Green verification now requires at least 16 tests, pass equal to tests, zero failures, and stable required scenario IDs; it no longer fixes the suite at 11 tests",
+      "evidence": [
+        "Initial DA Green history: tests 11; pass 11; fail 0",
+        "QGA hardening Green: tests 16; pass 16; fail 0",
+        "OPS-UPGRADE-FIXTURE-ROOT: --upgrade validates a fixture-derived previous baseline without changing config",
+        "OPS-CONFIG-SUCCESS-RESTORE: a successful dependency flow that mutates config restores bytes and mode",
+        "OPS-INSTALL-FAIL-RESTORE: an install failure that mutates config restores bytes and mode",
+        "OPS-SMOKE-FAIL-CLEANUP: a smoke failure removes config that did not exist before the transaction",
+        "OPS-SIGTERM-RESTORE: a signal after config mutation restores config and dependencies",
+        "Additional QGA evidence: a non-directory node_modules fails without deleting it or changing config"
+      ],
+      "resume_point": ".codex/task-packets/PBI-01-setup.md",
+      "timestamp": "2026-08-21T14:25:00+09:00"
     }
   ],
   "blocker_history": [
@@ -325,5 +345,5 @@
     }
   ],
   "created_at": "2026-08-21T09:39:07+09:00",
-  "updated_at": "2026-08-21T14:05:00+09:00"
+  "updated_at": "2026-08-21T14:25:00+09:00"
 }

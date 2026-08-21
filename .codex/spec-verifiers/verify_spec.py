@@ -75,7 +75,17 @@ def pbi01_transition_errors(body: str, executable_exists: bool) -> list[str]:
         'acceptance_command: "pnpm test:ops"',
         'verification_command: "mise x node@24.19.0 -- node --test tests/ops/*.test.mjs"',
         "exit: 0",
-        'signature: "tests 11; pass 11; fail 0"',
+        "minimum_tests: 16",
+        "pass_equals_tests: true",
+        "fail: 0",
+        'signature: "tests >= 16; pass = tests; fail 0; required scenarios present"',
+        'initial_da_green: "tests 11; pass 11; fail 0"',
+        'qga_hardening_green: "tests 16; pass 16; fail 0"',
+        'OPS-UPGRADE-FIXTURE-ROOT: "--upgrade validates a fixture-derived previous baseline without changing config"',
+        'OPS-CONFIG-SUCCESS-RESTORE: "a successful dependency flow that mutates config restores bytes and mode"',
+        'OPS-INSTALL-FAIL-RESTORE: "an install failure that mutates config restores bytes and mode"',
+        'OPS-SMOKE-FAIL-CLEANUP: "a smoke failure removes config that did not exist before the transaction"',
+        'OPS-SIGTERM-RESTORE: "a signal after config mutation restores config and dependencies"',
     ))
     return [] if green else ["PBI01-POST-IMPLEMENTATION-GREEN"]
 

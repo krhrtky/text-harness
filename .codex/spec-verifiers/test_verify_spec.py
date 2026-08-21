@@ -4,6 +4,7 @@ import subprocess
 import unittest
 import importlib.util
 import sys
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -67,8 +68,17 @@ class SpecVerifierTest(unittest.TestCase):
         self.assertNotEqual(0, (ROOT / "scripts/text-harness-setup").stat().st_mode & 0o111)
         green = subprocess.run("mise x node@24.19.0 -- node --test tests/ops/*.test.mjs", cwd=ROOT, shell=True, text=True, capture_output=True)
         self.assertEqual(0, green.returncode, green.stderr)
-        self.assertIn("tests 11", green.stdout)
-        self.assertIn("pass 11", green.stdout)
-        self.assertIn("fail 0", green.stdout)
+        totals = {name: int(value) for name, value in re.findall(r"^ℹ (tests|pass|fail) (\d+)$", green.stdout, re.MULTILINE)}
+        self.assertGreaterEqual(totals["tests"], 16)
+        self.assertEqual(totals["tests"], totals["pass"])
+        self.assertEqual(0, totals["fail"])
+        for scenario in (
+            "--upgrade validates a fixture-derived previous baseline without changing config",
+            "a successful dependency flow that mutates config restores bytes and mode",
+            "an install failure that mutates config restores bytes and mode",
+            "a smoke failure removes config that did not exist before the transaction",
+            "a signal after config mutation restores config and dependencies",
+        ):
+            self.assertIn(scenario, green.stdout)
 
 if __name__ == "__main__": unittest.main()
