@@ -501,12 +501,12 @@ def pbi05i_registration_errors(body: str, oracle_exists: bool, implementation_ex
         'exact_dependencies_unchanged: ["@textlint/markdown-to-ast@15.8.0", "sentence-splitter@5.0.1", "textlint-util-to-string@3.3.4"]',
         'threshold_contract: "actual > 500; 500 non-match; 501 finding with actual=501 threshold=500"',
         'range_contract: "RNG-001 Paragraph.range; input.slice(start,end)=Paragraph.raw"',
-        'minimum_tests: 13', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 13',
+        'minimum_tests: 14', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 13',
         '"H112-B01 projected UTF-16 length 500 does not report"',
         '"H112-P01 projected UTF-16 length 501 reports actual 501 threshold 500"',
         '"H112-R01 every finding range slices the exact Paragraph raw text"',
         '"H112-M01 gte document raw and block substitutes each fail a fixture"',
-        'green_signature: "PBI05I_GREEN tests>=13 pass=tests fail=0 required_titles=13"',
+        'green_signature: "PBI05I_GREEN tests>=14 pass=tests fail=0 required_titles=13"',
     ))
     mutation_contract = all(value in body for value in (
         '"H112-M-GTE"', '"H112-M-DOC"', '"H112-M-RAW"', '"H112-M-BLOCK"',
@@ -528,6 +528,25 @@ def pbi05i_registration_errors(body: str, oracle_exists: bool, implementation_ex
         ))
         if not registered:
             errors.append("PBI05I-PRE-IMPLEMENTATION-RED")
+        return errors
+    green = all(value in body for value in (
+        'expected_red: null', 'red_status: "CONSUMED_GREEN"',
+        'phase: "PRE_IMPLEMENTATION"',
+        'command: "python3 .codex/spec-verifiers/verify_pbi05i.py"', 'exit: 1',
+        'stdout: "PBI05I_RED missing packages/readability-core/src/rules/H112.ts"',
+        'stderr: "<empty>"', 'measured_runs: 2',
+        'green_transition:', 'exit: 0',
+        'source_file: "packages/readability-core/src/rules/H112.ts"',
+        'analyze_registration: "H112 dispatch"', 'public_export: "analyzeH112"',
+        'project_contract: "imports and reuses PBI-05P projectParagraphs without changing paragraph/project.ts"',
+        'dependency_contract: "manifest and lock importer remain exact authorized 3-key set"',
+        'mutation_contract: ["H112-M-GTE", "H112-M-DOC", "H112-M-RAW", "H112-M-BLOCK"]',
+        'minimum_tests: 14', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 13',
+        'signature: "PBI05I_GREEN tests>=14 pass=tests fail=0 required_titles=13"',
+        'initial_da_green: "tests 14; pass 14; fail 0; required_titles 13"',
+    ))
+    if not green:
+        errors.append("PBI05I-POST-IMPLEMENTATION-GREEN")
     return errors
 
 def verify(state: dict) -> list[str]:
@@ -937,7 +956,7 @@ def apply_mutation(name: str, state: dict) -> None:
                 1,
             )
         else:
-            packets[key] = packets[key].replace('    - "H112-M-RAW"\n', "", 1)
+            packets[key] = packets[key].replace("H112-M-RAW", "REMOVED-M-RAW")
     else: raise ValueError(name)
 
 def main() -> int:

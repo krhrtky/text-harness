@@ -2,6 +2,7 @@
 """PBI-05I H112 projected UTF-16 Paragraph length oracle."""
 from __future__ import annotations
 
+import importlib.util
 import re
 import subprocess
 from pathlib import Path
@@ -31,11 +32,29 @@ TEST_COMMAND = (
 )
 
 
+def dependency_error() -> str | None:
+    path = ROOT / ".codex/spec-verifiers/verify_pbi05p.py"
+    spec = importlib.util.spec_from_file_location("verify_pbi05p_for_pbi05i", path)
+    if spec is None or spec.loader is None:
+        return "dependency-oracle-unavailable"
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.dependency_error()
+
+
 def main() -> int:
+    dependency = dependency_error()
+    if dependency is not None:
+        print(f"PBI05I_FAIL dependency {dependency}")
+        return 1
     for required in (SOURCE, TEST):
         if not (ROOT / required).is_file():
             print(f"PBI05I_RED missing {required}")
             return 1
+    source = (ROOT / SOURCE).read_text()
+    if 'import { projectParagraphs } from "../paragraph/project.ts";' not in source:
+        print("PBI05I_FAIL projectParagraphs reuse missing")
+        return 1
     analyze = (ROOT / "packages/readability-core/src/analyze.ts").read_text()
     index = (ROOT / "packages/readability-core/src/index.ts").read_text()
     if 'analyzeH112' not in analyze or 'case "H112"' not in analyze:
@@ -57,7 +76,7 @@ def main() -> int:
     }
     tests, passed, failed = totals.get("tests", -1), totals.get("pass", -1), totals.get("fail", -1)
     titles = sum(title in plain for title in REQUIRED_TITLES)
-    if tests < 13 or passed != tests or failed != 0 or titles != len(REQUIRED_TITLES):
+    if tests < 14 or passed != tests or failed != 0 or titles != len(REQUIRED_TITLES):
         print(f"PBI05I_FAIL tests={tests} pass={passed} fail={failed} required_titles={titles}/{len(REQUIRED_TITLES)}")
         return 1
     print(f"PBI05I_GREEN tests={tests} pass={passed} fail=0 required_titles={len(REQUIRED_TITLES)}")
