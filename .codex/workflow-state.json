@@ -1,11 +1,11 @@
 {
   "id": "wf-readability-mvp-20260821",
   "request": "Readability Engineering System要求の実現、setup/upgrade支援、反証必須の完了判定、public GitHub repositoryへのpush",
-  "current_phase": "DA",
+  "current_phase": "QGA",
   "active_pbi": "PBI-07",
   "gate_type": "DELIVERY",
-  "strategy_id": "delivery-pbi07-green-transition-v1",
-  "iteration": 58,
+  "strategy_id": "delivery-pbi07-canonical-rule-oracle-v2",
+  "iteration": 59,
   "task_packet_ref": ".codex/task-packets/PBI-07-semantic-skill.md",
   "phase_history": [
     {
@@ -1600,6 +1600,41 @@
       ],
       "resume_point": ".codex/task-packets/PBI-07-semantic-skill.md",
       "timestamp": "2026-08-22T01:55:00+09:00"
+    },
+    {
+      "phase": "QGA",
+      "status": "REQUEST_CHANGES",
+      "agent": "/root/spec_qga",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-07",
+      "task_packet_ref": ".codex/task-packets/PBI-07-semantic-skill.md",
+      "decision": "The aggregate semantic fixtures passed, but rule prose meaning and forbidden output instructions were not independently pinned",
+      "evidence": [
+        "S201-S208 rule files were checked by selected substrings rather than approved full-body identity plus canonical structure",
+        "A mutation could swap the S203 violation body while retaining the heading and fixture IDs",
+        "A mutation could append a severity/autofix/rewrite/hard-error instruction to S204 without a cross-artifact semantic output guard"
+      ],
+      "resume_point": ".codex/task-packets/PBI-07-semantic-skill.md",
+      "timestamp": "2026-08-22T02:00:00+09:00"
+    },
+    {
+      "phase": "SDA",
+      "status": "QGA_READY",
+      "agent": "/root/spec_finalize",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-07",
+      "task_packet_ref": ".codex/task-packets/PBI-07-semantic-skill.md",
+      "decision": "PBI-07 oracle now combines approved per-rule SHA-256, canonical structured sections, and instruction-aware cross-artifact forbidden-output validation",
+      "evidence": [
+        "Approved SHA-256 recorded for each S201-S208 rule file",
+        "Canonical section order is violation/no_violation/uncertain/counterexample/必要context/forbidden shortcut/evidence/fixtures with explicit status/context/evidence/shortcut/fixture mappings",
+        "Instruction-aware scan rejects positive severity assignment, enabled autofix, hard-error enablement, and rewrite execution while allowing prohibition prose and schema-description vocabulary",
+        "SEM-M-S203-BODY-MEANING-SWAP is rejected by PBI07-RULE-HASH-S203",
+        "SEM-M-S204-APPEND-FORBIDDEN-INSTRUCTION is rejected by PBI07-FORBIDDEN-INSTRUCTION",
+        "Product commit 23f5bb8 remains unchanged; fix is limited to .codex packet/verifiers/workflow"
+      ],
+      "resume_point": ".codex/task-packets/PBI-07-semantic-skill.md",
+      "timestamp": "2026-08-22T02:05:00+09:00"
     }
   ],
   "blocker_history": [
@@ -1677,5 +1712,5 @@
     }
   ],
   "created_at": "2026-08-21T09:39:07+09:00",
-  "updated_at": "2026-08-22T01:55:00+09:00"
+  "updated_at": "2026-08-22T02:05:00+09:00"
 }

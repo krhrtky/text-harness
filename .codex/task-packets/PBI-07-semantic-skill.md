@@ -51,6 +51,23 @@ task_packet:
     S206: "主張・理由・例・例外の階層が不明確"
     S207: "文脈に対して抽象度が不適切"
     S208: "中心結論の提示が不必要に遅れている"
+  canonical_rule_contract:
+    section_order: ["violation", "no_violation", "uncertain", "counterexample", "必要context", "forbidden shortcut", "evidence", "fixtures"]
+    status_mapping: "violation section=>P01 violation; no_violation=>N01 no_violation; uncertain=>A01 uncertain; counterexample=>C01 no_violation"
+    context_mapping: "必要context section names only information required to decide the rule and must agree with A01 missing-context reason"
+    evidence_mapping: "evidence section requires input-surface support; violation fixture evidence strings occur in input and agree with RNG-001 slice"
+    shortcut_mapping: "forbidden shortcut section names a tempting but invalid proxy and C01 or N01 falsifies it"
+    fixture_mapping: "fixtures section contains exact <rule>-P01/N01/A01/C01 IDs once each"
+  approved_rule_sha256:
+    S201: "a3abb86a47808bc3c0c22f2d9c2e68eb9bf484319dce35bd18b211d089f4e050"
+    S202: "bc6a63249565adc7d8ecde27729f70d93c5296f5ef8189f9243f937610248c25"
+    S203: "e1cc3266077e58be5754c8d04bef04211a63e1e6dcae55a4ed1f3d215110545f"
+    S204: "303e3a48f4a514304a73375441fb732f92447dbf399d17f52eac3fdcaa0907a4"
+    S205: "858eb8c167c9f72d0f6d0925ff5bca09c7248a78cab4e7e564fffde337074260"
+    S206: "2d2cf2120b4f9f17ed7b05dca1b71d8fa6f8d72db80a976eb24961ab60aa6581"
+    S207: "91948b3eb2e58fc2fcba376089349bc9e4ba068347e8cc74946978c8d5b50d00"
+    S208: "295032f1eabed8cd1847dc97afa59cb71e481eba3cc8c603c289b80ad353f004"
+  forbidden_instruction_contract: "Skill/rules/workflowの肯定的なseverity=error|warning、autofix=true|enabled、hard-error=true|にする、rewrite=true|実行|返す|生成を拒否する。禁止説明の語とschema property検査は誤検知しない。schema/fixtures/evalsはkey severity/autofix/rewrite/hardErrorを再帰拒否する"
   rule_oracle_contract: "各rules/S20x.mdはsemantic-rules.mdと意味同一のviolation/no_violation/uncertain/counterexample条件、必要context、forbidden shortcut、evidence要件、fixture IDsを明記する"
   fixture_contract: "各fixtures/S20x.jsonはruleId、meaning、cases exact P01/N01/A01/C01を持ち、expected statusは順に violation/no_violation/uncertain/no_violation、input/context/expected range/evidence/reason/confidenceを持つ"
   schema_contract: "JSON Schema draft 2020-12; additionalProperties=false; exact ruleId S201-S208; exact status violation|no_violation|uncertain; range integer start>=0/end>=1; evidence non-empty array of non-empty string; reason non-empty; confidence number [0,1]; suggestedAction optional non-empty string; severity/autofix/rewrite forbidden"
@@ -117,6 +134,11 @@ task_packet:
     required_titles: 14
     signature: "PBI07_GREEN tests>=14 pass=tests fail=0 required_titles=14 fixture_cases=32 eval_rules=2"
     da_commit: "23f5bb8"
+  qga_oracle_fix:
+    status: "READY_FOR_QGA"
+    strategy: "approved rule SHA-256 plus canonical structured section contract plus cross-artifact forbidden-instruction scan"
+    product_artifacts_changed: false
+    mutations: ["SEM-M-S203-BODY-MEANING-SWAP", "SEM-M-S204-APPEND-FORBIDDEN-INSTRUCTION"]
   red_registration_gate: "PBI開始時、依存PBI完了後かつ実装変更前に、実在する失敗test command・exit code・完全一致signatureを登録する"
   acceptance: ["AC-S201-01〜AC-S208-01", "S201〜S208-P01/N01/A01/C01", "schema invalid mutation reject", "S203/S204 saved eval", "credential-free required CI"]
   engineering_constraints: "docs/requirements/engineering-constraints.md"

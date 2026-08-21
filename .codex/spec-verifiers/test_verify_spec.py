@@ -221,6 +221,8 @@ EXPECTED = {
     "drop-pbi07-green-falsification": "PBI07-POST-IMPLEMENTATION-GREEN",
     "drop-pbi07-green-eval": "PBI07-POST-IMPLEMENTATION-GREEN",
     "drop-pbi07-green-hash": "PBI07-POST-IMPLEMENTATION-GREEN",
+    "swap-pbi07-s203-body-meaning": "PBI07-RULE-HASH-S203",
+    "append-pbi07-s204-forbidden-instruction": "PBI07-FORBIDDEN-INSTRUCTION",
 }
 
 class SpecVerifierTest(unittest.TestCase):

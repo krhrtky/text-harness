@@ -2,12 +2,24 @@
 """Bidirectional verifier: normative matrix <-> specs <-> task packets."""
 from __future__ import annotations
 import argparse
+import hashlib
 import json
 import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 MATRIX_PATH = ROOT / "docs/requirements/normative-contract-matrix.json"
+PBI07_RULE_HASHES = {
+    "S201": "a3abb86a47808bc3c0c22f2d9c2e68eb9bf484319dce35bd18b211d089f4e050",
+    "S202": "bc6a63249565adc7d8ecde27729f70d93c5296f5ef8189f9243f937610248c25",
+    "S203": "e1cc3266077e58be5754c8d04bef04211a63e1e6dcae55a4ed1f3d215110545f",
+    "S204": "303e3a48f4a514304a73375441fb732f92447dbf399d17f52eac3fdcaa0907a4",
+    "S205": "858eb8c167c9f72d0f6d0925ff5bca09c7248a78cab4e7e564fffde337074260",
+    "S206": "2d2cf2120b4f9f17ed7b05dca1b71d8fa6f8d72db80a976eb24961ab60aa6581",
+    "S207": "91948b3eb2e58fc2fcba376089349bc9e4ba068347e8cc74946978c8d5b50d00",
+    "S208": "295032f1eabed8cd1847dc97afa59cb71e481eba3cc8c603c289b80ad353f004",
+}
+PBI07_CANONICAL_SECTIONS = ("violation", "no_violation", "uncertain", "counterexample", "必要context", "forbidden shortcut", "evidence", "fixtures")
 
 MUTATIONS = (
     "drop-h113-falsification", "drop-d004-falsification", "change-public-owner",
@@ -88,6 +100,7 @@ MUTATIONS = (
     "permit-pbi07-live-model-ci", "drop-pbi07-s204-eval-title",
     "drop-pbi07-green-falsification", "drop-pbi07-green-eval",
     "drop-pbi07-green-hash",
+    "swap-pbi07-s203-body-meaning", "append-pbi07-s204-forbidden-instruction",
 )
 
 def read_state() -> dict:
@@ -112,6 +125,7 @@ def read_state() -> dict:
         "workflow": json.loads((ROOT / ".codex/workflow-state.json").read_text()),
         "pbi05p_test": (ROOT / "packages/readability-core/test/paragraph/contract.test.ts").read_text(),
         "pbi06g_test": (ROOT / "packages/readability-core/test/deterministic/D007.contract.test.ts").read_text(),
+        "pbi07_rules": {rule: (ROOT / f"skills/readability-review/rules/{rule}.md").read_text() for rule in PBI07_RULE_HASHES},
     }
 
 def packet_id(body: str) -> str:
@@ -1530,6 +1544,21 @@ def pbi07_registration_errors(body: str, oracle_exists: bool, skill_exists: bool
         's204_eval_contract: "saved S204 evalはP01/N01/A01/C01 exact 4 cases、expectedとobserved status一致、credentialRequired=false、antecedentCandidates evidenceを持つ"',
         'ci_contract: ".github/workflows/semantic-contract.yml is pull_request required candidate; permissions contents:read; Node 24.19.0; exact node --test four semantic test files; no secrets/API key/network/live model command"',
         'external_dependency_contract: "runtime/dev dependency追加なし; root/workspace/package/lock unchanged; Node built-ins and repository files only"',
+        'section_order: ["violation", "no_violation", "uncertain", "counterexample", "必要context", "forbidden shortcut", "evidence", "fixtures"]',
+        'status_mapping: "violation section=>P01 violation; no_violation=>N01 no_violation; uncertain=>A01 uncertain; counterexample=>C01 no_violation"',
+        'context_mapping: "必要context section names only information required to decide the rule and must agree with A01 missing-context reason"',
+        'evidence_mapping: "evidence section requires input-surface support; violation fixture evidence strings occur in input and agree with RNG-001 slice"',
+        'shortcut_mapping: "forbidden shortcut section names a tempting but invalid proxy and C01 or N01 falsifies it"',
+        'fixture_mapping: "fixtures section contains exact <rule>-P01/N01/A01/C01 IDs once each"',
+        'S201: "a3abb86a47808bc3c0c22f2d9c2e68eb9bf484319dce35bd18b211d089f4e050"',
+        'S202: "bc6a63249565adc7d8ecde27729f70d93c5296f5ef8189f9243f937610248c25"',
+        'S203: "e1cc3266077e58be5754c8d04bef04211a63e1e6dcae55a4ed1f3d215110545f"',
+        'S204: "303e3a48f4a514304a73375441fb732f92447dbf399d17f52eac3fdcaa0907a4"',
+        'S205: "858eb8c167c9f72d0f6d0925ff5bca09c7248a78cab4e7e564fffde337074260"',
+        'S206: "2d2cf2120b4f9f17ed7b05dca1b71d8fa6f8d72db80a976eb24961ab60aa6581"',
+        'S207: "91948b3eb2e58fc2fcba376089349bc9e4ba068347e8cc74946978c8d5b50d00"',
+        'S208: "295032f1eabed8cd1847dc97afa59cb71e481eba3cc8c603c289b80ad353f004"',
+        'forbidden_instruction_contract: "Skill/rules/workflowの肯定的なseverity=error|warning、autofix=true|enabled、hard-error=true|にする、rewrite=true|実行|返す|生成を拒否する。禁止説明の語とschema property検査は誤検知しない。schema/fixtures/evalsはkey severity/autofix/rewrite/hardErrorを再帰拒否する"',
         'mutations: ["SEM-M-SWAP-S203-MEANING", "SEM-M-DROP-UNCERTAIN", "SEM-M-COUNTEREXAMPLE-VIOLATION", "SEM-M-RANGE-OUTSIDE", "SEM-M-DROP-EVIDENCE", "SEM-M-CONFIDENCE-OUTSIDE", "SEM-M-ADD-SEVERITY", "SEM-M-DROP-S203-EVAL", "SEM-M-DROP-S204-EVAL", "SEM-M-EVAL-LABEL-DRIFT", "SEM-M-REQUIRE-SECRET", "SEM-M-LIVE-MODEL-CI", "SEM-M-DROP-RULE-TITLE", "SEM-M-FILTER-NO-MATCH"]',
     ))
     acceptance = all(value in body for value in (
@@ -1589,6 +1618,10 @@ def pbi07_registration_errors(body: str, oracle_exists: bool, skill_exists: bool
         'minimum_tests: 14', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 14',
         'signature: "PBI07_GREEN tests>=14 pass=tests fail=0 required_titles=14 fixture_cases=32 eval_rules=2"',
         'da_commit: "23f5bb8"',
+        'status: "READY_FOR_QGA"',
+        'strategy: "approved rule SHA-256 plus canonical structured section contract plus cross-artifact forbidden-instruction scan"',
+        'product_artifacts_changed: false',
+        'mutations: ["SEM-M-S203-BODY-MEANING-SWAP", "SEM-M-S204-APPEND-FORBIDDEN-INSTRUCTION"]',
     ))
     if not green: errors.append("PBI07-POST-IMPLEMENTATION-GREEN")
     return errors
@@ -1622,6 +1655,18 @@ def verify(state: dict) -> list[str]:
         "assert.ok(true)" not in b04_source and all(fragment in b04_source for fragment in b04_fragments),
         "PBI06G-B04-SUBSTANTIVE-ORACLE",
     )
+    positive_semantic_instruction = re.compile(r"(?:severity\s*[:=]\s*(?:error|warning)|autofix\s*[:=]\s*(?:true|enabled)|hard[- ]?error\s*(?:にする|[:=]\s*true)|(?:全文\s*)?rewrite\s*(?:を)?\s*(?:実行|返す|生成|[:=]\s*true))", re.IGNORECASE)
+    for rule, expected_hash in PBI07_RULE_HASHES.items():
+        rule_body = state["pbi07_rules"][rule]
+        need(hashlib.sha256(rule_body.encode()).hexdigest() == expected_hash, f"PBI07-RULE-HASH-{rule}")
+        sections = re.findall(r"^- ([^:]+):\s*(.+)$", rule_body, re.MULTILINE)
+        need(tuple(name for name, value in sections if value.strip()) == PBI07_CANONICAL_SECTIONS, f"PBI07-RULE-STRUCTURE-{rule}")
+        forbidden_lines = [
+            line for line in rule_body.splitlines()
+            if positive_semantic_instruction.search(line)
+            and not any(negation in line for negation in ("禁止", "しない", "返さない", "forbidden", "false"))
+        ]
+        need(not forbidden_lines, "PBI07-FORBIDDEN-INSTRUCTION")
 
     # Matrix -> specification: stable IDs, exact meanings, thresholds, range and operations.
     canonical_range = {"contractId":"RNG-001","unit":"UTF-16 code unit","interval":"[start,end)","origin":0,"oracle":"input.slice(start,end)"}
@@ -2046,7 +2091,18 @@ def verify(state: dict) -> list[str]:
             for item in workflow.get("phase_history", [])
         )
     )
-    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started or pbi05j_delivery_started or pbi06_delivery_started or pbi06a_delivery_started or pbi06b_delivery_started or pbi06c_delivery_started or pbi06d_delivery_started or pbi06e_delivery_started or pbi06f_delivery_started or pbi06g_delivery_started or pbi06h_delivery_started or pbi07_delivery_started, "WORKFLOW-GATE-TRANSITION")
+    pbi07_qga_ready = (
+        workflow.get("current_phase") == "QGA"
+        and workflow.get("gate_type") == "DELIVERY"
+        and workflow.get("active_pbi") == "PBI-07"
+        and workflow.get("task_packet_ref") == ".codex/task-packets/PBI-07-semantic-skill.md"
+        and any(
+            item.get("phase") == "SDA" and item.get("status") == "QGA_READY"
+            and item.get("gate_type") == "DELIVERY" and item.get("active_pbi") == "PBI-07"
+            for item in workflow.get("phase_history", [])
+        )
+    )
+    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started or pbi05j_delivery_started or pbi06_delivery_started or pbi06a_delivery_started or pbi06b_delivery_started or pbi06c_delivery_started or pbi06d_delivery_started or pbi06e_delivery_started or pbi06f_delivery_started or pbi06g_delivery_started or pbi06h_delivery_started or pbi07_delivery_started or pbi07_qga_ready, "WORKFLOW-GATE-TRANSITION")
     return errors
 
 def apply_mutation(name: str, state: dict) -> None:
@@ -2061,6 +2117,14 @@ def apply_mutation(name: str, state: dict) -> None:
             '  assert.ok(true);',
             1,
         )
+    elif name == "swap-pbi07-s203-body-meaning":
+        state["pbi07_rules"]["S203"] = state["pbi07_rules"]["S203"].replace(
+            "隣接文に cause/consequence/contrast/elaboration/example/condition/sequence/independent の複数labelが同程度に成立する。",
+            "主語が省略されている文を検出する。",
+            1,
+        )
+    elif name == "append-pbi07-s204-forbidden-instruction":
+        state["pbi07_rules"]["S204"] += "\n- output instruction: severity=error\n"
     elif name == "drop-d004-falsification": t["d"] = t["d"].replace("D004-P01/N01/B01/F01", "D004-P01/N01/B01")
     elif name == "change-public-owner": t["dec5"] = t["dec5"].replace("owner: krhrtky", "owner: changed")
     elif name == "change-normative-range": m["range"]["unit"] = "Unicode code point"

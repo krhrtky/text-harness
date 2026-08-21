@@ -19,6 +19,17 @@ RULES = {
     "S207": "文脈に対して抽象度が不適切",
     "S208": "中心結論の提示が不必要に遅れている",
 }
+RULE_HASHES = {
+    "S201": "a3abb86a47808bc3c0c22f2d9c2e68eb9bf484319dce35bd18b211d089f4e050",
+    "S202": "bc6a63249565adc7d8ecde27729f70d93c5296f5ef8189f9243f937610248c25",
+    "S203": "e1cc3266077e58be5754c8d04bef04211a63e1e6dcae55a4ed1f3d215110545f",
+    "S204": "303e3a48f4a514304a73375441fb732f92447dbf399d17f52eac3fdcaa0907a4",
+    "S205": "858eb8c167c9f72d0f6d0925ff5bca09c7248a78cab4e7e564fffde337074260",
+    "S206": "2d2cf2120b4f9f17ed7b05dca1b71d8fa6f8d72db80a976eb24961ab60aa6581",
+    "S207": "91948b3eb2e58fc2fcba376089349bc9e4ba068347e8cc74946978c8d5b50d00",
+    "S208": "295032f1eabed8cd1847dc97afa59cb71e481eba3cc8c603c289b80ad353f004",
+}
+CANONICAL_SECTIONS = ("violation", "no_violation", "uncertain", "counterexample", "必要context", "forbidden shortcut", "evidence", "fixtures")
 TESTS = tuple(Path(f"tests/semantic/{name}.contract.test.mjs") for name in ("schema", "rules", "eval", "ci"))
 REQUIRED_TITLES = (
     "SEM-SCHEMA-01 valid SemanticFinding schema accepts all statuses",
@@ -51,6 +62,32 @@ UNCHANGED_HASHES = {
 def fail(message: str) -> int:
     print("PBI07_FAIL " + message)
     return 1
+
+def forbidden_instruction_errors(root: Path) -> list[str]:
+    errors: list[str] = []
+    markdown_paths = [root / SKILL, *(root / f"skills/readability-review/rules/{rule}.md" for rule in RULES)]
+    positive = re.compile(r"(?:severity\s*[:=]\s*(?:error|warning)|autofix\s*[:=]\s*(?:true|enabled)|hard[- ]?error\s*(?:にする|[:=]\s*true)|(?:全文\s*)?rewrite\s*(?:を)?\s*(?:実行|返す|生成|[:=]\s*true))", re.IGNORECASE)
+    for path in markdown_paths:
+        for line_number, line in enumerate(path.read_text().splitlines(), 1):
+            if positive.search(line) and not any(negation in line for negation in ("禁止", "しない", "返さない", "forbidden", "false")):
+                errors.append(f"{path.relative_to(root)}:{line_number}")
+    forbidden_keys = {"severity", "autofix", "rewrite", "hardError", "hard-error"}
+    json_paths = [root / "skills/readability-review/schema/semantic-finding.schema.json"]
+    json_paths += [root / f"skills/readability-review/fixtures/{rule}.json" for rule in RULES]
+    json_paths += [root / f"skills/readability-review/evals/{rule}.json" for rule in ("S203", "S204")]
+    def walk(value: object, path: str) -> None:
+        if isinstance(value, dict):
+            for key, nested in value.items():
+                if key in forbidden_keys: errors.append(path + ":" + key)
+                walk(nested, path + "." + key)
+        elif isinstance(value, list):
+            for index, nested in enumerate(value): walk(nested, f"{path}[{index}]")
+    for path in json_paths:
+        walk(json.loads(path.read_text()), str(path.relative_to(root)))
+    workflow = (root / ".github/workflows/semantic-contract.yml").read_text()
+    for line_number, line in enumerate(workflow.splitlines(), 1):
+        if positive.search(line): errors.append(f".github/workflows/semantic-contract.yml:{line_number}")
+    return errors
 
 def main() -> int:
     if not (ROOT / SKILL).is_file():
@@ -99,7 +136,14 @@ def main() -> int:
     suffixes = ["P01", "N01", "A01", "C01"]
     total_cases = 0
     for rule, meaning in RULES.items():
-        rule_text = (ROOT / f"skills/readability-review/rules/{rule}.md").read_text()
+        rule_path = ROOT / f"skills/readability-review/rules/{rule}.md"
+        rule_text = rule_path.read_text()
+        if hashlib.sha256(rule_path.read_bytes()).hexdigest() != RULE_HASHES[rule]:
+            return fail(f"rule approved hash {rule}")
+        sections = re.findall(r"^- ([^:]+):\s*(.+)$", rule_text, re.MULTILINE)
+        section_names = tuple(name for name, value in sections if value.strip())
+        if section_names != CANONICAL_SECTIONS:
+            return fail(f"rule canonical sections {rule}")
         if meaning not in rule_text or not all(f"{rule}-{suffix}" in rule_text for suffix in suffixes):
             return fail(f"rule contract {rule}")
         fixture = json.loads((ROOT / f"skills/readability-review/fixtures/{rule}.json").read_text())
@@ -124,6 +168,9 @@ def main() -> int:
             if not isinstance(finding.get("reason"), str) or not finding["reason"] or not isinstance(finding.get("confidence"), (int, float)) or not 0 <= finding["confidence"] <= 1:
                 return fail(f"fixture reason confidence {rule}")
         total_cases += len(cases)
+
+    forbidden = forbidden_instruction_errors(ROOT)
+    if forbidden: return fail("forbidden semantic instruction " + ",".join(forbidden))
 
     for rule, evidence_key in (("S203", "relationLabels"), ("S204", "antecedentCandidates")):
         saved = json.loads((ROOT / f"skills/readability-review/evals/{rule}.json").read_text())
