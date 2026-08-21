@@ -598,6 +598,26 @@ def pbi05j_registration_errors(body: str, oracle_exists: bool, implementation_ex
         ))
         if not registered:
             errors.append("PBI05J-PRE-IMPLEMENTATION-RED")
+        return errors
+    green = all(value in body for value in (
+        'expected_red: null', 'red_status: "CONSUMED_GREEN"',
+        'phase: "PRE_IMPLEMENTATION"',
+        'command: "python3 .codex/spec-verifiers/verify_pbi05j.py"', 'exit: 1',
+        'stdout: "PBI05J_RED missing packages/readability-core/src/rules/H113.ts"',
+        'stderr: "<empty>"', 'measured_runs: 2',
+        'green_transition:', 'exit: 0',
+        'source_file: "packages/readability-core/src/rules/H113.ts"',
+        'analyze_registration: "H113 dispatch"', 'public_export: "analyzeH113"',
+        'project_contract: "imports and reuses PBI-05P projectParagraphs without changing paragraph/project.ts"',
+        'dependency_contract: "manifest and lock importer remain exact authorized 3-key set"',
+        'sentence_contract: "sentence-splitter@5.0.1 split(projected text) top-level Sentence count; H113 source contains no splitAST"',
+        'mutation_contract: ["H113-M-GTE", "H113-M-DOC", "H113-M-PUNCT", "H113-M-BLOCK", "H113-M-SPLIT_AST"]',
+        'minimum_tests: 14', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 14',
+        'signature: "PBI05J_GREEN tests>=14 pass=tests fail=0 required_titles=14"',
+        'initial_da_green: "tests 14; pass 14; fail 0; required_titles 14"',
+    ))
+    if not green:
+        errors.append("PBI05J-POST-IMPLEMENTATION-GREEN")
     return errors
 
 def verify(state: dict) -> list[str]:
