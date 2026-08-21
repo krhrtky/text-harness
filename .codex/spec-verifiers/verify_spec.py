@@ -42,6 +42,9 @@ MUTATIONS = (
     "drop-pbi06a-analyze-ownership", "drop-pbi06a-no-match-guard",
     "drop-pbi06a-falsification-title", "weaken-pbi06a-range", "permit-pbi06a-external-dependency",
     "drop-pbi06a-unchanged-hash",
+    "drop-pbi06b-analyze-ownership", "drop-pbi06b-no-match-guard",
+    "drop-pbi06b-falsification-title", "weaken-pbi06b-range",
+    "permit-pbi06b-external-dependency", "drift-pbi06b-normalization",
 )
 
 def read_state() -> dict:
@@ -821,6 +824,59 @@ def pbi06a_registration_errors(body: str, oracle_exists: bool, source_exists: bo
         errors.append("PBI06A-POST-IMPLEMENTATION-GREEN")
     return errors
 
+
+def pbi06b_registration_errors(body: str, oracle_exists: bool, source_exists: bool) -> list[str]:
+    ownership = all(value in body for value in (
+        '    - "packages/readability-core/src/rules/D002.ts"',
+        '    - "packages/readability-core/test/deterministic/D002.contract.test.ts"',
+        '    - "packages/readability-core/src/analyze.ts"',
+        '    - "packages/readability-core/src/index.ts"',
+        'packages/readability-core/src/analyze.ts: "既存D001/H dispatchを維持し、validated D002 normalization/severityをanalyzeD002へ渡すcaseだけ追加する"',
+        'packages/readability-core/src/index.ts: "既存public exportsを維持し、analyzeD002 exportだけ追加する"',
+    ))
+    contract = all(value in body for value in (
+        'input_contract: "U+304B か followed by U+3099 COMBINING KATAKANA-HIRAGANA VOICED SOUND MARK; two UTF-16 code units; NFC result が"',
+        'config_contract: "{ruleId:D002, normalization:NFC, severity?:error|warning}; missing/unknown/non-NFC enum is rejected by existing config validator"',
+        'oracle_contract: "the U+304B U+3099 source sequence reports exactly one finding; NFC済みが and uncomposable combining input report zero; separated violating sequences report independently"',
+        'range_contract: "RNG-001 UTF-16 zero-based half-open minimal source sequence; base example [0,2); emoji-prefixed source reports [2,4) and input.slice(2,4) reconstructs U+304B U+3099"',
+        'severity_contract: "omitted=>error; explicit error|warning preserved exactly"',
+        'external_dependency_contract: "PBI-06 decision INTERNAL/PBI-06B; package manifests and lockfile unchanged"',
+        'mutations: ["D002-M-CODE_POINT", "D002-M-WHOLE_DOCUMENT", "D002-M-NORMALIZED_OUTPUT"]',
+    ))
+    acceptance = all(value in body for value in (
+        'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi06b.py"',
+        'test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/deterministic/D002.contract.test.ts"',
+        'exact_test_file: "packages/readability-core/test/deterministic/D002.contract.test.ts"',
+        'unchanged_contract: "PBI-06A verifier hashes for config/types/package/lock remain valid"',
+        'minimum_tests: 10', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 10',
+        '"D002-P01 non-NFC combining sequence reports its minimal source range"',
+        '"D002-N01 NFC-normalized input does not report"',
+        '"D002-B01 emoji-prefixed UTF-16 half-open range reconstructs the combining sequence"',
+        '"D002-B02 default error and explicit warning severity are preserved"',
+        '"D002-F01 code-point offsets cannot substitute for UTF-16 code-unit offsets"',
+        '"D002-M01 whole-document and normalized-output range mutants fail fixtures"',
+        'no_match_guard: "--fail-if-no-match plus exact test file, collected count, pass=tests, fail=0, and all required titles"',
+        'green_signature: "PBI06B_GREEN tests>=10 pass=tests fail=0 required_titles=10"',
+    ))
+    errors = []
+    if not ownership:
+        errors.append("PBI06B-OWNERSHIP")
+    if not contract:
+        errors.append("PBI06B-RULE-CONTRACT")
+    if not acceptance or not oracle_exists:
+        errors.append("PBI06B-ACCEPTANCE-ORACLE")
+    if not source_exists:
+        registered = all(value in body for value in (
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi06b.py; exit=1; signature=PBI06B_RED missing packages/readability-core/src/rules/D002.ts"',
+            'red_status: "REGISTERED_RED"',
+            'command: "python3 .codex/spec-verifiers/verify_pbi06b.py"', 'exit: 1',
+            'stdout: "PBI06B_RED missing packages/readability-core/src/rules/D002.ts"',
+            'stderr: "<empty>"', 'measured_runs: 2',
+        ))
+        if not registered:
+            errors.append("PBI06B-PRE-IMPLEMENTATION-RED")
+    return errors
+
 def verify(state: dict) -> list[str]:
     m, t, packets, workflow = state["matrix"], state["text"], state["packets"], state["workflow"]
     errors: list[str] = []
@@ -992,6 +1048,13 @@ def verify(state: dict) -> list[str]:
                 (ROOT / "packages/readability-core/src/rules/D001.ts").is_file(),
             ):
                 need(False, error)
+        if pid == "PBI-06B":
+            for error in pbi06b_registration_errors(
+                body,
+                (ROOT / ".codex/spec-verifiers/verify_pbi06b.py").is_file(),
+                (ROOT / "packages/readability-core/src/rules/D002.ts").is_file(),
+            ):
+                need(False, error)
         need(not any(x in body for x in ("TBD", "placeholder", "実装開始時に")), f"PACKET-PLACEHOLDER-{name}")
 
     for gap in range(8, 18):
@@ -1112,7 +1175,18 @@ def verify(state: dict) -> list[str]:
             for item in workflow.get("phase_history", [])
         )
     )
-    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started or pbi05j_delivery_started or pbi06_delivery_started or pbi06a_delivery_started, "WORKFLOW-GATE-TRANSITION")
+    pbi06b_delivery_started = (
+        workflow.get("current_phase") == "DA"
+        and workflow.get("gate_type") == "DELIVERY"
+        and workflow.get("active_pbi") == "PBI-06B"
+        and workflow.get("task_packet_ref") == ".codex/task-packets/PBI-06B-d002.md"
+        and any(
+            item.get("phase") == "QGA" and item.get("status") == "APPROVE"
+            and item.get("gate_type") == "DELIVERY" and item.get("active_pbi") == "PBI-06A"
+            for item in workflow.get("phase_history", [])
+        )
+    )
+    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started or pbi05j_delivery_started or pbi06_delivery_started or pbi06a_delivery_started or pbi06b_delivery_started, "WORKFLOW-GATE-TRANSITION")
     return errors
 
 def apply_mutation(name: str, state: dict) -> None:
@@ -1373,6 +1447,28 @@ def apply_mutation(name: str, state: dict) -> None:
                 "",
                 1,
             )
+    elif name in (
+        "drop-pbi06b-analyze-ownership", "drop-pbi06b-no-match-guard",
+        "drop-pbi06b-falsification-title", "weaken-pbi06b-range",
+        "permit-pbi06b-external-dependency", "drift-pbi06b-normalization",
+    ):
+        key = next(k for k, body in packets.items() if packet_id(body) == "PBI-06B")
+        if name == "drop-pbi06b-analyze-ownership":
+            packets[key] = packets[key].replace('    - "packages/readability-core/src/analyze.ts"\n', "", 1)
+        elif name == "drop-pbi06b-no-match-guard":
+            packets[key] = packets[key].replace(" --fail-if-no-match", "", 1)
+        elif name == "drop-pbi06b-falsification-title":
+            packets[key] = packets[key].replace('"D002-F01 code-point offsets cannot substitute for UTF-16 code-unit offsets", ', "", 1)
+        elif name == "weaken-pbi06b-range":
+            packets[key] = packets[key].replace("[2,4)", "[1,3)", 1)
+        elif name == "permit-pbi06b-external-dependency":
+            packets[key] = packets[key].replace(
+                "PBI-06 decision INTERNAL/PBI-06B; package manifests and lockfile unchanged",
+                "external dependency permitted",
+                1,
+            )
+        else:
+            packets[key] = packets[key].replace("normalization:NFC", "normalization:NFKC", 1)
     else: raise ValueError(name)
 
 def main() -> int:
