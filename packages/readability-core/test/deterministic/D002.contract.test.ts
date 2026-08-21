@@ -45,6 +45,13 @@ test("D002-B01 emoji-prefixed UTF-16 half-open range reconstructs the combining 
   assert.equal(input.slice(finding!.range.start, finding!.range.end), decomposedGa);
 });
 
+test("D002-B03 multi-mark combining sequence reports exact source range", () => {
+  const input = `${decomposedGa}\u0301`;
+  const [finding] = analyze(input, config());
+  assert.deepEqual(finding?.range, { start: 0, end: 3 });
+  assert.equal(input.slice(finding!.range.start, finding!.range.end), input);
+});
+
 test("D002-B02 default error and explicit warning severity are preserved", () => {
   assert.equal(analyze(decomposedGa, config())[0]?.severity, "error");
   assert.equal(analyze(decomposedGa, config("warning"))[0]?.severity, "warning");
