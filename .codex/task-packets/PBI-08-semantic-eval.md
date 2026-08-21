@@ -51,8 +51,8 @@ task_packet:
     red_signature: "PBI08_RED missing packages/textlint-adapter/schema/validation-report.schema.json"
     green_signature: "PBI08_GREEN tests>=16 pass=tests fail=0 required_titles=16 fixtures=3 probe=PASS"
   mutations: ["INT-M-MERGE-ARRAYS", "INT-M-SEMANTIC-EXIT1", "INT-M-HEURISTIC-EXIT1", "INT-M-SEMANTIC-ERROR-LEVEL", "INT-M-DROP-SEMANTIC-EVIDENCE", "INT-M-PERMIT-CROSS-SCHEMA", "INT-M-NONDETERMINISTIC-ORDER", "INT-M-TIE-PARTIAL-ORDER", "INT-M-STATUS-COMPARATOR-REMOVED", "INT-M-DEDUPE", "INT-M-API-CLI-BYTE-DRIFT", "INT-M-CLI-PARTIAL-OUTPUT", "INT-M-CLI-INVALID-EXIT1", "INT-M-CLI-NETWORK", "INT-M-DROP-E2E-TITLE", "INT-M-FILTER-NO-MATCH"]
-  expected_red: "python3 .codex/spec-verifiers/verify_pbi08.py; exit=1; signature=PBI08_FAIL tests=15 pass=15 fail=0 required_titles=15/16"
-  red_status: "REGISTERED_RED_QGA_FIX_2"
+  expected_red: null
+  red_status: "CONSUMED_GREEN"
   expected_red_history:
     registration:
       phase: "PRE_IMPLEMENTATION"
@@ -72,12 +72,12 @@ task_packet:
   green_transition:
     command: "python3 .codex/spec-verifiers/verify_pbi08.py"
     exit: 0
-    product_commit: "3049fea"
+    product_commit: "0e7ad7c"
     schema_version: "1.0.0"
-    tests: 15
-    pass: 15
+    tests: 16
+    pass: 16
     fail: 0
-    required_titles: 15
+    required_titles: 16
     fixtures: 3
     runtime_probe: "PASS"
     report_contract: "lintMessages and semanticNotices separate; category/status/evidence/confidence lossless; full-payload total-order; duplicates retained; API and CLI permutation outputs byte-identical"
@@ -89,8 +89,8 @@ task_packet:
       packages/textlint-adapter/src/index.ts: "44e0de81038c8fa1406f21bd8f09e5d407c45dbef46a899b0ab1a2e076e63546"
       packages/textlint-adapter/src/cli.ts: "90b1c03cdc7210b483e6650632d52b4fde062ffb5f00fd154beb8c0610ffca79"
       packages/textlint-adapter/schema/validation-report.schema.json: "8a0d545278e7222f7144ca8b719afbf289903ab4b4f2b6d5f7a35a753b0b6023"
-      packages/textlint-adapter/test/integration/report.contract.test.ts: "8fd4d6458cc022c025c8c82abf1f73dcceebd2b1896206b339014c28811ea0ba"
-      packages/textlint-adapter/test/integration/cli.contract.test.ts: "9c5c98006fc22f8afc2847f777adbfec29798741cc53b8889be98215226a0c87"
+      packages/textlint-adapter/test/integration/report.contract.test.ts: "15b0425d85f1d9cf690896433f3328f3c44cf3e5614882da6c365d3301431682"
+      packages/textlint-adapter/test/integration/cli.contract.test.ts: "f456646c398f2e9f5c18d9ed7582f395773965f74faf28dae444aa1a26ddf579"
       packages/textlint-adapter/test/integration/e2e.contract.test.ts: "1b5aec7e5fc67af07aa15c89d50bfb492f046d32401487d254110463eec42d97"
       packages/textlint-adapter/test/integration/ci.contract.test.ts: "985c8a56d3740b8bdf9c52eec69f2f87ca2e11c5d6d59a9952dd2f0dda5df9cd"
       packages/textlint-adapter/test/fixtures/mixed-pass.json: "cb08948df2ef6a28ad124444682abbd0f1eac91e8f458cf428564ece03bbcffa"
@@ -104,8 +104,8 @@ task_packet:
       packages/readability-core/package.json: "996ac24d4b0af2137c09c7ee84934fbd3db368c6db45347325441331685e9f55"
       packages/readability-core/src/types/findings.ts: "760fb0b3045423a9900f554e33529a81fb2d98548f873b269991fc14697b9a26"
       packages/textlint-adapter/tsconfig.json: "1891f8459b7f3b1283c31c1340d4e340e893d89e67f13e4242eb57d77c2ba772"
-    falsification_contract: "merged arrays, Semantic/H failure promotion, semantic error level, dropped evidence, cross-schema fields, nondeterministic/partial tie order, dedupe, API/CLI byte drift, CLI partial output/wrong exit/network, title deletion, no-match, and delivery hash drift are rejected"
-    signature: "PBI08_GREEN tests>=15 pass=tests fail=0 required_titles=15 fixtures=3 probe=PASS"
+    falsification_contract: "merged arrays, Semantic/H failure promotion, semantic error level, dropped evidence, cross-schema fields, nondeterministic/partial tie order, status comparator removal, dedupe, API/CLI byte drift, CLI partial output/wrong exit/network, title deletion, no-match, and delivery hash drift are rejected"
+    signature: "PBI08_GREEN tests>=16 pass=tests fail=0 required_titles=16 fixtures=3 probe=PASS"
   green_fix_history:
     previous_green:
       product_commit: "59317f4"
@@ -115,6 +115,12 @@ task_packet:
       product_commit: "3049fea"
       reason: "same primary keys previously relied on stable input order; full payload total-order and no-dedupe/API+CLI byte identity close the integration ordering gap"
       signature: "PBI08_GREEN tests=15 pass=15 fail=0 required_titles=15 fixtures=3 probe=PASS"
+      artifact_hashes: "report_test=8fd4d6458cc022c025c8c82abf1f73dcceebd2b1896206b339014c28811ea0ba cli_test=9c5c98006fc22f8afc2847f777adbfec29798741cc53b8889be98215226a0c87"
+    qga_fix_2_green:
+      product_commit: "0e7ad7c"
+      reason: "INT-ORDER-03 makes status-only lexical ordering and no-dedupe explicit in API and CLI contract tests"
+      signature: "PBI08_GREEN tests=16 pass=16 fail=0 required_titles=16 fixtures=3 probe=PASS"
+      artifact_hashes: "report_test=15b0425d85f1d9cf690896433f3328f3c44cf3e5614882da6c365d3301431682 cli_test=f456646c398f2e9f5c18d9ed7582f395773965f74faf28dae444aa1a26ddf579"
   red_registration_gate: "PBI開始時、依存PBI完了後かつ実装変更前に、実在する失敗test command・exit code・完全一致signatureを登録する"
   acceptance: ["AC-INT-01", "O-09", "D/H vs Semantic type separation", "CLI exit 0/1/2", "canonical report schema", "offline deterministic E2E"]
   engineering_constraints: "docs/requirements/engineering-constraints.md A03/A04/A06/A08"

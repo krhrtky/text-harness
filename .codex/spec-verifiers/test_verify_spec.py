@@ -968,17 +968,28 @@ test("D002-B03 multi-mark combining sequence reports exact source range", () => 
         state = verify_spec.read_state()
         packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-08")
         pre_implementation = packet.replace(
-            'expected_red: "python3 .codex/spec-verifiers/verify_pbi08.py; exit=1; signature=PBI08_FAIL tests=15 pass=15 fail=0 required_titles=15/16"',
+            "expected_red: null",
             'expected_red: "python3 .codex/spec-verifiers/verify_pbi08.py; exit=1; signature=PBI08_RED missing packages/textlint-adapter/schema/validation-report.schema.json"',
             1,
-        ).replace('red_status: "REGISTERED_RED_QGA_FIX_2"', 'red_status: "REGISTERED_RED"', 1)
+        ).replace('red_status: "CONSUMED_GREEN"', 'red_status: "REGISTERED_RED"', 1)
         self.assertEqual([], verify_spec.pbi08_registration_errors(pre_implementation, PBI08_VERIFIER.is_file(), False))
+        qga_fix = packet.replace(
+            "expected_red: null",
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi08.py; exit=1; signature=PBI08_FAIL tests=15 pass=15 fail=0 required_titles=15/16"',
+            1,
+        ).replace('red_status: "CONSUMED_GREEN"', 'red_status: "REGISTERED_RED_QGA_FIX_2"', 1)
+        self.assertEqual([], verify_spec.pbi08_registration_errors(qga_fix, PBI08_VERIFIER.is_file(), True))
         self.assertEqual([], verify_spec.pbi08_registration_errors(packet, PBI08_VERIFIER.is_file(), True))
-        first = subprocess.run(["python3", str(PBI08_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
-        second = subprocess.run(["python3", str(PBI08_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
-        expected = "PBI08_FAIL tests=15 pass=15 fail=0 required_titles=15/16"
-        self.assertEqual((1, expected, ""), (first.returncode, first.stdout.rstrip().splitlines()[-1], first.stderr))
-        self.assertEqual((1, expected, ""), (second.returncode, second.stdout.rstrip().splitlines()[-1], second.stderr))
+        green = subprocess.run(["python3", str(PBI08_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        self.assertEqual(0, green.returncode, green.stdout + green.stderr)
+        summary = re.search(r"PBI08_GREEN tests=(\d+) pass=(\d+) fail=(\d+) required_titles=(\d+) fixtures=(\d+) probe=PASS", green.stdout)
+        self.assertIsNotNone(summary)
+        tests, passed, failed, titles, fixtures = (int(value) for value in summary.groups())
+        self.assertGreaterEqual(tests, 16)
+        self.assertEqual(tests, passed)
+        self.assertEqual(0, failed)
+        self.assertEqual(16, titles)
+        self.assertEqual(3, fixtures)
         probe_errors, probe_output = verify_pbi08.run_behavioral_probe()
         self.assertEqual([], probe_errors, probe_output)
         for path, expected in verify_pbi08.DELIVERY_HASHES.items():
