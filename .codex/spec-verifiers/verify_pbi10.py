@@ -12,6 +12,7 @@ CANDIDATE_BRANCH = "codex/release-candidate"
 FINAL_BRANCH = "main"
 WORKFLOW_PATH = ".github/workflows/release-contract.yml"
 ARTIFACT_NAME = "release-attestation"
+SUPERSEDED_CANDIDATES = {"d09a2b51cf6b490c3e172edc5dd4e5b145b861c9": 32488263297}
 
 STATIC_CONTRACT = {
     "schemaVersion": 1,
@@ -31,6 +32,7 @@ def static_errors(contract: object, publication: str) -> list[str]:
 
 def remote_errors(repository: dict, candidate_sha: str, workflow: dict, run: dict, jobs: dict, artifact: dict, attestation: dict, stage: str, main_sha: str | None = None) -> list[str]:
     errors: list[str] = []
+    if candidate_sha in SUPERSEDED_CANDIDATES or run.get("id") in SUPERSEDED_CANDIDATES.values(): errors.append("superseded-candidate")
     if repository.get("full_name") != REPOSITORY or repository.get("private") is not False or repository.get("license", {}).get("spdx_id") != "Apache-2.0": errors.append("repository-authority")
     if workflow.get("path") != WORKFLOW_PATH or workflow.get("name") != "Release contract" or workflow.get("state") != "active": errors.append("workflow-identity")
     if run.get("head_branch") != CANDIDATE_BRANCH or run.get("head_sha") != candidate_sha: errors.append("candidate-run-sha")

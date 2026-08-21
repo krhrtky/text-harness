@@ -53,6 +53,7 @@ DELIVERY_HASHES = {
     Path(".github/workflows/release-contract.yml"): "29bb21410eb4336faca56dd77ce3eacce3d4a71c2624b31521506ba3223c3b63",
 }
 PBI10_CANDIDATE_WORKFLOW_HASH = "e8315894bd8ac84fdd9550084725a87acd94111279e7ea7817c3e6e175e24211"
+PBI10_EXTERNAL_ATTESTATION_WORKFLOW_HASH = "82e70f96995853ba8278d87d716744046a42eeba8a60110b17ce783bbec4867b"
 APACHE_SHA256 = "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
 LOCK_SHA256 = "f5cc3eea2d7a5c7e04810e44f6d31798094437e54bdfa519112788bdb0f773ba"
 NOTICE_SHA256 = "f5c708b59114507b8b27b48181b6883d106bbca0c1634bbee45b5e344237b66b"
@@ -144,7 +145,9 @@ def main() -> int:
     drift = [str(path) for path, expected in UNCHANGED_HASHES.items() if sha(path) != expected]
     if drift: return fail("forbidden_path_drift " + ",".join(drift))
     delivery_hashes = dict(DELIVERY_HASHES)
-    if (ROOT / "tests/release/publication.contract.test.mjs").is_file():
+    if (ROOT / "docs/release-evidence/native-x64-release.json").is_file():
+        delivery_hashes[Path(".github/workflows/release-contract.yml")] = PBI10_EXTERNAL_ATTESTATION_WORKFLOW_HASH
+    elif (ROOT / "tests/release/publication.contract.test.mjs").is_file():
         delivery_hashes[Path(".github/workflows/release-contract.yml")] = PBI10_CANDIDATE_WORKFLOW_HASH
     delivery_drift = [str(path) for path, expected in delivery_hashes.items() if sha(path) != expected]
     if delivery_drift: return fail("delivery_artifact_drift " + ",".join(delivery_drift))

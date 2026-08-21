@@ -4,8 +4,8 @@
   "current_phase": "DA",
   "active_pbi": "PBI-10",
   "gate_type": "RELEASE",
-  "strategy_id": "release-pbi10-external-attestation-v2",
-  "iteration": 71,
+  "strategy_id": "release-pbi10-candidate-ledger-v3",
+  "iteration": 72,
   "task_packet_ref": ".codex/task-packets/PBI-10-publication.md",
   "phase_history": [
     {
@@ -1945,6 +1945,26 @@
       ],
       "resume_point": ".codex/task-packets/PBI-10-publication.md",
       "timestamp": "2026-08-22T04:25:00+09:00"
+    },
+    {
+      "phase": "SDA",
+      "status": "CANDIDATE_EVIDENCE_SUPERSEDED",
+      "agent": "/root/spec_finalize",
+      "gate_type": "RELEASE",
+      "active_pbi": "PBI-10",
+      "task_packet_ref": ".codex/task-packets/PBI-10-publication.md",
+      "decision": "d09a2b5/run32488263297 proves the external attestation design but is pre-final because this ledger commit advances the candidate tip; a new exact-SHA run is mandatory",
+      "evidence": [
+        "candidate d09a2b51cf6b490c3e172edc5dd4e5b145b861c9",
+        "GitHub Actions run https://github.com/krhrtky/text-harness/actions/runs/32488263297",
+        "artifact https://api.github.com/repos/krhrtky/text-harness/actions/artifacts/9448703953/zip",
+        "pre-ledger verifier result: PBI10_GREEN stage=candidate candidate_sha=d09a2b51cf6b490c3e172edc5dd4e5b145b861c9 native_x64=PASS",
+        "authorized PBI-10 workflow SHA-256 82e70f96995853ba8278d87d716744046a42eeba8a60110b17ce783bbec4867b is phase-aware in PBI-09 verifier; PBI-09 delivery hash remains historical",
+        "d09a2b5/run32488263297 is now explicitly rejected as superseded-candidate",
+        "next action: push the ledger-inclusive candidate tip, obtain a new completed successful exact-SHA run/artifact, then add no further repository commit before RELEASE QGA"
+      ],
+      "resume_point": ".codex/task-packets/PBI-10-publication.md",
+      "timestamp": "2026-08-22T04:40:00+09:00"
     }
   ],
   "blocker_history": [
@@ -2022,5 +2042,5 @@
     }
   ],
   "created_at": "2026-08-21T09:39:07+09:00",
-  "updated_at": "2026-08-22T04:25:00+09:00"
+  "updated_at": "2026-08-22T04:40:00+09:00"
 }

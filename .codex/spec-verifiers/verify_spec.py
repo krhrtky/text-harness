@@ -125,6 +125,7 @@ MUTATIONS = (
     "use-pbi10-main-as-candidate",
     "store-pbi10-dynamic-evidence", "allow-pbi10-post-attestation-commit",
     "drop-pbi10-main-workflow-trigger",
+    "reuse-pbi10-superseded-run",
 )
 
 def read_state() -> dict:
@@ -1874,6 +1875,10 @@ def pbi10_native_x64_errors(body: str, oracle_exists: bool, publication_exists: 
         'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi10.py --stage candidate"',
         'final_acceptance_command: "python3 .codex/spec-verifiers/verify_pbi10.py --stage final"',
         "--stage finalはauthenticated APIでcandidate tip=main tipかつdefault_branch=mainを要求",
+        "PBI-10 product commit d09a2b5 authorized workflow SHA-256 82e70f96995853ba8278d87d716744046a42eeba8a60110b17ce783bbec4867b",
+        'candidate_sha: "d09a2b51cf6b490c3e172edc5dd4e5b145b861c9"',
+        "workflow_run_id: 32488263297", 'status: "SUPERSEDED_PRE_FINAL_EVIDENCE"',
+        "このledger commitを含む新candidate tipをcodex/release-candidateへpushし、そのexact SHAの新しいcompleted successful run/artifactを取得する。以後repository commit禁止",
         "user承認済みowner=krhrtky/repository=text-harness/visibility=public/license=Apache-2.0/final default branch=main",
     )
     errors = [] if oracle_exists and all(value in body for value in required) else ["PBI10-NATIVE-X64-GATE"]
@@ -3101,14 +3106,16 @@ def apply_mutation(name: str, state: dict) -> None:
             packets[key] = packets[key].replace("candidate evidence Green後に独立RELEASE QGAを行い、APPROVE後だけ同一SHAをmainへpushしてdefault branch mainを確認する", "candidate Green immediately pushes main", 1)
         else:
             packets[key] = packets[key].replace("refs/heads/codex/release-candidateへexact candidate SHA", "refs/heads/mainへcandidate SHA", 1)
-    elif name in ("store-pbi10-dynamic-evidence", "allow-pbi10-post-attestation-commit", "drop-pbi10-main-workflow-trigger"):
+    elif name in ("store-pbi10-dynamic-evidence", "allow-pbi10-post-attestation-commit", "drop-pbi10-main-workflow-trigger", "reuse-pbi10-superseded-run"):
         key = next(k for k, body in packets.items() if packet_id(body) == "PBI-10")
         if name == "store-pbi10-dynamic-evidence":
             packets[key] = packets[key].replace("candidate SHA/run ID/URL/artifact URL/conclusionを含めない", "candidate SHA/run ID/URLをcommitする", 1)
         elif name == "allow-pbi10-post-attestation-commit":
             packets[key] = packets[key].replace("取得後commit禁止", "取得後にevidence commitを追加する", 1)
-        else:
+        elif name == "drop-pbi10-main-workflow-trigger":
             packets[key] = packets[key].replace("push branchesはcodex/release-candidateとmainのexact 2 branch", "push branchesはcodex/release-candidateのみ", 1)
+        else:
+            packets[key] = packets[key].replace('status: "SUPERSEDED_PRE_FINAL_EVIDENCE"', 'status: "REUSABLE_FINAL_EVIDENCE"', 1)
     else: raise ValueError(name)
 
 def main() -> int:

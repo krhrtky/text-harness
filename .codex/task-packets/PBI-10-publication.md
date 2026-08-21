@@ -57,6 +57,16 @@ task_packet:
   static_repository_contract: "publication.mdは手順/authority/workflow identity/branchだけ、native-x64-release.jsonはschemaVersion1、repository authority、candidate/final branch、workflow path/name/push branches candidate+main/artifact name、attestation required field名だけを保持。candidate SHA/run ID/URL/artifact URL/conclusionを含めない"
   dynamic_attestation_contract: "GH_TOKENでauthenticated gh apiを使用。candidate branch tip、workflow、最新completed candidate push run、jobs、run artifact release-attestationを直接取得し、artifact JSONのrunId/workflowId/headSha/branch/event/Linux/X64/fresh/frozen/release/license/NOTICE/securityをAPI値と双方向照合。取得後commit禁止"
   workflow_history: "PBI-10 initial product commit 54833ea, workflow SHA-256 e8315894bd8ac84fdd9550084725a87acd94111279e7ea7817c3e6e175e24211 added candidate trigger/native markers but predates required main trigger and downloadable release-attestation artifact; retained as pre-fix history, not final Green evidence"
+  external_attestation_workflow_transition: "PBI-10 product commit d09a2b5 authorized workflow SHA-256 82e70f96995853ba8278d87d716744046a42eeba8a60110b17ce783bbec4867b; PBI-09 delivery-time workflow SHA-256 29bb21410eb4336faca56dd77ce3eacce3d4a71c2624b31521506ba3223c3b63 and initial PBI-10 e8315894... remain historical, arbitrary third drift is forbidden"
+  superseded_candidate_history:
+    candidate_sha: "d09a2b51cf6b490c3e172edc5dd4e5b145b861c9"
+    workflow_run_id: 32488263297
+    run_url: "https://github.com/krhrtky/text-harness/actions/runs/32488263297"
+    artifact_url: "https://api.github.com/repos/krhrtky/text-harness/actions/artifacts/9448703953/zip"
+    observed_result: "native_x64=PASS, external attestation exact, candidate verifier Green before this ledger commit"
+    status: "SUPERSEDED_PRE_FINAL_EVIDENCE"
+    reason: "このspec-only ledger commitがcandidate tipを進めるため、d09a2b5 runはfinal candidate evidenceとして再利用不可"
+  next_candidate_contract: "このledger commitを含む新candidate tipをcodex/release-candidateへpushし、そのexact SHAの新しいcompleted successful run/artifactを取得する。以後repository commit禁止。d09a2b5/run32488263297はverify_pbi10でsuperseded-candidateとして拒否する"
   candidate_green_signature: "PBI10_GREEN stage=candidate candidate_sha=<40hex> native_x64=PASS run_url=https://github.com/krhrtky/text-harness/actions/runs/<id> artifact_url=https://api.github.com/repos/krhrtky/text-harness/actions/artifacts/<id>/zip"
   final_contract: "独立RELEASE QGA APPROVEはworkflow state/task evidenceで先行確認しrepositoryへ自己参照記録しない。--stage finalはauthenticated APIでcandidate tip=main tipかつdefault_branch=mainを要求"
   mutations: ["PUB-M-PUSH-MAIN-BEFORE-QGA", "PUB-M-CANDIDATE-SHA-DRIFT", "PUB-M-RUN-SHA-DRIFT", "PUB-M-OLD-SUCCESS-RUN", "PUB-M-BRANCH-DRIFT", "PUB-M-ARM64-AS-X64", "PUB-M-MISSING-ARTIFACT", "PUB-M-ARTIFACT-RUN-ID-DRIFT", "PUB-M-ATTESTATION-TAMPER", "PUB-M-SKIPPED-CI", "PUB-M-UNFROZEN-INSTALL", "PUB-M-RELEASE-FAIL", "PUB-M-MISSING-LICENSE-NOTICE-SECURITY", "PUB-M-REPOSITORY-DYNAMIC-EVIDENCE", "PUB-M-POST-ATTESTATION-COMMIT", "PUB-M-QGA-SKIP", "PUB-M-MAIN-DIFFERENT-SHA", "PUB-M-DEFAULT-BRANCH-UNCONFIRMED", "PUB-M-WORKFLOW-MISSING-MAIN-TRIGGER", "PUB-M-FAILED-CANDIDATE-PROMOTION"]

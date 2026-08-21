@@ -274,6 +274,7 @@ EXPECTED = {
     "store-pbi10-dynamic-evidence": "PBI10-NATIVE-X64-GATE",
     "allow-pbi10-post-attestation-commit": "PBI10-NATIVE-X64-GATE",
     "drop-pbi10-main-workflow-trigger": "PBI10-NATIVE-X64-GATE",
+    "reuse-pbi10-superseded-run": "PBI10-NATIVE-X64-GATE",
 }
 
 class SpecVerifierTest(unittest.TestCase):
