@@ -268,6 +268,9 @@ EXPECTED = {
     "drop-pbi09-fresh-frozen-install": "PBI09-POST-IMPLEMENTATION-GREEN",
     "drop-pbi09-license-before-secret": "PBI09-POST-IMPLEMENTATION-GREEN",
     "drop-pbi10-native-x64-gate": "PBI10-NATIVE-X64-GATE",
+    "permit-pbi10-main-before-qga": "PBI10-NATIVE-X64-GATE",
+    "skip-pbi10-release-qga": "PBI10-NATIVE-X64-GATE",
+    "use-pbi10-main-as-candidate": "PBI10-NATIVE-X64-GATE",
 }
 
 class SpecVerifierTest(unittest.TestCase):

@@ -2,11 +2,11 @@
   "id": "wf-readability-mvp-20260821",
   "request": "Readability Engineering System要求の実現、setup/upgrade支援、反証必須の完了判定、public GitHub repositoryへのpush",
   "current_phase": "DA",
-  "active_pbi": "PBI-09",
-  "gate_type": "DELIVERY",
-  "strategy_id": "delivery-pbi09-fresh-platform-secret-fix-v5",
-  "iteration": 69,
-  "task_packet_ref": ".codex/task-packets/PBI-09-release-evidence.md",
+  "active_pbi": "PBI-10",
+  "gate_type": "RELEASE",
+  "strategy_id": "release-pbi10-two-stage-candidate-v1",
+  "iteration": 70,
+  "task_packet_ref": ".codex/task-packets/PBI-10-publication.md",
   "phase_history": [
     {
       "phase": "SDA",
@@ -1889,6 +1889,42 @@
       ],
       "resume_point": ".codex/task-packets/PBI-09-release-evidence.md",
       "timestamp": "2026-08-22T04:00:00+09:00"
+    },
+    {
+      "phase": "QGA",
+      "status": "APPROVE",
+      "agent": "/root/spec_qga",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-09",
+      "task_packet_ref": ".codex/task-packets/PBI-09-release-evidence.md",
+      "decision": "PBI-09 delivery approved after portable release, exact secret, tracked runtime, and fresh frozen-install fixture fixes",
+      "evidence": [
+        "product commits 63555bd, 0660ed4, 7057fac, e1650bc",
+        "SDA transition commits dae4f43, e1e1cc2, c299796, 1f3f710",
+        "python3 .codex/spec-verifiers/verify_pbi09.py => PBI09_GREEN tests=12 pass=12 fail=0 required_titles=12 links=PASS commands=PASS license=PASS notice=ABSENT security=PASS",
+        "independent QGA decision supplied by orchestrator: APPROVE"
+      ],
+      "resume_point": ".codex/task-packets/PBI-10-publication.md",
+      "timestamp": "2026-08-22T04:10:00+09:00"
+    },
+    {
+      "phase": "DA",
+      "status": "READY_FOR_IMPLEMENTATION",
+      "agent": "/root/spec_finalize",
+      "gate_type": "RELEASE",
+      "active_pbi": "PBI-10",
+      "task_packet_ref": ".codex/task-packets/PBI-10-publication.md",
+      "decision": "PBI-10 uses a public codex/release-candidate branch to obtain native Linux X64 evidence before independent RELEASE QGA and forbids main promotion until APPROVE",
+      "evidence": [
+        "user authority: krhrtky/text-harness, public, Apache-2.0, final default branch main",
+        "pre-implementation oracle: python3 .codex/spec-verifiers/verify_pbi10.py --stage candidate => exit1; PBI10_RED missing docs/release-evidence/publication.md; stderr empty; reproduced twice",
+        "candidate SHA may be pushed only to refs/heads/codex/release-candidate before RELEASE APPROVE",
+        "candidate workflow must prove exact SHA, push event, fresh checkout, frozen install, pnpm verify:release, Linux X64 log evidence, license PASS, NOTICE ABSENT, and security PASS",
+        "candidate fail/skip/cancel/unknown or evidence drift forbids main promotion; the same DA fixes and republishes a new candidate SHA",
+        "after independent RELEASE APPROVE only, the identical candidate SHA may be pushed to main and final default branch/main SHA must be independently confirmed"
+      ],
+      "resume_point": ".codex/task-packets/PBI-10-publication.md",
+      "timestamp": "2026-08-22T04:15:00+09:00"
     }
   ],
   "blocker_history": [
@@ -1966,5 +2002,5 @@
     }
   ],
   "created_at": "2026-08-21T09:39:07+09:00",
-  "updated_at": "2026-08-22T04:00:00+09:00"
+  "updated_at": "2026-08-22T04:15:00+09:00"
 }

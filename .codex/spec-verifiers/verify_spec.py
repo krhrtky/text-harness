@@ -121,6 +121,8 @@ MUTATIONS = (
     "drop-pbi09-tracked-runtime",
     "drop-pbi09-github-pat-tracked", "drop-pbi09-fresh-frozen-install",
     "drop-pbi09-license-before-secret", "drop-pbi10-native-x64-gate",
+    "permit-pbi10-main-before-qga", "skip-pbi10-release-qga",
+    "use-pbi10-main-as-candidate",
 )
 
 def read_state() -> dict:
@@ -1852,18 +1854,34 @@ def pbi09_registration_errors(body: str, oracle_exists: bool, readme_exists: boo
         if not green: errors.append("PBI09-POST-IMPLEMENTATION-GREEN")
     return errors
 
-def pbi10_native_x64_errors(body: str) -> list[str]:
+def pbi10_native_x64_errors(body: str, oracle_exists: bool, publication_exists: bool) -> list[str]:
     required = (
         "local Darwin arm64 PBI-09 Greenはnative Linux x64証拠の代替にならない",
-        "public repository作成・push後、GitHub Actions ubuntu native X64 runner上のfresh checkoutでfrozen installとverify:releaseが成功するまでRELEASE APPROVE禁止",
-        "remote HEAD SHAと同一candidate SHA",
+        "refs/heads/codex/release-candidateへexact candidate SHAをpre-release CI evidence目的でpushできる",
+        "candidate SHAはGitHub Actions ubuntu native X64 runner上のfresh checkout/frozen install/verify:release成功までmainへpush禁止",
+        "candidate evidence Green後に独立RELEASE QGAを行い、APPROVE後だけ同一SHAをmainへpushしてdefault branch mainを確認する",
+        "candidate failure/skip/cancel/unknown、evidence不一致時はmainへ昇格せず、同じDAが修正した新SHAをcandidate branchへ再pushして全gateを再実行する",
         'runner: "GitHub Actions ubuntu native X64（emulation/self-reportだけは禁止）"',
-        'command_sequence: ["checkout exact remote main SHA", "corepack pnpm install --frozen-lockfile", "pnpm verify:release"]',
-        'required_evidence: ["repository=krhrtky/text-harness", "branch=main", "remoteHeadSha=candidateSha", "runner.os=Linux", "runner.arch=X64", "workflow run URL", "conclusion=success", "license=PASS", "notice=ABSENT", "security=PASS"]',
+        'command_sequence: ["checkout exact candidate SHA", "corepack pnpm install --frozen-lockfile", "pnpm verify:release"]',
+        'required_evidence: ["repository=krhrtky/text-harness", "visibility=public", "license=Apache-2.0", "branch=codex/release-candidate", "remoteCandidateSha=candidateSha", "runner.os=Linux", "runner.arch=X64", "workflow run URL", "log SHA and RUNNER_OS=Linux RUNNER_ARCH=X64", "conclusion=success", "license=PASS", "notice=ABSENT", "security=PASS"]',
         "run missing/cancelled/skipped/failure、arch不一致、SHA不一致、evidence欠落はRELEASE REQUEST_CHANGES",
         '"docs/release-evidence/native-x64-release.json"',
+        'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi10.py --stage candidate"',
+        'final_acceptance_command: "python3 .codex/spec-verifiers/verify_pbi10.py --stage final"',
+        "releaseQga status=APPROVE+nonempty decisionRef、mainPromotion status=COMPLETE/pushed=true/sha=candidateSha/defaultBranchConfirmed=true",
+        "user承認済みowner=krhrtky/repository=text-harness/visibility=public/license=Apache-2.0/final default branch=main",
     )
-    return [] if all(value in body for value in required) else ["PBI10-NATIVE-X64-GATE"]
+    errors = [] if oracle_exists and all(value in body for value in required) else ["PBI10-NATIVE-X64-GATE"]
+    if not publication_exists:
+        registered = all(value in body for value in (
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi10.py --stage candidate; exit=1; signature=PBI10_RED missing docs/release-evidence/publication.md"',
+            'red_status: "REGISTERED_RED"', 'phase: "PRE_IMPLEMENTATION"',
+            'command: "python3 .codex/spec-verifiers/verify_pbi10.py --stage candidate"',
+            'exit: 1', 'stdout: "PBI10_RED missing docs/release-evidence/publication.md"',
+            'stderr: "<empty>"', 'measured_runs: 2',
+        ))
+        if not registered: errors.append("PBI10-PRE-IMPLEMENTATION-RED")
+    return errors
 
 def verify(state: dict) -> list[str]:
     m, t, packets, workflow = state["matrix"], state["text"], state["packets"], state["workflow"]
@@ -2137,7 +2155,11 @@ def verify(state: dict) -> list[str]:
             ):
                 need(False, error)
         if pid == "PBI-10":
-            for error in pbi10_native_x64_errors(body):
+            for error in pbi10_native_x64_errors(
+                body,
+                (ROOT / ".codex/spec-verifiers/verify_pbi10.py").is_file(),
+                (ROOT / "docs/release-evidence/publication.md").is_file(),
+            ):
                 need(False, error)
         need(not any(x in body for x in ("TBD", "placeholder", "実装開始時に")), f"PACKET-PLACEHOLDER-{name}")
 
@@ -2375,7 +2397,17 @@ def verify(state: dict) -> list[str]:
         and workflow.get("task_packet_ref") == ".codex/task-packets/PBI-09-release-evidence.md"
         and any(item.get("phase") == "QGA" and item.get("status") == "APPROVE" and item.get("active_pbi") == "PBI-08" for item in workflow.get("phase_history", []))
     )
-    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started or pbi05j_delivery_started or pbi06_delivery_started or pbi06a_delivery_started or pbi06b_delivery_started or pbi06c_delivery_started or pbi06d_delivery_started or pbi06e_delivery_started or pbi06f_delivery_started or pbi06g_delivery_started or pbi06h_delivery_started or pbi07_delivery_started or pbi07_qga_ready or pbi08_delivery_started or pbi09_delivery_started, "WORKFLOW-GATE-TRANSITION")
+    pbi10_release_started = (
+        workflow.get("current_phase") == "DA" and workflow.get("gate_type") == "RELEASE"
+        and workflow.get("active_pbi") == "PBI-10"
+        and workflow.get("task_packet_ref") == ".codex/task-packets/PBI-10-publication.md"
+        and any(
+            item.get("phase") == "QGA" and item.get("status") == "APPROVE"
+            and item.get("gate_type") == "DELIVERY" and item.get("active_pbi") == "PBI-09"
+            for item in workflow.get("phase_history", [])
+        )
+    )
+    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started or pbi05j_delivery_started or pbi06_delivery_started or pbi06a_delivery_started or pbi06b_delivery_started or pbi06c_delivery_started or pbi06d_delivery_started or pbi06e_delivery_started or pbi06f_delivery_started or pbi06g_delivery_started or pbi06h_delivery_started or pbi07_delivery_started or pbi07_qga_ready or pbi08_delivery_started or pbi09_delivery_started or pbi10_release_started, "WORKFLOW-GATE-TRANSITION")
     return errors
 
 def apply_mutation(name: str, state: dict) -> None:
@@ -3056,6 +3088,14 @@ def apply_mutation(name: str, state: dict) -> None:
     elif name == "drop-pbi10-native-x64-gate":
         key = next(k for k, body in packets.items() if packet_id(body) == "PBI-10")
         packets[key] = packets[key].replace('  native_x64_release_gate:\n', '  native_x64_release_gate_removed:\n', 1).replace('    runner: "GitHub Actions ubuntu native X64（emulation/self-reportだけは禁止）"\n', "", 1)
+    elif name in ("permit-pbi10-main-before-qga", "skip-pbi10-release-qga", "use-pbi10-main-as-candidate"):
+        key = next(k for k, body in packets.items() if packet_id(body) == "PBI-10")
+        if name == "permit-pbi10-main-before-qga":
+            packets[key] = packets[key].replace("candidate SHAはGitHub Actions ubuntu native X64 runner上のfresh checkout/frozen install/verify:release成功までmainへpush禁止", "candidate may be pushed to main before CI", 1)
+        elif name == "skip-pbi10-release-qga":
+            packets[key] = packets[key].replace("candidate evidence Green後に独立RELEASE QGAを行い、APPROVE後だけ同一SHAをmainへpushしてdefault branch mainを確認する", "candidate Green immediately pushes main", 1)
+        else:
+            packets[key] = packets[key].replace("refs/heads/codex/release-candidateへexact candidate SHA", "refs/heads/mainへcandidate SHA", 1)
     else: raise ValueError(name)
 
 def main() -> int:
