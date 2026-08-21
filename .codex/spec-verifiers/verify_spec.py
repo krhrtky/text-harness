@@ -348,10 +348,11 @@ def pbi05_registration_errors(body: str, oracle_exists: bool, implementation_exi
         'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi05.py"',
         'test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/heuristic/H107.contract.test.ts test/heuristic/H108.contract.test.ts"',
         'exact_test_files: ["packages/readability-core/test/heuristic/H107.contract.test.ts", "packages/readability-core/test/heuristic/H108.contract.test.ts"]',
-        'minimum_tests: 8', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 8',
+        'minimum_tests: 12', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 8',
         '"H107-P01 three identical leading labels report actual 3 threshold 2"',
         '"H108-P01 three identical terminal labels report actual 3 threshold 2"',
-        'green_signature: "PBI05_GREEN tests>=8 pass=tests fail=0 required_titles=8"',
+        'dependency_contract: "manifest and packages/readability-core lock importer direct dependency sets remain exactly @textlint/markdown-to-ast@15.8.0 and sentence-splitter@5.0.1"',
+        'green_signature: "PBI05_GREEN tests>=12 pass=tests fail=0 required_titles=8"',
     ))
     errors = []
     if not ownership:
@@ -370,6 +371,22 @@ def pbi05_registration_errors(body: str, oracle_exists: bool, implementation_exi
         ))
         if not registered:
             errors.append("PBI05-PRE-IMPLEMENTATION-RED")
+        return errors
+    green = all(value in body for value in (
+        'expected_red: null', 'red_status: "CONSUMED_GREEN"',
+        'phase: "PRE_IMPLEMENTATION"',
+        'command: "python3 .codex/spec-verifiers/verify_pbi05.py"', 'exit: 1',
+        'stdout: "PBI05_RED missing packages/readability-core/src/rules/H107.ts"',
+        'stderr: "<empty>"', 'measured_runs: 2',
+        'green_transition:', 'exit: 0',
+        'exact_test_files: ["packages/readability-core/test/heuristic/H107.contract.test.ts", "packages/readability-core/test/heuristic/H108.contract.test.ts"]',
+        'minimum_tests: 12', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 8',
+        'dependency_contract: "manifest and lock importer retain the exact two direct runtime dependencies and versions"',
+        'signature: "PBI05_GREEN tests>=12 pass=tests fail=0 required_titles=8"',
+        'initial_da_green: "tests 12; pass 12; fail 0; required_titles 8"',
+    ))
+    if not green:
+        errors.append("PBI05-POST-IMPLEMENTATION-GREEN")
     return errors
 
 def verify(state: dict) -> list[str]:

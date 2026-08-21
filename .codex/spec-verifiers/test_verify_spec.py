@@ -26,6 +26,10 @@ assert PBI04_SPEC and PBI04_SPEC.loader
 verify_pbi04 = importlib.util.module_from_spec(PBI04_SPEC)
 PBI04_SPEC.loader.exec_module(verify_pbi04)
 PBI05_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi05.py"
+PBI05_SPEC = importlib.util.spec_from_file_location("verify_pbi05", PBI05_VERIFIER)
+assert PBI05_SPEC and PBI05_SPEC.loader
+verify_pbi05 = importlib.util.module_from_spec(PBI05_SPEC)
+PBI05_SPEC.loader.exec_module(verify_pbi05)
 
 EXPECTED = {
     "drop-h113-falsification": "H113-FALSIFICATION",
@@ -311,14 +315,27 @@ packages:
         self.assertEqual(0, failed)
         self.assertEqual(12, titles)
 
-    def test_pbi05_registered_red_matches_repository_state(self) -> None:
+    def test_pbi05_red_history_and_green_transition_match_repository_state(self) -> None:
         state = verify_spec.read_state()
         packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-05")
-        self.assertEqual([], verify_spec.pbi05_registration_errors(packet, PBI05_VERIFIER.is_file(), False))
-        first = subprocess.run(["python3", str(PBI05_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
-        second = subprocess.run(["python3", str(PBI05_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
-        expected = (1, "PBI05_RED missing packages/readability-core/src/rules/H107.ts\n", "")
-        self.assertEqual(expected, (first.returncode, first.stdout, first.stderr))
-        self.assertEqual(expected, (second.returncode, second.stdout, second.stderr))
+        pre_implementation = packet.replace(
+            "expected_red: null",
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi05.py; exit=1; signature=PBI05_RED missing packages/readability-core/src/rules/H107.ts"',
+            1,
+        ).replace('red_status: "CONSUMED_GREEN"', 'red_status: "REGISTERED_RED"', 1)
+        self.assertEqual([], verify_spec.pbi05_registration_errors(pre_implementation, True, False))
+        self.assertEqual([], verify_spec.pbi05_registration_errors(packet, PBI05_VERIFIER.is_file(), True))
+        self.assertEqual([], verify_pbi05.dependency_errors())
+        green = subprocess.run(["python3", str(PBI05_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        self.assertEqual(0, green.returncode, green.stdout + green.stderr)
+        summary = re.search(
+            r"PBI05_GREEN tests=(\d+) pass=(\d+) fail=(\d+) required_titles=(\d+)", green.stdout
+        )
+        self.assertIsNotNone(summary)
+        tests, passed, failed, titles = (int(value) for value in summary.groups())
+        self.assertGreaterEqual(tests, 12)
+        self.assertEqual(tests, passed)
+        self.assertEqual(0, failed)
+        self.assertEqual(8, titles)
 
 if __name__ == "__main__": unittest.main()

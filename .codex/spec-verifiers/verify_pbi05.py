@@ -2,6 +2,8 @@
 """PBI-05 H107/H108 exact-file, collection, and contract-title oracle."""
 from __future__ import annotations
 
+import importlib.util
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -23,7 +25,7 @@ REQUIRED_TITLES = (
     "H108-F01 different morphology labels do not repeat",
     "H108-R01 range spans the repeated three-sentence run",
 )
-MINIMUM_TESTS = 8
+MINIMUM_TESTS = 12
 TEST_COMMAND = (
     "mise", "x", "node@24.19.0", "--", "corepack", "pnpm",
     "--filter", "@text-harness/readability-core", "--fail-if-no-match",
@@ -33,7 +35,29 @@ TEST_COMMAND = (
 )
 
 
+def dependency_errors() -> list[str]:
+    verifier_path = ROOT / ".codex/spec-verifiers/verify_pbi03.py"
+    spec = importlib.util.spec_from_file_location("verify_pbi03_for_pbi05", verifier_path)
+    if spec is None or spec.loader is None:
+        return ["dependency-oracle-unavailable"]
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    manifest = json.loads((ROOT / "packages/readability-core/package.json").read_text())
+    manifest_ok, manifest_reason = module.manifest_dependencies_match(manifest.get("dependencies", {}))
+    lock_ok, lock_reason = module.lock_dependencies_match((ROOT / "pnpm-lock.yaml").read_text())
+    errors = []
+    if not manifest_ok:
+        errors.append(f"manifest-{manifest_reason}")
+    if not lock_ok:
+        errors.append(f"lock-{lock_reason}")
+    return errors
+
+
 def main() -> int:
+    dependencies = dependency_errors()
+    if dependencies:
+        print("PBI05_FAIL dependencies " + ",".join(dependencies))
+        return 1
     for required in REQUIRED_FILES:
         if not (ROOT / required).is_file():
             print(f"PBI05_RED missing {required}")
