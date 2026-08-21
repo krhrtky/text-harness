@@ -3,9 +3,11 @@ from __future__ import annotations
 import subprocess
 import unittest
 import importlib.util
+import hashlib
 import json
 import sys
 import re
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -106,6 +108,7 @@ EXPECTED = {
     "permit-pbi06-nonpass-external": "PBI06-EVIDENCE-SCHEMA",
     "drop-pbi06-rule-id": "PBI06-ACCEPTANCE-ORACLE",
     "drop-pbi06-required-title": "PBI06-ACCEPTANCE-ORACLE",
+    "drop-pbi06-runtime-hash": "PBI06-POST-IMPLEMENTATION-GREEN",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -468,7 +471,7 @@ packages:
         self.assertEqual(0, failed)
         self.assertEqual(14, titles)
 
-    def test_pbi06_schema_and_registered_red_match_repository_state(self) -> None:
+    def test_pbi06_schema_and_green_transition_match_repository_state(self) -> None:
         def unknown_gate(rule_id: str, gate: str) -> dict:
             evidence = (
                 [f"{rule_id} RNG-001 UTF-16 half-open reconstruction not executed"]
@@ -506,11 +509,31 @@ packages:
 
         state = verify_spec.read_state()
         packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-06")
-        self.assertEqual([], verify_spec.pbi06_registration_errors(packet, PBI06_VERIFIER.is_file(), False))
-        first = subprocess.run(["python3", str(PBI06_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
-        second = subprocess.run(["python3", str(PBI06_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
-        expected = (1, "PBI06_RED missing docs/decision-evidence/deterministic-qualification.json\n", "")
-        self.assertEqual(expected, (first.returncode, first.stdout, first.stderr))
-        self.assertEqual(expected, (second.returncode, second.stdout, second.stderr))
+        pre_implementation = packet.replace(
+            "expected_red: null",
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi06.py; exit=1; signature=PBI06_RED missing docs/decision-evidence/deterministic-qualification.json"',
+            1,
+        ).replace('red_status: "CONSUMED_GREEN"', 'red_status: "REGISTERED_RED"', 1)
+        self.assertEqual([], verify_spec.pbi06_registration_errors(pre_implementation, True, False))
+        self.assertEqual([], verify_spec.pbi06_registration_errors(packet, PBI06_VERIFIER.is_file(), True))
+        green = subprocess.run(["python3", str(PBI06_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        self.assertEqual(0, green.returncode, green.stdout + green.stderr)
+        summary = re.search(r"PBI06_GREEN tests=(\d+) pass=(\d+) fail=(\d+) required_titles=(\d+)", green.stdout)
+        self.assertIsNotNone(summary)
+        tests, passed, failed, titles = (int(value) for value in summary.groups())
+        self.assertGreaterEqual(tests, 12)
+        self.assertEqual(tests, passed)
+        self.assertEqual(0, failed)
+        self.assertEqual(12, titles)
+        for path, expected in verify_pbi06.RUNTIME_DEPENDENCY_HASHES.items():
+            self.assertEqual(expected, hashlib.sha256((ROOT / path).read_bytes()).hexdigest())
+        with tempfile.TemporaryDirectory() as directory:
+            temporary_root = Path(directory)
+            dependency = Path("package.json")
+            (temporary_root / dependency).write_text("changed\n")
+            self.assertEqual(
+                ["package.json"],
+                verify_pbi06.runtime_dependency_errors(temporary_root, {dependency: "0" * 64}),
+            )
 
 if __name__ == "__main__": unittest.main()

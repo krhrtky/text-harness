@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 import subprocess
 from datetime import date
@@ -32,12 +33,27 @@ TEST_COMMAND = (
     "mise", "x", "node@24.19.0", "--", "node", "--test",
     "tests/qualification/deterministic.contract.test.mjs",
 )
+RUNTIME_DEPENDENCY_HASHES = {
+    Path("package.json"): "87d2ccaa29bd499df2777ed25614fd3e84a457a79ae5cc1d1581059dd7f62760",
+    Path("pnpm-lock.yaml"): "f5cc3eea2d7a5c7e04810e44f6d31798094437e54bdfa519112788bdb0f773ba",
+    Path("packages/readability-core/package.json"): "996ac24d4b0af2137c09c7ee84934fbd3db368c6db45347325441331685e9f55",
+}
 
 
 def evidence_valid(value: object) -> bool:
     return isinstance(value, list) and bool(value) and all(
         isinstance(item, str) and bool(item.strip()) for item in value
     )
+
+
+def runtime_dependency_errors(
+    root: Path, expected_hashes: dict[Path, str] = RUNTIME_DEPENDENCY_HASHES
+) -> list[str]:
+    return [
+        str(path) for path, expected in expected_hashes.items()
+        if not (root / path).is_file()
+        or hashlib.sha256((root / path).read_bytes()).hexdigest() != expected
+    ]
 
 
 def validate_artifact(value: object) -> list[str]:
@@ -138,6 +154,10 @@ def main() -> int:
     errors = validate_artifact(json.loads((ROOT / ARTIFACT).read_text()))
     if errors:
         print("PBI06_FAIL artifact " + ",".join(errors))
+        return 1
+    dependency_drift = runtime_dependency_errors(ROOT)
+    if dependency_drift:
+        print("PBI06_FAIL runtime_dependency_drift " + ",".join(dependency_drift))
         return 1
     result = subprocess.run(TEST_COMMAND, cwd=ROOT, text=True, capture_output=True)
     output = result.stdout + result.stderr

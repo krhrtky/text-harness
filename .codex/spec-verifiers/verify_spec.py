@@ -36,7 +36,7 @@ MUTATIONS = (
     "drop-pbi05j-analyze-ownership", "drop-pbi05j-no-match-guard",
     "drop-pbi05j-boundary-title", "permit-pbi05j-splitast", "drop-pbi05j-splitast-mutation",
     "drop-pbi06-gate", "weaken-pbi06-evidence", "permit-pbi06-nonpass-external",
-    "drop-pbi06-rule-id", "drop-pbi06-required-title",
+    "drop-pbi06-rule-id", "drop-pbi06-required-title", "drop-pbi06-runtime-hash",
 )
 
 def read_state() -> dict:
@@ -668,6 +668,26 @@ def pbi06_registration_errors(body: str, oracle_exists: bool, artifact_exists: b
         ))
         if not registered:
             errors.append("PBI06-PRE-IMPLEMENTATION-RED")
+        return errors
+    green = all(value in body for value in (
+        'expected_red: null', 'red_status: "CONSUMED_GREEN"',
+        'phase: "PRE_IMPLEMENTATION"',
+        'command: "python3 .codex/spec-verifiers/verify_pbi06.py"', 'exit: 1',
+        'stdout: "PBI06_RED missing docs/decision-evidence/deterministic-qualification.json"',
+        'stderr: "<empty>"', 'measured_runs: 2',
+        'green_transition:', 'exit: 0',
+        'artifact_contract: "strict schemaVersion/evaluatedAt/toolchain and exact D001-D008 by five-gate catalog with typed non-empty evidence"',
+        'routing_contract: "D001->PBI-06A, D002->PBI-06B, D003->PBI-06C, D004->PBI-06D, D005->PBI-06E, D006->PBI-06F, D007->PBI-06G, D008->PBI-06H; all INTERNAL/NON_PASS_GATE"',
+        'runtime_dependency_contract: "package.json, pnpm-lock.yaml, and packages/readability-core/package.json retain their pre-PBI-06 SHA-256 values"',
+        'package.json: "87d2ccaa29bd499df2777ed25614fd3e84a457a79ae5cc1d1581059dd7f62760"',
+        'pnpm-lock.yaml: "f5cc3eea2d7a5c7e04810e44f6d31798094437e54bdfa519112788bdb0f773ba"',
+        'packages/readability-core/package.json: "996ac24d4b0af2137c09c7ee84934fbd3db368c6db45347325441331685e9f55"',
+        'minimum_tests: 12', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 12',
+        'signature: "PBI06_GREEN tests>=12 pass=tests fail=0 required_titles=12"',
+        'initial_da_green: "tests 12; pass 12; fail 0; required_titles 12; DA commit 0f584d4"',
+    ))
+    if not green:
+        errors.append("PBI06-POST-IMPLEMENTATION-GREEN")
     return errors
 
 def verify(state: dict) -> list[str]:
@@ -1137,7 +1157,7 @@ def apply_mutation(name: str, state: dict) -> None:
             packets[key] = packets[key].replace("H113-M-SPLIT_AST", "REMOVED-M-SPLIT_AST")
     elif name in (
         "drop-pbi06-gate", "weaken-pbi06-evidence", "permit-pbi06-nonpass-external",
-        "drop-pbi06-rule-id", "drop-pbi06-required-title",
+        "drop-pbi06-rule-id", "drop-pbi06-required-title", "drop-pbi06-runtime-hash",
     ):
         key = next(k for k, body in packets.items() if packet_id(body) == "PBI-06")
         if name == "drop-pbi06-gate":
@@ -1150,9 +1170,15 @@ def apply_mutation(name: str, state: dict) -> None:
             packets[key] = packets[key].replace("otherwise INTERNAL/NON_PASS_GATE", "otherwise EXTERNAL permitted", 1)
         elif name == "drop-pbi06-rule-id":
             packets[key] = packets[key].replace(', "D008"]', "]", 1)
-        else:
+        elif name == "drop-pbi06-required-title":
             packets[key] = packets[key].replace(
                 '"PBI06-Q07 any UNKNOWN gate selects internal implementation", ', "", 1
+            )
+        else:
+            packets[key] = packets[key].replace(
+                '      pnpm-lock.yaml: "f5cc3eea2d7a5c7e04810e44f6d31798094437e54bdfa519112788bdb0f773ba"\n',
+                "",
+                1,
             )
     else: raise ValueError(name)
 

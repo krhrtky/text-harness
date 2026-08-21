@@ -38,15 +38,34 @@ task_packet:
     fail: 0
     required_titles: 12
     required_title_text: ["PBI06-Q01 qualification catalog contains D001 through D008 exactly", "PBI06-Q02 every rule contains the exact five mandatory gates", "PBI06-Q03 gate evidence is a non-empty array of non-empty strings", "PBI06-Q04 executed and unknown gate result fields are type consistent", "PBI06-Q05 external mode requires a pinned candidate and five PASS gates", "PBI06-Q06 any FAIL gate selects internal implementation", "PBI06-Q07 any UNKNOWN gate selects internal implementation", "PBI06-Q08 configuration compatibility evidence is rule specific", "PBI06-Q09 range evidence names RNG-001 UTF-16 half-open reconstruction", "PBI06-Q10 all internal decisions route to PBI-06A through PBI-06H", "PBI06-M01 removing one mandatory gate is rejected", "PBI06-M02 empty evidence and invalid external decisions are rejected"]
+    runtime_dependency_contract: "package.json, pnpm-lock.yaml, and packages/readability-core/package.json retain their pre-PBI-06 SHA-256 values"
     green_signature: "PBI06_GREEN tests>=12 pass=tests fail=0 required_titles=12"
-  expected_red: "python3 .codex/spec-verifiers/verify_pbi06.py; exit=1; signature=PBI06_RED missing docs/decision-evidence/deterministic-qualification.json"
-  red_status: "REGISTERED_RED"
-  expected_red_evidence:
+  expected_red: null
+  red_status: "CONSUMED_GREEN"
+  expected_red_history:
+    registration:
+      phase: "PRE_IMPLEMENTATION"
+      command: "python3 .codex/spec-verifiers/verify_pbi06.py"
+      exit: 1
+      stdout: "PBI06_RED missing docs/decision-evidence/deterministic-qualification.json"
+      stderr: "<empty>"
+      measured_runs: 2
+  green_transition:
     command: "python3 .codex/spec-verifiers/verify_pbi06.py"
-    exit: 1
-    stdout: "PBI06_RED missing docs/decision-evidence/deterministic-qualification.json"
-    stderr: "<empty>"
-    measured_runs: 2
+    exit: 0
+    artifact_contract: "strict schemaVersion/evaluatedAt/toolchain and exact D001-D008 by five-gate catalog with typed non-empty evidence"
+    routing_contract: "D001->PBI-06A, D002->PBI-06B, D003->PBI-06C, D004->PBI-06D, D005->PBI-06E, D006->PBI-06F, D007->PBI-06G, D008->PBI-06H; all INTERNAL/NON_PASS_GATE"
+    runtime_dependency_hashes:
+      package.json: "87d2ccaa29bd499df2777ed25614fd3e84a457a79ae5cc1d1581059dd7f62760"
+      pnpm-lock.yaml: "f5cc3eea2d7a5c7e04810e44f6d31798094437e54bdfa519112788bdb0f773ba"
+      packages/readability-core/package.json: "996ac24d4b0af2137c09c7ee84934fbd3db368c6db45347325441331685e9f55"
+    minimum_tests: 12
+    pass_equals_tests: true
+    fail: 0
+    required_titles: 12
+    signature: "PBI06_GREEN tests>=12 pass=tests fail=0 required_titles=12"
+  green_history:
+    initial_da_green: "tests 12; pass 12; fail 0; required_titles 12; DA commit 0f584d4"
   red_registration_gate: "PBI開始時、依存PBI完了後かつ実装変更前に、実在する失敗test command・exit code・完全一致signatureを登録する"
   acceptance: ["AC-D-02", "AC-D-03", "8 rule全てPASSまたは独自実装decision"]
   engineering_constraints: "docs/requirements/engineering-constraints.md"
