@@ -2,6 +2,7 @@
 """PBI-03 oracle: exact heuristic files, collection totals, and boundary titles."""
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import subprocess
@@ -122,6 +123,13 @@ def lock_importer_dependencies(lockfile: str, importer: str) -> dict[str, dict[s
 
 def lock_dependencies_match(lockfile: str) -> tuple[bool, str | None]:
     dependencies = lock_importer_dependencies(lockfile, "packages/readability-core")
+    expected_keys = {package for package, _ in RUNTIME_DEPENDENCIES}
+    extra_keys = sorted(set(dependencies) - expected_keys)
+    if extra_keys:
+        return False, f"unexpected:{extra_keys[0]}"
+    missing_keys = sorted(expected_keys - set(dependencies))
+    if missing_keys:
+        return False, missing_keys[0]
     for package, version in RUNTIME_DEPENDENCIES:
         entry = dependencies.get(package, {})
         if entry.get("specifier") != version or entry.get("version") != version:
@@ -129,20 +137,53 @@ def lock_dependencies_match(lockfile: str) -> tuple[bool, str | None]:
     return True, None
 
 
+def manifest_dependencies_match(dependencies: object) -> tuple[bool, str | None]:
+    if not isinstance(dependencies, dict):
+        return False, "dependencies-not-a-map"
+    expected = dict(RUNTIME_DEPENDENCIES)
+    extra_keys = sorted(set(dependencies) - set(expected))
+    if extra_keys:
+        return False, f"unexpected:{extra_keys[0]}"
+    missing_keys = sorted(set(expected) - set(dependencies))
+    if missing_keys:
+        return False, missing_keys[0]
+    for package, version in RUNTIME_DEPENDENCIES:
+        if dependencies.get(package) != version:
+            return False, package
+    return True, None
+
+
 def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--mutation", choices=("add-third-direct-dependency",))
+    args = parser.parse_args()
     for required in (PACKAGE_MANIFEST, LOCKFILE):
         if not (ROOT / required).is_file():
             print(f"PBI03_RED missing {required}")
             return 1
 
     manifest = json.loads((ROOT / PACKAGE_MANIFEST).read_text())
-    dependencies = manifest.get("dependencies", {})
+    dependencies = dict(manifest.get("dependencies", {}))
+    if args.mutation == "add-third-direct-dependency":
+        dependencies["structured-source"] = "4.0.0"
     for package, version in RUNTIME_DEPENDENCIES:
         if dependencies.get(package) != version:
             print(f"PBI03_RED dependency {package} expected {version}")
             return 1
+    manifest_matches, manifest_error = manifest_dependencies_match(dependencies)
+    if not manifest_matches:
+        print(f"PBI03_FAIL manifest direct dependencies {manifest_error}")
+        return 1
 
     lockfile = (ROOT / LOCKFILE).read_text()
+    lock_dependencies = lock_importer_dependencies(lockfile, "packages/readability-core")
+    if args.mutation == "add-third-direct-dependency":
+        lock_dependencies["structured-source"] = {"specifier": "4.0.0", "version": "4.0.0"}
+    expected_lock_keys = {package for package, _ in RUNTIME_DEPENDENCIES}
+    extra_lock_keys = sorted(set(lock_dependencies) - expected_lock_keys)
+    if extra_lock_keys:
+        print(f"PBI03_FAIL lock direct dependencies unexpected:{extra_lock_keys[0]}")
+        return 1
     lock_matches, invalid_package = lock_dependencies_match(lockfile)
     if not lock_matches:
         expected_version = dict(RUNTIME_DEPENDENCIES)[invalid_package]

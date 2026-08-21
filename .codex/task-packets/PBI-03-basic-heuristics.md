@@ -19,6 +19,8 @@ task_packet:
     test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/heuristic/H101.contract.test.ts test/heuristic/H103.contract.test.ts test/heuristic/H104.contract.test.ts"
     contract_test_files: ["packages/readability-core/test/heuristic/H101.contract.test.ts", "packages/readability-core/test/heuristic/H103.contract.test.ts", "packages/readability-core/test/heuristic/H104.contract.test.ts"]
     runtime_dependencies: ["sentence-splitter@5.0.1", "@textlint/markdown-to-ast@15.8.0"]
+    direct_dependency_keys_exact: ["@textlint/markdown-to-ast", "sentence-splitter"]
+    dependency_scope: "package manifest dependenciesとpackages/readability-core lock importer dependenciesだけをexact比較する。devDependenciesとlockfile transitive package entriesは別scope"
     markdown_exclusion: "@textlint/markdown-to-ast@15.8.0 CodeBlock range exclusion; internal scanner forbidden; remaining interval ranges rebased to original UTF-16 offsets"
     minimum_tests: 12
     pass_equals_tests: true

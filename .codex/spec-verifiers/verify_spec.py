@@ -22,6 +22,7 @@ MUTATIONS = (
     "drop-pbi03-package-ownership", "drift-pbi03-sentence-version",
     "permit-pbi03-internal-scanner", "drop-pbi03-code-range-title",
     "drop-pbi03-runtime-dependency",
+    "add-pbi03-third-direct-dependency",
 )
 
 def read_state() -> dict:
@@ -174,6 +175,10 @@ def pbi03_transition_errors(body: str, oracle_exists: bool, contract_tests_exist
         'runtime_dependencies: ["sentence-splitter@5.0.1", "@textlint/markdown-to-ast@15.8.0"]',
         'markdown_exclusion: "@textlint/markdown-to-ast@15.8.0 CodeBlock range exclusion; internal scanner forbidden; remaining interval ranges rebased to original UTF-16 offsets"',
     ))
+    exact_direct_dependencies = all(value in body for value in (
+        'direct_dependency_keys_exact: ["@textlint/markdown-to-ast", "sentence-splitter"]',
+        'dependency_scope: "package manifest dependenciesとpackages/readability-core lock importer dependenciesだけをexact比較する。devDependenciesとlockfile transitive package entriesは別scope"',
+    ))
     acceptance = all(value in body for value in (
         'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi03.py"',
         'test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/heuristic/H101.contract.test.ts test/heuristic/H103.contract.test.ts test/heuristic/H104.contract.test.ts"',
@@ -209,6 +214,8 @@ def pbi03_transition_errors(body: str, oracle_exists: bool, contract_tests_exist
         errors.append("PBI03-OWNERSHIP")
     if not dependency_contract:
         errors.append("PBI03-DEPENDENCY-CONTRACT")
+    if not exact_direct_dependencies:
+        errors.append("PBI03-EXACT-DIRECT-DEPENDENCIES")
     if not acceptance or not oracle_exists:
         errors.append("PBI03-ACCEPTANCE-ORACLE")
     if not historical:
@@ -428,6 +435,7 @@ def apply_mutation(name: str, state: dict) -> None:
         "drop-pbi03-analyze-ownership", "drop-pbi03-no-match-guard", "drop-pbi03-required-title",
         "drop-pbi03-package-ownership", "drift-pbi03-sentence-version", "drop-pbi03-code-range-title",
         "drop-pbi03-runtime-dependency",
+        "add-pbi03-third-direct-dependency",
     ):
         key = next(k for k, body in packets.items() if packet_id(body) == "PBI-03")
         if name == "drop-pbi03-analyze-ownership":
@@ -447,6 +455,12 @@ def apply_mutation(name: str, state: dict) -> None:
                 packets[key] = packets[key].replace(
                     'runtime_dependencies: ["sentence-splitter@5.0.1", "@textlint/markdown-to-ast@15.8.0"]',
                     'runtime_dependencies: ["sentence-splitter@5.0.1"]',
+                    1,
+                )
+            elif name == "add-pbi03-third-direct-dependency":
+                packets[key] = packets[key].replace(
+                    'direct_dependency_keys_exact: ["@textlint/markdown-to-ast", "sentence-splitter"]',
+                    'direct_dependency_keys_exact: ["@textlint/markdown-to-ast", "sentence-splitter", "structured-source"]',
                     1,
                 )
             else:

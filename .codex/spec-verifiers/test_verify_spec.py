@@ -46,6 +46,7 @@ EXPECTED = {
     "permit-pbi03-internal-scanner": "PBI03-MARKDOWN-CONTRACT",
     "drop-pbi03-code-range-title": "PBI03-ACCEPTANCE-ORACLE",
     "drop-pbi03-runtime-dependency": "PBI03-DEPENDENCY-CONTRACT",
+    "add-pbi03-third-direct-dependency": "PBI03-EXACT-DIRECT-DEPENDENCIES",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -155,8 +156,43 @@ importers:
         self.assertEqual((True, None), verify_pbi03.lock_dependencies_match(unquoted))
         invalid_version = quoted.replace("version: 15.8.0", "version: 15.8.1", 1)
         self.assertEqual((False, "@textlint/markdown-to-ast"), verify_pbi03.lock_dependencies_match(invalid_version))
-        missing_dependency = quoted.replace("'@textlint/markdown-to-ast':", "removed-markdown-dependency:", 1)
+        missing_dependency = quoted.replace(
+            "      '@textlint/markdown-to-ast':\n        specifier: 15.8.0\n        version: 15.8.0\n",
+            "",
+            1,
+        )
         self.assertEqual((False, "@textlint/markdown-to-ast"), verify_pbi03.lock_dependencies_match(missing_dependency))
+        third_direct = quoted.replace(
+            "      sentence-splitter:\n",
+            "      structured-source:\n        specifier: 4.0.0\n        version: 4.0.0\n      sentence-splitter:\n",
+            1,
+        )
+        self.assertEqual((False, "unexpected:structured-source"), verify_pbi03.lock_dependencies_match(third_direct))
+        separate_scopes = quoted + """  packages/textlint-adapter:
+    devDependencies:
+      structured-source:
+        specifier: 4.0.0
+        version: 4.0.0
+packages:
+  structured-source@4.0.0: {}
+"""
+        self.assertEqual((True, None), verify_pbi03.lock_dependencies_match(separate_scopes))
+        exact_manifest = {"@textlint/markdown-to-ast": "15.8.0", "sentence-splitter": "5.0.1"}
+        self.assertEqual((True, None), verify_pbi03.manifest_dependencies_match(exact_manifest))
+        self.assertEqual(
+            (False, "unexpected:structured-source"),
+            verify_pbi03.manifest_dependencies_match({**exact_manifest, "structured-source": "4.0.0"}),
+        )
+        mutation = subprocess.run(
+            ["python3", str(PBI03_VERIFIER), "--mutation", "add-third-direct-dependency"],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(
+            (1, "PBI03_FAIL manifest direct dependencies unexpected:structured-source\n", ""),
+            (mutation.returncode, mutation.stdout, mutation.stderr),
+        )
 
     def test_pbi03_red_history_and_green_transition_match_repository_state(self) -> None:
         state = verify_spec.read_state()
