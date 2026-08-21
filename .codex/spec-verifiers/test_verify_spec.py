@@ -538,17 +538,27 @@ packages:
         state = verify_spec.read_state()
         packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-06")
         pre_implementation = packet.replace(
-            'expected_red: "python3 .codex/spec-verifiers/verify_pbi06.py; exit=1; signature=PBI06_RED artifact_schema_version expected=2 actual=1"',
+            "expected_red: null",
             'expected_red: "python3 .codex/spec-verifiers/verify_pbi06.py; exit=1; signature=PBI06_RED missing docs/decision-evidence/deterministic-qualification.json"',
             1,
-        ).replace('red_status: "REGISTERED_RED_QGA_FIX"', 'red_status: "REGISTERED_RED"', 1)
+        ).replace('red_status: "CONSUMED_GREEN"', 'red_status: "REGISTERED_RED"', 1)
         self.assertEqual([], verify_spec.pbi06_registration_errors(pre_implementation, True, False))
-        self.assertEqual([], verify_spec.pbi06_registration_errors(packet, PBI06_VERIFIER.is_file(), True, 1))
-        first = subprocess.run(["python3", str(PBI06_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
-        second = subprocess.run(["python3", str(PBI06_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
-        expected = (1, "PBI06_RED artifact_schema_version expected=2 actual=1\n", "")
-        self.assertEqual(expected, (first.returncode, first.stdout, first.stderr))
-        self.assertEqual(expected, (second.returncode, second.stdout, second.stderr))
+        pre_qga_fix = packet.replace(
+            "expected_red: null",
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi06.py; exit=1; signature=PBI06_RED artifact_schema_version expected=2 actual=1"',
+            1,
+        ).replace('red_status: "CONSUMED_GREEN"', 'red_status: "REGISTERED_RED_QGA_FIX"', 1)
+        self.assertEqual([], verify_spec.pbi06_registration_errors(pre_qga_fix, True, True, 1))
+        self.assertEqual([], verify_spec.pbi06_registration_errors(packet, PBI06_VERIFIER.is_file(), True, 2))
+        green = subprocess.run(["python3", str(PBI06_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        self.assertEqual(0, green.returncode, green.stdout + green.stderr)
+        summary = re.search(r"PBI06_GREEN tests=(\d+) pass=(\d+) fail=(\d+) required_titles=(\d+)", green.stdout)
+        self.assertIsNotNone(summary)
+        tests, passed, failed, titles = (int(value) for value in summary.groups())
+        self.assertGreaterEqual(tests, 17)
+        self.assertEqual(tests, passed)
+        self.assertEqual(0, failed)
+        self.assertEqual(12, titles)
         for path, expected in verify_pbi06.RUNTIME_DEPENDENCY_HASHES.items():
             self.assertEqual(expected, hashlib.sha256((ROOT / path).read_bytes()).hexdigest())
         with tempfile.TemporaryDirectory() as directory:

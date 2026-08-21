@@ -238,7 +238,7 @@ def main() -> int:
     }
     tests, passed, failed = totals.get("tests", -1), totals.get("pass", -1), totals.get("fail", -1)
     titles = sum(title in plain for title in REQUIRED_TITLES)
-    if tests < 12 or passed != tests or failed != 0 or titles != len(REQUIRED_TITLES):
+    if tests < 17 or passed != tests or failed != 0 or titles != len(REQUIRED_TITLES):
         print(f"PBI06_FAIL tests={tests} pass={passed} fail={failed} required_titles={titles}/{len(REQUIRED_TITLES)}")
         return 1
     print(f"PBI06_GREEN tests={tests} pass={passed} fail=0 required_titles={len(REQUIRED_TITLES)}")

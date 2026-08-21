@@ -675,11 +675,11 @@ def pbi06_registration_errors(
         'report: "docs/decision-evidence/deterministic-qualification.md"',
         'exact_rule_ids: ["D001", "D002", "D003", "D004", "D005", "D006", "D007", "D008"]',
         'exact_gates: ["functional", "configCompatibility", "license", "maintainability", "range"]',
-        'minimum_tests: 12', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 12',
+        'minimum_tests: 17', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 12',
         '"PBI06-Q05 external mode requires a pinned candidate and five PASS gates"',
         '"PBI06-Q07 any UNKNOWN gate selects internal implementation"',
         '"PBI06-Q10 all internal decisions route to PBI-06A through PBI-06H"',
-        'green_signature: "PBI06_GREEN tests>=12 pass=tests fail=0 required_titles=12"',
+        'green_signature: "PBI06_GREEN tests>=17 pass=tests fail=0 required_titles=12"',
     ))
     errors = []
     if not ownership:
@@ -723,9 +723,16 @@ def pbi06_registration_errors(
         'package.json: "87d2ccaa29bd499df2777ed25614fd3e84a457a79ae5cc1d1581059dd7f62760"',
         'pnpm-lock.yaml: "f5cc3eea2d7a5c7e04810e44f6d31798094437e54bdfa519112788bdb0f773ba"',
         'packages/readability-core/package.json: "996ac24d4b0af2137c09c7ee84934fbd3db368c6db45347325441331685e9f55"',
-        'minimum_tests: 12', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 12',
-        'signature: "PBI06_GREEN tests>=12 pass=tests fail=0 required_titles=12"',
+        'minimum_tests: 17', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 12',
+        'signature: "PBI06_GREEN tests>=17 pass=tests fail=0 required_titles=12"',
         'initial_da_green: "tests 12; pass 12; fail 0; required_titles 12; DA commit 0f584d4"',
+        'qga_fix_expected_red:', 'phase: "PRE_FIX_IMPLEMENTATION"',
+        'stdout: "PBI06_RED artifact_schema_version expected=2 actual=1"',
+        'qga_fix_green_transition:', 'schema_version: 2',
+        'provenance_contract: "exact candidate/license/maintenance provenance and all five tamper counterexamples executable"',
+        'minimum_tests: 17', 'required_titles: 12',
+        'signature: "PBI06_GREEN tests>=17 pass=tests fail=0 required_titles=12"',
+        'da_commit: "7fc7274"',
     ))
     if not green:
         errors.append("PBI06-POST-IMPLEMENTATION-GREEN")

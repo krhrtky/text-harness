@@ -57,15 +57,15 @@ task_packet:
     report: "docs/decision-evidence/deterministic-qualification.md"
     exact_rule_ids: ["D001", "D002", "D003", "D004", "D005", "D006", "D007", "D008"]
     exact_gates: ["functional", "configCompatibility", "license", "maintainability", "range"]
-    minimum_tests: 12
+    minimum_tests: 17
     pass_equals_tests: true
     fail: 0
     required_titles: 12
     required_title_text: ["PBI06-Q01 qualification catalog contains D001 through D008 exactly", "PBI06-Q02 every rule contains the exact five mandatory gates", "PBI06-Q03 gate evidence is a non-empty array of non-empty strings", "PBI06-Q04 executed and unknown gate result fields are type consistent", "PBI06-Q05 external mode requires a pinned candidate and five PASS gates", "PBI06-Q06 any FAIL gate selects internal implementation", "PBI06-Q07 any UNKNOWN gate selects internal implementation", "PBI06-Q08 configuration compatibility evidence is rule specific", "PBI06-Q09 range evidence names RNG-001 UTF-16 half-open reconstruction", "PBI06-Q10 all internal decisions route to PBI-06A through PBI-06H", "PBI06-M01 removing one mandatory gate is rejected", "PBI06-M02 empty evidence and invalid external decisions are rejected"]
     runtime_dependency_contract: "package.json, pnpm-lock.yaml, and packages/readability-core/package.json retain their pre-PBI-06 SHA-256 values"
-    green_signature: "PBI06_GREEN tests>=12 pass=tests fail=0 required_titles=12"
-  expected_red: "python3 .codex/spec-verifiers/verify_pbi06.py; exit=1; signature=PBI06_RED artifact_schema_version expected=2 actual=1"
-  red_status: "REGISTERED_RED_QGA_FIX"
+    green_signature: "PBI06_GREEN tests>=17 pass=tests fail=0 required_titles=12"
+  expected_red: null
+  red_status: "CONSUMED_GREEN"
   expected_red_history:
     registration:
       phase: "PRE_IMPLEMENTATION"
@@ -83,11 +83,11 @@ task_packet:
       package.json: "87d2ccaa29bd499df2777ed25614fd3e84a457a79ae5cc1d1581059dd7f62760"
       pnpm-lock.yaml: "f5cc3eea2d7a5c7e04810e44f6d31798094437e54bdfa519112788bdb0f773ba"
       packages/readability-core/package.json: "996ac24d4b0af2137c09c7ee84934fbd3db368c6db45347325441331685e9f55"
-    minimum_tests: 12
+    minimum_tests: 17
     pass_equals_tests: true
     fail: 0
     required_titles: 12
-    signature: "PBI06_GREEN tests>=12 pass=tests fail=0 required_titles=12"
+    signature: "PBI06_GREEN tests>=17 pass=tests fail=0 required_titles=12"
   green_history:
     initial_da_green: "tests 12; pass 12; fail 0; required_titles 12; DA commit 0f584d4"
   qga_fix_expected_red:
@@ -97,6 +97,17 @@ task_packet:
     stdout: "PBI06_RED artifact_schema_version expected=2 actual=1"
     stderr: "<empty>"
     measured_runs: 2
+  qga_fix_green_transition:
+    command: "python3 .codex/spec-verifiers/verify_pbi06.py"
+    exit: 0
+    schema_version: 2
+    provenance_contract: "exact candidate/license/maintenance provenance and all five tamper counterexamples executable"
+    minimum_tests: 17
+    pass_equals_tests: true
+    fail: 0
+    required_titles: 12
+    signature: "PBI06_GREEN tests>=17 pass=tests fail=0 required_titles=12"
+    da_commit: "7fc7274"
   red_registration_gate: "PBI開始時、依存PBI完了後かつ実装変更前に、実在する失敗test command・exit code・完全一致signatureを登録する"
   acceptance: ["AC-D-02", "AC-D-03", "8 rule全てPASSまたは独自実装decision"]
   engineering_constraints: "docs/requirements/engineering-constraints.md"
