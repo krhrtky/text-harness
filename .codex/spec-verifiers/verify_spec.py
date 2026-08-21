@@ -19,6 +19,8 @@ MUTATIONS = (
     "drop-pbi02-required-title",
     "drop-pbi03-analyze-ownership", "drop-pbi03-no-match-guard",
     "drop-pbi03-required-title",
+    "drop-pbi03-package-ownership", "drift-pbi03-sentence-version",
+    "permit-pbi03-internal-scanner", "drop-pbi03-code-range-title",
 )
 
 def read_state() -> dict:
@@ -160,41 +162,54 @@ def pbi02_transition_errors(
 
 def pbi03_registration_errors(body: str, oracle_exists: bool, contract_tests_exist: bool) -> list[str]:
     ownership = all(value in body for value in (
-        'owned_paths: ["packages/readability-core/src/rules/H101*", "packages/readability-core/src/rules/H103*", "packages/readability-core/src/rules/H104*", "packages/readability-core/src/rules/shared/**", "packages/readability-core/src/analyze.ts", "packages/readability-core/src/index.ts", "packages/readability-core/test/heuristic/H101*", "packages/readability-core/test/heuristic/H103*", "packages/readability-core/test/heuristic/H104*"]',
+        'owned_paths: ["packages/readability-core/package.json", "pnpm-lock.yaml", "packages/readability-core/src/rules/H101*", "packages/readability-core/src/rules/H103*", "packages/readability-core/src/rules/H104*", "packages/readability-core/src/rules/shared/**", "packages/readability-core/src/analyze.ts", "packages/readability-core/src/index.ts", "packages/readability-core/test/heuristic/H101*", "packages/readability-core/test/heuristic/H103*", "packages/readability-core/test/heuristic/H104*"]',
+        'packages/readability-core/package.json: "PBI-02 ownership履歴を維持し、runtime dependenciesへsentence-splitter=5.0.1と@textlint/markdown-to-ast=15.8.0だけ追加する"',
+        'pnpm-lock.yaml: "PBI-02 ownership履歴を維持し、上記2 exact dependencyと推移依存の生成差分だけ更新する"',
         'packages/readability-core/src/analyze.ts: "PBI-02 ownership履歴を維持し、H101/H103/H104 dispatch登録だけ変更する"',
         'packages/readability-core/src/index.ts: "PBI-02 ownership履歴を維持し、H101/H103/H104 public exportだけ変更する"',
+    ))
+    dependency_contract = all(value in body for value in (
+        '"sentence-splitter@5.0.1と@textlint/markdown-to-ast@15.8.0をruntime dependencyとしてexact pinする"',
+        'runtime_dependencies: ["sentence-splitter@5.0.1", "@textlint/markdown-to-ast@15.8.0"]',
+        'markdown_exclusion: "@textlint/markdown-to-ast@15.8.0 CodeBlock range exclusion; internal scanner forbidden; remaining interval ranges rebased to original UTF-16 offsets"',
     ))
     acceptance = all(value in body for value in (
         'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi03.py"',
         'test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/heuristic/H101.contract.test.ts test/heuristic/H103.contract.test.ts test/heuristic/H104.contract.test.ts"',
         'contract_test_files: ["packages/readability-core/test/heuristic/H101.contract.test.ts", "packages/readability-core/test/heuristic/H103.contract.test.ts", "packages/readability-core/test/heuristic/H104.contract.test.ts"]',
-        "minimum_tests: 9",
+        "minimum_tests: 12",
         "pass_equals_tests: true",
         "fail: 0",
         '"AC-H101-01 H101 does not report length 100"',
         '"AC-H101-02 H101 reports length 101 with actual and threshold"',
-        '"H101-AC05 H101 excludes code blocks"',
+        '"H101-AC05a H101 excludes fenced code blocks"',
+        '"H101-AC05b H101 excludes indented code blocks"',
+        '"H101-AC05c H101 preserves prose source ranges around code blocks"',
+        '"H101-AC05d H101 includes code blocks when exclusion is disabled"',
         '"H101-AC06 H101 is deterministic"',
         '"H103-B01 H103 does not report four Japanese commas"',
         '"H103-P01 H103 reports five Japanese commas"',
         '"H104-B01 H104 does not report nesting depth two"',
         '"H104-P01 H104 reports nesting depth three"',
         '"H104-F01 H104 leaves mismatched brackets to D003"',
-        'green_signature: "PBI03_GREEN tests>=9 pass=tests fail=0 required_titles=9"',
+        'green_signature: "PBI03_GREEN tests>=12 pass=tests fail=0 required_titles=12"',
     ))
     registered = all(value in body for value in (
-        'expected_red: "python3 .codex/spec-verifiers/verify_pbi03.py; exit=1; signature=PBI03_RED missing packages/readability-core/test/heuristic/H101.contract.test.ts"',
+        'expected_red: "python3 .codex/spec-verifiers/verify_pbi03.py; exit=1; signature=PBI03_RED dependency sentence-splitter expected 5.0.1"',
         'red_status: "REGISTERED_RED"',
         'phase: "PRE_IMPLEMENTATION"',
         'command: "python3 .codex/spec-verifiers/verify_pbi03.py"',
         "exit: 1",
-        'stdout: "PBI03_RED missing packages/readability-core/test/heuristic/H101.contract.test.ts"',
+        'stdout: "PBI03_RED dependency sentence-splitter expected 5.0.1"',
         'stderr: "<empty>"',
         "measured_runs: 2",
+        'superseded_oracle: "python3 .codex/spec-verifiers/verify_pbi03.py; exit=1; signature=PBI03_RED missing packages/readability-core/test/heuristic/H101.contract.test.ts"',
     ))
     errors = []
     if not ownership:
         errors.append("PBI03-OWNERSHIP")
+    if not dependency_contract:
+        errors.append("PBI03-DEPENDENCY-CONTRACT")
     if not acceptance or not oracle_exists:
         errors.append("PBI03-ACCEPTANCE-ORACLE")
     if not registered or contract_tests_exist:
@@ -243,6 +258,15 @@ def verify(state: dict) -> list[str]:
     need(m["deterministicRules"]["D003"]["defaultPairs"][-1] == "[]" and "【】[]`" in t["d"], "D003-PAIR-CONTRACT")
     for rid, rule in m["postMvpHeuristicRules"].items():
         need(rid in t["dec1"] and rule["meaning"] in json.dumps(m, ensure_ascii=False), f"{rid}-POST-MVP-TRACE")
+    need(
+        "H101/H103/H104の文分割はruntime dependency `sentence-splitter@5.0.1`" in t["dec6"]
+        and "`@textlint/markdown-to-ast@15.8.0`へexact pinする" in t["dec6"]
+        and "独自Markdown block scanner" in t["dec6"]
+        and "禁止する" in t["dec6"]
+        and "H101/H103/H104のcode block除外は`@textlint/markdown-to-ast@15.8.0`" in t["mvp"]
+        and "独自Markdown scannerを禁止する" in t["mvp"],
+        "PBI03-MARKDOWN-CONTRACT",
+    )
 
     ops = m["operations"]
     for command in ops["commands"]:
@@ -375,16 +399,30 @@ def apply_mutation(name: str, state: dict) -> None:
             packets[key] = packets[key].replace(
                 "AC-FND-01 Finding uses UTF-16 zero-based half-open ranges", "REMOVED REQUIRED TITLE", 1
             )
-    elif name in ("drop-pbi03-analyze-ownership", "drop-pbi03-no-match-guard", "drop-pbi03-required-title"):
+    elif name in (
+        "drop-pbi03-analyze-ownership", "drop-pbi03-no-match-guard", "drop-pbi03-required-title",
+        "drop-pbi03-package-ownership", "drift-pbi03-sentence-version", "drop-pbi03-code-range-title",
+    ):
         key = next(k for k, body in packets.items() if packet_id(body) == "PBI-03")
         if name == "drop-pbi03-analyze-ownership":
             packets[key] = packets[key].replace('"packages/readability-core/src/analyze.ts", ', "", 1)
         elif name == "drop-pbi03-no-match-guard":
             packets[key] = packets[key].replace(" --fail-if-no-match", "", 1)
         else:
-            packets[key] = packets[key].replace(
-                "AC-H101-01 H101 does not report length 100", "REMOVED REQUIRED TITLE", 1
-            )
+            if name == "drop-pbi03-package-ownership":
+                packets[key] = packets[key].replace('"packages/readability-core/package.json", ', "", 1)
+            elif name == "drift-pbi03-sentence-version":
+                packets[key] = packets[key].replace("sentence-splitter@5.0.1", "sentence-splitter@5.0.0", 1)
+            elif name == "drop-pbi03-code-range-title":
+                packets[key] = packets[key].replace(
+                    "H101-AC05c H101 preserves prose source ranges around code blocks", "REMOVED RANGE TITLE", 1
+                )
+            else:
+                packets[key] = packets[key].replace(
+                    "AC-H101-01 H101 does not report length 100", "REMOVED REQUIRED TITLE", 1
+                )
+    elif name == "permit-pbi03-internal-scanner":
+        t["dec6"] = t["dec6"].replace("独自Markdown block scanner", "許可済みMarkdown block scanner", 1).replace("禁止する", "許可する", 1)
     else: raise ValueError(name)
 
 def main() -> int:

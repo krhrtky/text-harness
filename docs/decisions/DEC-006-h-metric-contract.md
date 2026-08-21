@@ -15,6 +15,17 @@ H106はdefault 50%、文数3以上かつ辞書一致3件以上を必要条件と
 「3文以上」は共通のstrict comparisonを維持するためthreshold 2、すなわち`actual > 2`と表現する。
 H104のpair集合はD003と共有し、DEC-007の`（）「」『』【】[]`を正とする。
 
+## PBI-03 Markdown code除外
+
+H101/H103/H104の文分割はruntime dependency `sentence-splitter@5.0.1`、Markdown code block識別は
+`@textlint/markdown-to-ast@15.8.0`へexact pinする。独自Markdown block scannerはCommonMarkの
+fenced/indented code、list内code、lazy continuationの境界を重複実装するため禁止する。
+
+Markdown ASTの`CodeBlock` source rangeを除外rangeとして収集し、除外range間の原文sliceだけを
+`sentence-splitter`へ渡す。返された`Sentence.range`へslice開始offsetを加算して原文UTF-16 rangeへ戻し、
+全findingで`input.slice(start,end)`が期待文と一致することを検査する。code除外の設定を無効にした場合だけ
+同じsource intervalを除外しない。fenced code、4-space indented code、code前後のprose rangeを独立fixtureにする。
+
 H112/H113は次の共通pipelineを規範とする。
 
 1. `@textlint/markdown-to-ast@15.8.0` の全 `Paragraph` nodeをsource順に列挙する。

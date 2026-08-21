@@ -4,8 +4,8 @@
   "current_phase": "DA",
   "active_pbi": "PBI-03",
   "gate_type": "DELIVERY",
-  "strategy_id": "delivery-pbi03-basic-heuristics-v1",
-  "iteration": 13,
+  "strategy_id": "delivery-pbi03-basic-heuristics-v2",
+  "iteration": 14,
   "task_packet_ref": ".codex/task-packets/PBI-03-basic-heuristics.md",
   "phase_history": [
     {
@@ -386,6 +386,40 @@
       ],
       "resume_point": ".codex/task-packets/PBI-03-basic-heuristics.md",
       "timestamp": "2026-08-21T15:25:00+09:00"
+    },
+    {
+      "phase": "SDA",
+      "status": "PBI03_PREFLIGHT_SPEC_GAP_RESOLVED",
+      "agent": "/root/spec_finalize",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-03",
+      "decision": "PBI-03 may update the PBI-02 package manifest and lockfile only for exact sentence-splitter 5.0.1 and markdown-to-ast 15.8.0 runtime dependency closure; Markdown code exclusion uses AST ranges and forbids an internal block scanner",
+      "evidence": [
+        "readability-mvp metric contract requires sentence-splitter@5.0.1 for H101 sentence ranges",
+        "objective evidence requires all H rules to exclude Markdown code blocks before analysis",
+        "existing research rejects independent blank-line/block parsing and validates @textlint/markdown-to-ast@15.8.0 source ranges",
+        "fenced code, indented code, and prose-range rebasing are separate required fixtures",
+        "PBI-02 package.json and pnpm-lock.yaml ownership history retained with PBI-03 delta constraints"
+      ],
+      "resume_point": ".codex/task-packets/PBI-03-basic-heuristics.md",
+      "timestamp": "2026-08-21T15:35:00+09:00"
+    },
+    {
+      "phase": "DA",
+      "status": "READY",
+      "agent": null,
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-03",
+      "task_packet_ref": ".codex/task-packets/PBI-03-basic-heuristics.md",
+      "decision": "PBI-03 RED re-registered against the exact dependency and lock oracle before implementation changes",
+      "evidence": [
+        "python3 .codex/spec-verifiers/verify_pbi03.py => exit 1",
+        "stdout: PBI03_RED dependency sentence-splitter expected 5.0.1; stderr empty; reproduced twice",
+        "previous missing-test RED retained as superseded history",
+        "acceptance now requires exact dependency pins, lock entries, three exact test files, tests >= 12, pass = tests, fail 0, and twelve titles including exclusion-off behavior"
+      ],
+      "resume_point": ".codex/task-packets/PBI-03-basic-heuristics.md",
+      "timestamp": "2026-08-21T15:40:00+09:00"
     }
   ],
   "blocker_history": [
@@ -463,5 +497,5 @@
     }
   ],
   "created_at": "2026-08-21T09:39:07+09:00",
-  "updated_at": "2026-08-21T15:25:00+09:00"
+  "updated_at": "2026-08-21T15:40:00+09:00"
 }

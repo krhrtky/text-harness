@@ -130,6 +130,10 @@ flowchart LR
 形態素metricの辞書と版、fixtureはDEC-006を正とする。
 H102のmessageは一般言語学上の「節」と断定せず「述語group」を表示する。
 
+H101/H103/H104のcode block除外は`@textlint/markdown-to-ast@15.8.0`の`CodeBlock.range`を正とし、
+独自Markdown scannerを禁止する。非code source intervalごとに`sentence-splitter@5.0.1`を実行し、
+sentence rangeを原文UTF-16 offsetへrebaseする。fenced/indented codeとcode前後proseのslice復元をfixtureで検証する。
+
 ### 4.4 H112/H113 paragraph・projection契約
 
 - paragraph: `@textlint/markdown-to-ast@15.8.0`が生成した全`Paragraph` node。Document直下、

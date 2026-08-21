@@ -36,6 +36,10 @@ EXPECTED = {
     "drop-pbi03-analyze-ownership": "PBI03-OWNERSHIP",
     "drop-pbi03-no-match-guard": "PBI03-ACCEPTANCE-ORACLE",
     "drop-pbi03-required-title": "PBI03-ACCEPTANCE-ORACLE",
+    "drop-pbi03-package-ownership": "PBI03-OWNERSHIP",
+    "drift-pbi03-sentence-version": "PBI03-DEPENDENCY-CONTRACT",
+    "permit-pbi03-internal-scanner": "PBI03-MARKDOWN-CONTRACT",
+    "drop-pbi03-code-range-title": "PBI03-ACCEPTANCE-ORACLE",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -136,7 +140,7 @@ class SpecVerifierTest(unittest.TestCase):
         for _ in range(2):
             red = subprocess.run(["python3", str(oracle)], cwd=ROOT, text=True, capture_output=True)
             self.assertEqual(
-                (1, "PBI03_RED missing packages/readability-core/test/heuristic/H101.contract.test.ts\n", ""),
+                (1, "PBI03_RED dependency sentence-splitter expected 5.0.1\n", ""),
                 (red.returncode, red.stdout, red.stderr),
             )
 
