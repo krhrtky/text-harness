@@ -89,6 +89,19 @@ def pbi01_transition_errors(body: str, executable_exists: bool) -> list[str]:
     ))
     return [] if green else ["PBI01-POST-IMPLEMENTATION-GREEN"]
 
+def pbi02_registration_errors(body: str, contract_test_exists: bool) -> list[str]:
+    registered = all(value in body for value in (
+        'expected_red: "test -f packages/readability-core/test/contract/core.contract.test.ts; exit=1; signature=<empty stdout/stderr>"',
+        'red_status: "REGISTERED_RED"',
+        'phase: "PRE_IMPLEMENTATION"',
+        'command: "test -f packages/readability-core/test/contract/core.contract.test.ts"',
+        "exit: 1",
+        'stdout: "<empty>"',
+        'stderr: "<empty>"',
+        "measured_runs: 2",
+    ))
+    return [] if registered and not contract_test_exists else ["PBI02-PRE-IMPLEMENTATION-RED"]
+
 def verify(state: dict) -> list[str]:
     m, t, packets, workflow = state["matrix"], state["text"], state["packets"], state["workflow"]
     errors: list[str] = []
@@ -165,12 +178,17 @@ def verify(state: dict) -> list[str]:
         else:
             need("exit=" in red_line and "signature=" in red_line, f"PACKET-RED-SIGNATURE-{pid}")
             need("pnpm " not in red_line, f"PACKET-RED-NONEXECUTABLE-{pid}")
+            if pid == "PBI-02":
+                for error in pbi02_registration_errors(
+                    body, (ROOT / "packages/readability-core/test/contract/core.contract.test.ts").is_file()
+                ):
+                    need(False, error)
         need(not any(x in body for x in ("TBD", "placeholder", "実装開始時に")), f"PACKET-PLACEHOLDER-{name}")
 
     for gap in range(8, 18):
         need(f"| GAP-{gap:02d} | RESOLVED |" in t["input"], f"QGA-GAP-{gap:02d}")
     qga_ready = workflow.get("current_phase") == "QGA" and workflow.get("gate_type") == "SPECIFICATION"
-    delivery_started = (
+    pbi01_delivery_started = (
         workflow.get("current_phase") == "DA"
         and workflow.get("gate_type") == "DELIVERY"
         and workflow.get("active_pbi") == "PBI-01"
@@ -182,7 +200,20 @@ def verify(state: dict) -> list[str]:
             for item in workflow.get("phase_history", [])
         )
     )
-    need(qga_ready or delivery_started, "WORKFLOW-GATE-TRANSITION")
+    pbi02_delivery_started = (
+        workflow.get("current_phase") == "DA"
+        and workflow.get("gate_type") == "DELIVERY"
+        and workflow.get("active_pbi") == "PBI-02"
+        and workflow.get("task_packet_ref") == ".codex/task-packets/PBI-02-core.md"
+        and any(
+            item.get("phase") == "QGA"
+            and item.get("status") == "APPROVE"
+            and item.get("gate_type") == "DELIVERY"
+            and item.get("active_pbi") == "PBI-01"
+            for item in workflow.get("phase_history", [])
+        )
+    )
+    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started, "WORKFLOW-GATE-TRANSITION")
     return errors
 
 def apply_mutation(name: str, state: dict) -> None:

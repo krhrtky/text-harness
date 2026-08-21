@@ -81,4 +81,18 @@ class SpecVerifierTest(unittest.TestCase):
         ):
             self.assertIn(scenario, green.stdout)
 
+    def test_pbi02_registered_red_matches_pre_implementation_baseline(self) -> None:
+        state = verify_spec.read_state()
+        packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-02")
+        contract_test = ROOT / "packages/readability-core/test/contract/core.contract.test.ts"
+        self.assertEqual([], verify_spec.pbi02_registration_errors(packet, contract_test.is_file()))
+        for _ in range(2):
+            red = subprocess.run(
+                ["test", "-f", "packages/readability-core/test/contract/core.contract.test.ts"],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual((1, "", ""), (red.returncode, red.stdout, red.stderr))
+
 if __name__ == "__main__": unittest.main()
