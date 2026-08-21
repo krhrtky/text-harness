@@ -60,6 +60,7 @@ PBI06E_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi06e.py"
 PBI06F_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi06f.py"
 PBI06G_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi06g.py"
 PBI06H_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi06h.py"
+PBI07_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi07.py"
 
 EXPECTED = {
     "drop-h113-falsification": "H113-FALSIFICATION",
@@ -207,6 +208,16 @@ EXPECTED = {
     "permit-pbi06h-regex": "PBI06H-RULE-CONTRACT",
     "permit-pbi06h-external-dependency": "PBI06H-RULE-CONTRACT",
     "drop-pbi06h-green-falsification": "PBI06H-POST-IMPLEMENTATION-GREEN",
+    "drop-pbi07-skill-ownership": "PBI07-OWNERSHIP",
+    "drop-pbi07-s203-eval-ownership": "PBI07-OWNERSHIP",
+    "drop-pbi07-no-match-guard": "PBI07-ACCEPTANCE-ORACLE",
+    "swap-pbi07-s203-meaning": "PBI07-RULE-DEFINITIONS",
+    "drop-pbi07-uncertain": "PBI07-SEMANTIC-CONTRACT",
+    "make-pbi07-counterexample-violation": "PBI07-SEMANTIC-CONTRACT",
+    "drop-pbi07-confidence-bound": "PBI07-SEMANTIC-CONTRACT",
+    "permit-pbi07-secret-ci": "PBI07-SEMANTIC-CONTRACT",
+    "permit-pbi07-live-model-ci": "PBI07-SEMANTIC-CONTRACT",
+    "drop-pbi07-s204-eval-title": "PBI07-ACCEPTANCE-ORACLE",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -906,5 +917,14 @@ test("D002-B03 multi-mark combining sequence reports exact source range", () => 
         self.assertEqual(tests, passed)
         self.assertEqual(0, failed)
         self.assertEqual(13, titles)
+
+    def test_pbi07_registered_red_is_exact_and_reproducible(self) -> None:
+        state = verify_spec.read_state()
+        packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-07")
+        self.assertEqual([], verify_spec.pbi07_registration_errors(packet, PBI07_VERIFIER.is_file(), False))
+        expected = (1, "PBI07_RED missing skills/readability-review/SKILL.md\n", "")
+        for _ in range(2):
+            result = subprocess.run(["python3", str(PBI07_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+            self.assertEqual(expected, (result.returncode, result.stdout, result.stderr))
 
 if __name__ == "__main__": unittest.main()

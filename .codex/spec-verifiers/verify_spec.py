@@ -81,6 +81,11 @@ MUTATIONS = (
     "reverse-pbi06h-mapping", "permit-pbi06h-substring-composition",
     "permit-pbi06h-regex", "permit-pbi06h-external-dependency",
     "drop-pbi06h-green-falsification",
+    "drop-pbi07-skill-ownership", "drop-pbi07-s203-eval-ownership",
+    "drop-pbi07-no-match-guard", "swap-pbi07-s203-meaning",
+    "drop-pbi07-uncertain", "make-pbi07-counterexample-violation",
+    "drop-pbi07-confidence-bound", "permit-pbi07-secret-ci",
+    "permit-pbi07-live-model-ci", "drop-pbi07-s204-eval-title",
 )
 
 def read_state() -> dict:
@@ -1487,6 +1492,86 @@ def pbi06h_registration_errors(body: str, oracle_exists: bool, source_exists: bo
     if not green: errors.append("PBI06H-POST-IMPLEMENTATION-GREEN")
     return errors
 
+
+def pbi07_registration_errors(body: str, oracle_exists: bool, skill_exists: bool) -> list[str]:
+    ownership = all(value in body for value in (
+        '    - "skills/readability-review/SKILL.md"',
+        '    - "skills/readability-review/schema/semantic-finding.schema.json"',
+        '    - "skills/readability-review/rules/S201.md"',
+        '    - "skills/readability-review/rules/S208.md"',
+        '    - "skills/readability-review/fixtures/S201.json"',
+        '    - "skills/readability-review/fixtures/S208.json"',
+        '    - "skills/readability-review/evals/S203.json"',
+        '    - "skills/readability-review/evals/S204.json"',
+        '    - "tests/semantic/schema.contract.test.mjs"',
+        '    - "tests/semantic/rules.contract.test.mjs"',
+        '    - "tests/semantic/eval.contract.test.mjs"',
+        '    - "tests/semantic/ci.contract.test.mjs"',
+        '    - ".github/workflows/semantic-contract.yml"',
+    ))
+    definitions = all(value in body for value in (
+        'S201: "中心主張が特定しにくい"',
+        'S202: "独立した判断が一文に過剰に含まれる"',
+        'S203: "文間の論理関係が不明確"',
+        'S204: "指示表現の参照対象が曖昧"',
+        'S205: "情報提示の順序に前提依存の問題がある"',
+        'S206: "主張・理由・例・例外の階層が不明確"',
+        'S207: "文脈に対して抽象度が不適切"',
+        'S208: "中心結論の提示が不必要に遅れている"',
+    ))
+    contract = all(value in body for value in (
+        'fixture_contract: "各fixtures/S20x.jsonはruleId、meaning、cases exact P01/N01/A01/C01を持ち、expected statusは順に violation/no_violation/uncertain/no_violation、input/context/expected range/evidence/reason/confidenceを持つ"',
+        'schema_contract: "JSON Schema draft 2020-12; additionalProperties=false; exact ruleId S201-S208; exact status violation|no_violation|uncertain; range integer start>=0/end>=1; evidence non-empty array of non-empty string; reason non-empty; confidence number [0,1]; suggestedAction optional non-empty string; severity/autofix/rewrite forbidden"',
+        'range_contract: "fixture input.lengthを上限にstart<endをcontract testで検証し、violation evidenceの各文字列はinputに存在しrange sliceと矛盾しない"',
+        'confidence_contract: "confidenceは確率でなくrelative signal 0..1; exact値をlive modelへ要求せずsaved fixtureはschema/range/status bandだけ決定的に検査する"',
+        's203_eval_contract: "saved S203 evalはP01/N01/A01/C01 exact 4 cases、expectedとobserved status一致、credentialRequired=false、relation evidence labelsを持つ"',
+        's204_eval_contract: "saved S204 evalはP01/N01/A01/C01 exact 4 cases、expectedとobserved status一致、credentialRequired=false、antecedentCandidates evidenceを持つ"',
+        'ci_contract: ".github/workflows/semantic-contract.yml is pull_request required candidate; permissions contents:read; Node 24.19.0; exact node --test four semantic test files; no secrets/API key/network/live model command"',
+        'external_dependency_contract: "runtime/dev dependency追加なし; root/workspace/package/lock unchanged; Node built-ins and repository files only"',
+        'mutations: ["SEM-M-SWAP-S203-MEANING", "SEM-M-DROP-UNCERTAIN", "SEM-M-COUNTEREXAMPLE-VIOLATION", "SEM-M-RANGE-OUTSIDE", "SEM-M-DROP-EVIDENCE", "SEM-M-CONFIDENCE-OUTSIDE", "SEM-M-ADD-SEVERITY", "SEM-M-DROP-S203-EVAL", "SEM-M-DROP-S204-EVAL", "SEM-M-EVAL-LABEL-DRIFT", "SEM-M-REQUIRE-SECRET", "SEM-M-LIVE-MODEL-CI", "SEM-M-DROP-RULE-TITLE", "SEM-M-FILTER-NO-MATCH"]',
+    ))
+    acceptance = all(value in body for value in (
+        'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi07.py"',
+        'test_command: "mise x node@24.19.0 -- node --test tests/semantic/schema.contract.test.mjs tests/semantic/rules.contract.test.mjs tests/semantic/eval.contract.test.mjs tests/semantic/ci.contract.test.mjs"',
+        'fixture_cases_per_rule: 4', 'total_fixture_cases: 32',
+        'minimum_tests: 14', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 14',
+        '"SEM-SCHEMA-01 valid SemanticFinding schema accepts all statuses"',
+        '"SEM-SCHEMA-02 invalid rule status range evidence confidence and forbidden fields are rejected"',
+        '"SEM-SKILL-01 repository-native skill and exact S201-S208 rule files are present"',
+        '"SEM-S201-01 positive no_violation uncertain and counterexample oracles pass"',
+        '"SEM-S208-01 positive no_violation uncertain and counterexample oracles pass"',
+        '"SEM-EVAL-S203 saved four-state relation eval is credential-free and exact"',
+        '"SEM-EVAL-S204 saved four-state antecedent eval is credential-free and exact"',
+        '"SEM-CI-01 required semantic contract CI is credential-free deterministic and offline"',
+        'no_match_guard: "exact four test files, collected count, pass=tests, fail=0, all required titles, exact 8 rule files, exact 32 fixture cases, and S203/S204 eval artifacts"',
+        'green_signature: "PBI07_GREEN tests>=14 pass=tests fail=0 required_titles=14 fixture_cases=32 eval_rules=2"',
+    ))
+    errors = []
+    if not ownership: errors.append("PBI07-OWNERSHIP")
+    if not definitions: errors.append("PBI07-RULE-DEFINITIONS")
+    if not contract: errors.append("PBI07-SEMANTIC-CONTRACT")
+    if not acceptance or not oracle_exists: errors.append("PBI07-ACCEPTANCE-ORACLE")
+    if not skill_exists:
+        registered = all(value in body for value in (
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi07.py; exit=1; signature=PBI07_RED missing skills/readability-review/SKILL.md"',
+            'red_status: "REGISTERED_RED"', 'phase: "PRE_IMPLEMENTATION"',
+            'command: "python3 .codex/spec-verifiers/verify_pbi07.py"', 'exit: 1',
+            'stdout: "PBI07_RED missing skills/readability-review/SKILL.md"',
+            'stderr: "<empty>"', 'measured_runs: 2',
+        ))
+        if not registered: errors.append("PBI07-PRE-IMPLEMENTATION-RED")
+        return errors
+    green = all(value in body for value in (
+        'expected_red: null', 'red_status: "CONSUMED_GREEN"',
+        'phase: "PRE_IMPLEMENTATION"', 'stdout: "PBI07_RED missing skills/readability-review/SKILL.md"',
+        'stderr: "<empty>"', 'measured_runs: 2', 'green_transition:',
+        'command: "python3 .codex/spec-verifiers/verify_pbi07.py"', 'exit: 0',
+        'minimum_tests: 14', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 14',
+        'signature: "PBI07_GREEN tests>=14 pass=tests fail=0 required_titles=14 fixture_cases=32 eval_rules=2"',
+    ))
+    if not green: errors.append("PBI07-POST-IMPLEMENTATION-GREEN")
+    return errors
+
 def verify(state: dict) -> list[str]:
     m, t, packets, workflow = state["matrix"], state["text"], state["packets"], state["workflow"]
     errors: list[str] = []
@@ -1725,6 +1810,13 @@ def verify(state: dict) -> list[str]:
                 (ROOT / "packages/readability-core/src/rules/D008.ts").is_file(),
             ):
                 need(False, error)
+        if pid == "PBI-07":
+            for error in pbi07_registration_errors(
+                body,
+                (ROOT / ".codex/spec-verifiers/verify_pbi07.py").is_file(),
+                (ROOT / "skills/readability-review/SKILL.md").is_file(),
+            ):
+                need(False, error)
         need(not any(x in body for x in ("TBD", "placeholder", "実装開始時に")), f"PACKET-PLACEHOLDER-{name}")
 
     for gap in range(8, 18):
@@ -1922,7 +2014,18 @@ def verify(state: dict) -> list[str]:
             for item in workflow.get("phase_history", [])
         )
     )
-    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started or pbi05j_delivery_started or pbi06_delivery_started or pbi06a_delivery_started or pbi06b_delivery_started or pbi06c_delivery_started or pbi06d_delivery_started or pbi06e_delivery_started or pbi06f_delivery_started or pbi06g_delivery_started or pbi06h_delivery_started, "WORKFLOW-GATE-TRANSITION")
+    pbi07_delivery_started = (
+        workflow.get("current_phase") == "DA"
+        and workflow.get("gate_type") == "DELIVERY"
+        and workflow.get("active_pbi") == "PBI-07"
+        and workflow.get("task_packet_ref") == ".codex/task-packets/PBI-07-semantic-skill.md"
+        and any(
+            item.get("phase") == "QGA" and item.get("status") == "APPROVE"
+            and item.get("gate_type") == "DELIVERY" and item.get("active_pbi") == "PBI-06H"
+            for item in workflow.get("phase_history", [])
+        )
+    )
+    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started or pbi05j_delivery_started or pbi06_delivery_started or pbi06a_delivery_started or pbi06b_delivery_started or pbi06c_delivery_started or pbi06d_delivery_started or pbi06e_delivery_started or pbi06f_delivery_started or pbi06g_delivery_started or pbi06h_delivery_started or pbi07_delivery_started, "WORKFLOW-GATE-TRANSITION")
     return errors
 
 def apply_mutation(name: str, state: dict) -> None:
@@ -2438,6 +2541,34 @@ def apply_mutation(name: str, state: dict) -> None:
                 "",
                 1,
             )
+    elif name in (
+        "drop-pbi07-skill-ownership", "drop-pbi07-s203-eval-ownership",
+        "drop-pbi07-no-match-guard", "swap-pbi07-s203-meaning",
+        "drop-pbi07-uncertain", "make-pbi07-counterexample-violation",
+        "drop-pbi07-confidence-bound", "permit-pbi07-secret-ci",
+        "permit-pbi07-live-model-ci", "drop-pbi07-s204-eval-title",
+    ):
+        key = next(k for k, body in packets.items() if packet_id(body) == "PBI-07")
+        if name == "drop-pbi07-skill-ownership":
+            packets[key] = packets[key].replace('    - "skills/readability-review/SKILL.md"\n', "", 1)
+        elif name == "drop-pbi07-s203-eval-ownership":
+            packets[key] = packets[key].replace('    - "skills/readability-review/evals/S203.json"\n', "", 1)
+        elif name == "drop-pbi07-no-match-guard":
+            packets[key] = packets[key].replace("exact four test files, collected count", "collected count only", 1)
+        elif name == "swap-pbi07-s203-meaning":
+            packets[key] = packets[key].replace('S203: "文間の論理関係が不明確"', 'S203: "主語省略"', 1)
+        elif name == "drop-pbi07-uncertain":
+            packets[key] = packets[key].replace("violation/no_violation/uncertain/no_violation", "violation/no_violation/no_violation/no_violation", 1)
+        elif name == "make-pbi07-counterexample-violation":
+            packets[key] = packets[key].replace("violation/no_violation/uncertain/no_violation", "violation/no_violation/uncertain/violation", 1)
+        elif name == "drop-pbi07-confidence-bound":
+            packets[key] = packets[key].replace("confidence number [0,1]", "confidence number unbounded", 1)
+        elif name == "permit-pbi07-secret-ci":
+            packets[key] = packets[key].replace("no secrets/API key/network/live model command", "secrets/API key allowed", 1)
+        elif name == "permit-pbi07-live-model-ci":
+            packets[key] = packets[key].replace("saved S203 eval", "live model S203 eval", 1)
+        else:
+            packets[key] = packets[key].replace(', "SEM-EVAL-S204 saved four-state antecedent eval is credential-free and exact"', "", 1)
     else: raise ValueError(name)
 
 def main() -> int:

@@ -2,11 +2,11 @@
   "id": "wf-readability-mvp-20260821",
   "request": "Readability Engineering System要求の実現、setup/upgrade支援、反証必須の完了判定、public GitHub repositoryへのpush",
   "current_phase": "DA",
-  "active_pbi": "PBI-06H",
+  "active_pbi": "PBI-07",
   "gate_type": "DELIVERY",
-  "strategy_id": "delivery-pbi06h-green-transition-v1",
-  "iteration": 56,
-  "task_packet_ref": ".codex/task-packets/PBI-06H-d008.md",
+  "strategy_id": "delivery-pbi07-semantic-skill-contract-v1",
+  "iteration": 57,
+  "task_packet_ref": ".codex/task-packets/PBI-07-semantic-skill.md",
   "phase_history": [
     {
       "phase": "SDA",
@@ -1542,6 +1542,43 @@
       ],
       "resume_point": ".codex/task-packets/PBI-06H-d008.md",
       "timestamp": "2026-08-22T01:35:00+09:00"
+    },
+    {
+      "phase": "QGA",
+      "status": "APPROVE",
+      "agent": "/root/spec_qga",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-06H",
+      "task_packet_ref": ".codex/task-packets/PBI-06H-d008.md",
+      "decision": "PBI-06H delivery approved after the transition-aware D008 redundant-to-replacement mapping contract passed independently",
+      "evidence": [
+        "DA commit 14a49ee and SDA Green transition commit b9729333e7e17309e5e51ab682135b7651ace4b4",
+        "python3 .codex/spec-verifiers/verify_pbi06h.py => PBI06H_GREEN tests=13 pass=13 fail=0 required_titles=13",
+        "mapping direction, replacement message, literal precedence, range, severity, and Markdown exclusion verified",
+        "registered missing-D008 RED history remains retained and CONSUMED_GREEN"
+      ],
+      "resume_point": ".codex/task-packets/PBI-07-semantic-skill.md",
+      "timestamp": "2026-08-22T01:40:00+09:00"
+    },
+    {
+      "phase": "DA",
+      "status": "READY_FOR_IMPLEMENTATION",
+      "agent": "/root/spec_finalize",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-07",
+      "task_packet_ref": ".codex/task-packets/PBI-07-semantic-skill.md",
+      "decision": "PBI-07 starts with an executable missing-Skill RED and repository-native eight-rule semantic contract",
+      "evidence": [
+        "python3 .codex/spec-verifiers/verify_pbi07.py => exit 1; PBI07_RED missing skills/readability-review/SKILL.md; stderr empty; reproduced twice",
+        "S201-S208 exact stable meanings and 32 P01/N01/A01/C01 fixtures with violation/no_violation/uncertain/no_violation statuses are fixed",
+        "SemanticFinding requires exact IDs/statuses, in-input range, non-empty evidence/reason, confidence 0..1, no severity/autofix/rewrite",
+        "S203 relation and S204 antecedent saved four-state eval artifacts are mandatory and credentialRequired=false",
+        "acceptance runs four exact Node 24 test files, >=14 tests, pass=tests, fail=0, 14 titles, 32 fixtures, and 2 eval rules",
+        "required pull-request CI uses contents:read and saved repository artifacts only, with no secret/API/network/live model dependency",
+        "root/workspace/package/lock and packages remain outside ownership"
+      ],
+      "resume_point": ".codex/task-packets/PBI-07-semantic-skill.md",
+      "timestamp": "2026-08-22T01:45:00+09:00"
     }
   ],
   "blocker_history": [
@@ -1619,5 +1656,5 @@
     }
   ],
   "created_at": "2026-08-21T09:39:07+09:00",
-  "updated_at": "2026-08-22T01:35:00+09:00"
+  "updated_at": "2026-08-22T01:45:00+09:00"
 }
