@@ -59,6 +59,7 @@ MUTATIONS = (
     "drop-pbi06d-falsification-title", "weaken-pbi06d-range",
     "weaken-pbi06d-boundary", "permit-pbi06d-regex",
     "permit-pbi06d-external-dependency",
+    "drop-pbi06d-green-falsification",
 )
 
 def read_state() -> dict:
@@ -1100,7 +1101,31 @@ def pbi06d_registration_errors(body: str, oracle_exists: bool, source_exists: bo
         if not registered:
             errors.append("PBI06D-PRE-IMPLEMENTATION-RED")
         return errors
-    if 'expected_red: null' not in body or 'red_status: "CONSUMED_GREEN"' not in body or 'green_transition:' not in body:
+    green = all(value in body for value in (
+        'expected_red: null', 'red_status: "CONSUMED_GREEN"',
+        'phase: "PRE_IMPLEMENTATION"',
+        'stdout: "PBI06D_RED missing packages/readability-core/src/rules/D004.ts"',
+        'stderr: "<empty>"', 'measured_runs: 2',
+        'green_transition:', 'command: "python3 .codex/spec-verifiers/verify_pbi06d.py"', 'exit: 0',
+        'source_file: "packages/readability-core/src/rules/D004.ts"',
+        'analyze_registration: "D004 dispatch with validated forbiddenTerms and severity"',
+        'public_export: "analyzeD004"',
+        'fixture_contract: "P01/P02, N01/N02/N03, B01/B02/B03/B04, C01, F01, M01, D01 all executable"',
+        'mapping_contract: "literal left-to-right non-overlap, longest-at-same-start, config-order tie, and separated occurrence mapping executable"',
+        'falsification_contract: "substring, regex evaluation, first-config precedence, overlap, code-point, whole-range, and code-inclusion mutants are rejected"',
+        'package.json: "87d2ccaa29bd499df2777ed25614fd3e84a457a79ae5cc1d1581059dd7f62760"',
+        'pnpm-lock.yaml: "f5cc3eea2d7a5c7e04810e44f6d31798094437e54bdfa519112788bdb0f773ba"',
+        'packages/readability-core/package.json: "996ac24d4b0af2137c09c7ee84934fbd3db368c6db45347325441331685e9f55"',
+        'packages/readability-core/src/config/validate.ts: "feae0845be487cd3d502abf0ba54a6721abaec5e907a4ddf9e8930ae6c3a80d4"',
+        'packages/readability-core/src/types/rules.ts: "3b6681dc4632b806a734fa34156434e933d49494de46e65c42f65f3a6ce360de"',
+        'packages/readability-core/src/types/findings.ts: "760fb0b3045423a9900f554e33529a81fb2d98548f873b269991fc14697b9a26"',
+        'packages/readability-core/src/types/range.ts: "f77039d0cc681c2fd0564da9e245c92961c21273cfa573a496cd9f0aec973de5"',
+        'packages/readability-core/src/types/errors.ts: "0d4f56962f75bc214964afa4aadd9de8e7c9627cf7bdb09f19892b6670cc2701"',
+        'minimum_tests: 13', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 13',
+        'signature: "PBI06D_GREEN tests>=13 pass=tests fail=0 required_titles=13"',
+        'da_commit: "bc2fdb5"',
+    ))
+    if not green:
         errors.append("PBI06D-POST-IMPLEMENTATION-GREEN")
     return errors
 
@@ -1798,6 +1823,7 @@ def apply_mutation(name: str, state: dict) -> None:
         "drop-pbi06d-falsification-title", "weaken-pbi06d-range",
         "weaken-pbi06d-boundary", "permit-pbi06d-regex",
         "permit-pbi06d-external-dependency",
+        "drop-pbi06d-green-falsification",
     ):
         key = next(k for k, body in packets.items() if packet_id(body) == "PBI-06D")
         if name == "drop-pbi06d-analyze-ownership":
@@ -1812,10 +1838,16 @@ def apply_mutation(name: str, state: dict) -> None:
             packets[key] = packets[key].replace("必ずしも reports zero", "必ずしも may report", 1)
         elif name == "permit-pbi06d-regex":
             packets[key] = packets[key].replace("regex metacharacters remain literal", "regex metacharacters are evaluated", 1)
-        else:
+        elif name == "permit-pbi06d-external-dependency":
             packets[key] = packets[key].replace(
                 "PBI-06 decision INTERNAL/PBI-06D; package manifests and lockfile unchanged",
                 "external dependency permitted",
+                1,
+            )
+        else:
+            packets[key] = packets[key].replace(
+                '    falsification_contract: "substring, regex evaluation, first-config precedence, overlap, code-point, whole-range, and code-inclusion mutants are rejected"\n',
+                "",
                 1,
             )
     else: raise ValueError(name)
