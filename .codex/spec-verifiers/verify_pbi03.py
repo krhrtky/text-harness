@@ -15,6 +15,7 @@ RUNTIME_DEPENDENCIES = (
     ("sentence-splitter", "5.0.1"),
     ("@textlint/markdown-to-ast", "15.8.0"),
 )
+PBI05P_DEPENDENCY = ("textlint-util-to-string", "3.3.4")
 CONTRACT_TESTS = (
     Path("packages/readability-core/test/heuristic/H101.contract.test.ts"),
     Path("packages/readability-core/test/heuristic/H103.contract.test.ts"),
@@ -121,33 +122,37 @@ def lock_importer_dependencies(lockfile: str, importer: str) -> dict[str, dict[s
     return result
 
 
-def lock_dependencies_match(lockfile: str) -> tuple[bool, str | None]:
+def lock_dependencies_match(
+    lockfile: str, expected_dependencies: tuple[tuple[str, str], ...] = RUNTIME_DEPENDENCIES
+) -> tuple[bool, str | None]:
     dependencies = lock_importer_dependencies(lockfile, "packages/readability-core")
-    expected_keys = {package for package, _ in RUNTIME_DEPENDENCIES}
+    expected_keys = {package for package, _ in expected_dependencies}
     extra_keys = sorted(set(dependencies) - expected_keys)
     if extra_keys:
         return False, f"unexpected:{extra_keys[0]}"
     missing_keys = sorted(expected_keys - set(dependencies))
     if missing_keys:
         return False, missing_keys[0]
-    for package, version in RUNTIME_DEPENDENCIES:
+    for package, version in expected_dependencies:
         entry = dependencies.get(package, {})
         if entry.get("specifier") != version or entry.get("version") != version:
             return False, package
     return True, None
 
 
-def manifest_dependencies_match(dependencies: object) -> tuple[bool, str | None]:
+def manifest_dependencies_match(
+    dependencies: object, expected_dependencies: tuple[tuple[str, str], ...] = RUNTIME_DEPENDENCIES
+) -> tuple[bool, str | None]:
     if not isinstance(dependencies, dict):
         return False, "dependencies-not-a-map"
-    expected = dict(RUNTIME_DEPENDENCIES)
+    expected = dict(expected_dependencies)
     extra_keys = sorted(set(dependencies) - set(expected))
     if extra_keys:
         return False, f"unexpected:{extra_keys[0]}"
     missing_keys = sorted(set(expected) - set(dependencies))
     if missing_keys:
         return False, missing_keys[0]
-    for package, version in RUNTIME_DEPENDENCIES:
+    for package, version in expected_dependencies:
         if dependencies.get(package) != version:
             return False, package
     return True, None
@@ -162,15 +167,16 @@ def main() -> int:
             print(f"PBI03_RED missing {required}")
             return 1
 
+    expected_dependencies = RUNTIME_DEPENDENCIES + ((PBI05P_DEPENDENCY,) if (ROOT / "packages/readability-core/src/paragraph/project.ts").is_file() else ())
     manifest = json.loads((ROOT / PACKAGE_MANIFEST).read_text())
     dependencies = dict(manifest.get("dependencies", {}))
     if args.mutation == "add-third-direct-dependency":
         dependencies["structured-source"] = "4.0.0"
-    for package, version in RUNTIME_DEPENDENCIES:
+    for package, version in expected_dependencies:
         if dependencies.get(package) != version:
             print(f"PBI03_RED dependency {package} expected {version}")
             return 1
-    manifest_matches, manifest_error = manifest_dependencies_match(dependencies)
+    manifest_matches, manifest_error = manifest_dependencies_match(dependencies, expected_dependencies)
     if not manifest_matches:
         print(f"PBI03_FAIL manifest direct dependencies {manifest_error}")
         return 1
@@ -179,14 +185,14 @@ def main() -> int:
     lock_dependencies = lock_importer_dependencies(lockfile, "packages/readability-core")
     if args.mutation == "add-third-direct-dependency":
         lock_dependencies["structured-source"] = {"specifier": "4.0.0", "version": "4.0.0"}
-    expected_lock_keys = {package for package, _ in RUNTIME_DEPENDENCIES}
+    expected_lock_keys = {package for package, _ in expected_dependencies}
     extra_lock_keys = sorted(set(lock_dependencies) - expected_lock_keys)
     if extra_lock_keys:
         print(f"PBI03_FAIL lock direct dependencies unexpected:{extra_lock_keys[0]}")
         return 1
-    lock_matches, invalid_package = lock_dependencies_match(lockfile)
+    lock_matches, invalid_package = lock_dependencies_match(lockfile, expected_dependencies)
     if not lock_matches:
-        expected_version = dict(RUNTIME_DEPENDENCIES)[invalid_package]
+        expected_version = dict(expected_dependencies)[invalid_package]
         print(f"PBI03_RED lock dependency {invalid_package} expected {expected_version}")
         return 1
 

@@ -30,6 +30,11 @@ PBI05_SPEC = importlib.util.spec_from_file_location("verify_pbi05", PBI05_VERIFI
 assert PBI05_SPEC and PBI05_SPEC.loader
 verify_pbi05 = importlib.util.module_from_spec(PBI05_SPEC)
 PBI05_SPEC.loader.exec_module(verify_pbi05)
+PBI05P_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi05p.py"
+PBI05P_SPEC = importlib.util.spec_from_file_location("verify_pbi05p", PBI05P_VERIFIER)
+assert PBI05P_SPEC and PBI05P_SPEC.loader
+verify_pbi05p = importlib.util.module_from_spec(PBI05P_SPEC)
+PBI05P_SPEC.loader.exec_module(verify_pbi05p)
 
 EXPECTED = {
     "drop-h113-falsification": "H113-FALSIFICATION",
@@ -71,6 +76,11 @@ EXPECTED = {
     "drop-pbi05-required-title": "PBI05-ACCEPTANCE-ORACLE",
     "drop-pbi05-continuity-title": "PBI05-ACCEPTANCE-ORACLE",
     "permit-pbi05-bridge": "PBI05-CONTINUITY-CONTRACT",
+    "drop-pbi05p-package-ownership": "PBI05P-OWNERSHIP",
+    "drift-pbi05p-string-version": "PBI05P-DEPENDENCY-CONTRACT",
+    "drop-pbi05p-no-match-guard": "PBI05P-ACCEPTANCE-ORACLE",
+    "drop-pbi05p-projection-title": "PBI05P-ACCEPTANCE-ORACLE",
+    "permit-pbi05p-raw-projection": "PBI05P-FALSIFICATION",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -207,6 +217,20 @@ packages:
             (False, "unexpected:structured-source"),
             verify_pbi03.manifest_dependencies_match({**exact_manifest, "structured-source": "4.0.0"}),
         )
+        pbi05p_expected = verify_pbi03.RUNTIME_DEPENDENCIES + (verify_pbi03.PBI05P_DEPENDENCY,)
+        self.assertEqual(
+            (True, None),
+            verify_pbi03.manifest_dependencies_match(
+                {**exact_manifest, "textlint-util-to-string": "3.3.4"}, pbi05p_expected
+            ),
+        )
+        self.assertEqual(
+            (False, "unexpected:structured-source"),
+            verify_pbi03.manifest_dependencies_match(
+                {**exact_manifest, "textlint-util-to-string": "3.3.4", "structured-source": "4.0.0"},
+                pbi05p_expected,
+            ),
+        )
         mutation = subprocess.run(
             ["python3", str(PBI03_VERIFIER), "--mutation", "add-third-direct-dependency"],
             cwd=ROOT,
@@ -339,5 +363,16 @@ packages:
         self.assertEqual(tests, passed)
         self.assertEqual(0, failed)
         self.assertEqual(14, titles)
+
+    def test_pbi05p_registered_red_matches_repository_state(self) -> None:
+        state = verify_spec.read_state()
+        packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-05P")
+        self.assertEqual([], verify_spec.pbi05p_registration_errors(packet, PBI05P_VERIFIER.is_file(), False))
+        self.assertEqual("missing:textlint-util-to-string", verify_pbi05p.dependency_error())
+        first = subprocess.run(["python3", str(PBI05P_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        second = subprocess.run(["python3", str(PBI05P_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        expected = (1, "PBI05P_RED dependency textlint-util-to-string expected 3.3.4\n", "")
+        self.assertEqual(expected, (first.returncode, first.stdout, first.stderr))
+        self.assertEqual(expected, (second.returncode, second.stdout, second.stderr))
 
 if __name__ == "__main__": unittest.main()

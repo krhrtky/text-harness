@@ -49,8 +49,11 @@ def dependency_errors() -> list[str]:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     manifest = json.loads((ROOT / "packages/readability-core/package.json").read_text())
-    manifest_ok, manifest_reason = module.manifest_dependencies_match(manifest.get("dependencies", {}))
-    lock_ok, lock_reason = module.lock_dependencies_match((ROOT / "pnpm-lock.yaml").read_text())
+    expected = module.RUNTIME_DEPENDENCIES + (
+        (module.PBI05P_DEPENDENCY,) if (ROOT / "packages/readability-core/src/paragraph/project.ts").is_file() else ()
+    )
+    manifest_ok, manifest_reason = module.manifest_dependencies_match(manifest.get("dependencies", {}), expected)
+    lock_ok, lock_reason = module.lock_dependencies_match((ROOT / "pnpm-lock.yaml").read_text(), expected)
     errors = []
     if not manifest_ok:
         errors.append(f"manifest-{manifest_reason}")
