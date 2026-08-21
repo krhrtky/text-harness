@@ -15,7 +15,7 @@ task_packet:
     - "release evidenceはgit commitの自己参照を避け、package/lock/workspace/core/adapter/Skillのsorted path+contentから算出するreleaseInputSha256を全artifactで共有する"
     - "license/NOTICE evidenceは@typescript/typescript-<platform>-<arch>へ正規化し、darwin-arm64/linux-arm64/linux-x64を同一契約として扱う。現在platformの実ファイルSHAを再構築する"
     - "READMEの<!-- CLI_COMMAND -->直後のcommandはrepository checkoutで実行可能で、canonical JSON 1行、exit0、H101/S203/S204を実測する。将来bin名は説明と区別する"
-    - "secret scanはgeneric assignmentに加えてGitHub PAT/AWS access key/PEM private keyを検出し、通常文のtokenを誤検知しない"
+    - "secret scanはtracked pathをruntimeで読む。GitHub PAT prefixはghp_/gho_/ghu_/ghs_/ghr_/github_pat_、AWS access keyはAKIAまたはASIA+英大文字数字16文字のexact 20文字、PEMはPRIVATE/RSA/EC/OPENSSH/ENCRYPTED/DSA PRIVATE KEYの6 BEGIN header、generic assignmentを検出する。未承認prefix、AWS 19/21文字、PUBLIC KEY/CERTIFICATE、通常文tokenはnonmatch"
     - "dependency auditは現在実行してstatus=0かつNo known vulnerabilities foundを確認する。nonzero/spawn error/成功exitでも結果不明はfail-closed"
     - "CHANGELOG linkはHEAD...HEADや自身のblob linkを禁止し、main commits URLへ解決する"
   active_pbi: "PBI-09"
@@ -72,7 +72,7 @@ task_packet:
     installed_notice_paths: ["node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/NOTICE.txt", "node_modules/.pnpm/@typescript+typescript-darwin-arm64@7.0.2/node_modules/@typescript/typescript-darwin-arm64/NOTICE.txt"]
     unique_notice_sha256: ["f5c708b59114507b8b27b48181b6883d106bbca0c1634bbee45b5e344237b66b"]
     notice_distribution_scope: "both packages are dev-only and their binary/NOTICE is not included in the public source repository release; distributable retention obligations=0"
-  mutations: ["REL-M-DROP-INSTALL", "REL-M-INVALID-UPGRADE", "REL-M-DROP-RULE", "REL-M-SEMANTIC-HARD-ERROR", "REL-M-LICENSE-TEXT", "REL-M-COPYRIGHT", "REL-M-LOCK-HASH", "REL-M-LICENSE-COUNT", "REL-M-NOTICE-OMITTED-WITH-OBLIGATION", "REL-M-UNNEEDED-NOTICE", "REL-M-SECRET-FINDING", "REL-M-HIGH-AUDIT", "REL-M-EVIDENCE-SHA-DRIFT", "REL-M-BROKEN-LINK", "REL-M-MISSING-SCRIPT", "REL-M-FALSE-NO-MATCH", "REL-M-CI-SECRET", "REL-M-STALE-EVIDENCE", "REL-M-PLATFORM-LICENSE-NORMALIZATION", "REL-M-LINUX-ARM64-NOTICE", "REL-M-README-NONEXECUTABLE-CLI", "REL-M-GITHUB-PAT", "REL-M-AWS-ACCESS-KEY", "REL-M-PEM-PRIVATE-KEY", "REL-M-AUDIT-EXIT42", "REL-M-AUDIT-UNKNOWN-SUCCESS", "REL-M-CHANGELOG-SELF-LINK"]
+  mutations: ["REL-M-DROP-INSTALL", "REL-M-INVALID-UPGRADE", "REL-M-DROP-RULE", "REL-M-SEMANTIC-HARD-ERROR", "REL-M-LICENSE-TEXT", "REL-M-COPYRIGHT", "REL-M-LOCK-HASH", "REL-M-LICENSE-COUNT", "REL-M-NOTICE-OMITTED-WITH-OBLIGATION", "REL-M-UNNEEDED-NOTICE", "REL-M-SECRET-FINDING", "REL-M-HIGH-AUDIT", "REL-M-EVIDENCE-SHA-DRIFT", "REL-M-BROKEN-LINK", "REL-M-MISSING-SCRIPT", "REL-M-FALSE-NO-MATCH", "REL-M-CI-SECRET", "REL-M-STALE-EVIDENCE", "REL-M-PLATFORM-LICENSE-NORMALIZATION", "REL-M-LINUX-ARM64-NOTICE", "REL-M-README-NONEXECUTABLE-CLI", "REL-M-GITHUB-PAT", "REL-M-AWS-ACCESS-KEY", "REL-M-PEM-PRIVATE-KEY", "REL-M-AUDIT-EXIT42", "REL-M-AUDIT-UNKNOWN-SUCCESS", "REL-M-CHANGELOG-SELF-LINK", "REL-M-AWS-ASIA-DROP", "REL-M-AWS-19-21-BOUNDARY", "REL-M-PEM-SIX-LABELS", "REL-M-GITHUB-PREFIX-SET", "REL-M-TRACKED-PATH-RUNTIME"]
   expected_red: null
   red_status: "CONSUMED_GREEN"
   expected_red_history:
@@ -134,6 +134,19 @@ task_packet:
       .github/workflows/release-contract.yml: "29bb21410eb4336faca56dd77ce3eacce3d4a71c2624b31521506ba3223c3b63"
     portable_evidence: "platformVariants=darwin-arm64,linux-arm64,linux-x64; normalized TypeScript package/NOTICE paths; active platform NOTICE hash reconstruction; releaseInput unchanged"
     security_evidence: "provider fixtures GitHub PAT/AWS/PEM plus generic assignment; current audit status0 and known-clean phrase; exit42 and unknown-success output both rejected"
+  secret_qga_fix_transition:
+    phase: "POST_IMPLEMENTATION_QGA_FIX_2"
+    product_commit: "7057fac"
+    command: "python3 .codex/spec-verifiers/verify_pbi09.py"
+    exit: 0
+    signature: "PBI09_GREEN tests=12 pass=12 fail=0 required_titles=12 links=PASS commands=PASS license=PASS notice=ABSENT security=PASS"
+    release_input_sha256: "d2b07d7382d4aa38f1a20bf71baeb1a8e21485fa1845a14db435599df03e0a25"
+    artifact_hash_transition:
+      scripts/verify-release.mjs: "f40ee09d91284facb93e95d44559d17128f17d0ede02fd131b88ecab6f375299"
+      tests/release/security.contract.test.mjs: "b87dee2ccc04785b9ad9f754af1361bdd28f231874f4d19fcb2a457a730d2ec7"
+      docs/release-evidence/security-scan.json: "19792186051f5a14ac931c2709291ab546f73035332ad072d174b8afdd702806"
+    exact_provider_contract: "GitHub=ghp_/gho_/ghu_/ghs_/ghr_/github_pat_; AWS=(AKIA|ASIA)+[A-Z0-9]{16}=20 chars; PEM=PRIVATE/RSA/EC/OPENSSH/ENCRYPTED/DSA PRIVATE KEY"
+    runtime_fixture_contract: "each positive is written to tracked-secret.txt, git-added, then both security and release modes must exit1 with path+kind; approved nonmatches run both modes exit0"
   red_registration_gate: "PBI開始時、依存PBI完了後かつ実装変更前に、実在する失敗test command・exit code・完全一致signatureを登録する"
   acceptance: ["O-01", "O-05", "O-06D", "O-06H", "O-10", "DEC-005", "README install/update/usage/rules/limitations", "Apache-2.0/NOTICE", "security/license evidence"]
   engineering_constraints: "docs/requirements/engineering-constraints.md A01-A08"

@@ -116,6 +116,9 @@ MUTATIONS = (
     "drop-pbi09-portable-license", "drop-pbi09-executable-cli",
     "drop-pbi09-provider-secrets", "weaken-pbi09-fail-closed-audit",
     "permit-pbi09-changelog-self-link", "drop-pbi09-qga-fix-hash",
+    "drop-pbi09-aws-asia", "weaken-pbi09-aws-boundary",
+    "drop-pbi09-pem-label", "drop-pbi09-github-prefix",
+    "drop-pbi09-tracked-runtime",
 )
 
 def read_state() -> dict:
@@ -1768,7 +1771,7 @@ def pbi09_registration_errors(body: str, oracle_exists: bool, readme_exists: boo
         'security_contract: "tracked-files secret scanとpnpm audit --audit-level highのcommand/toolchain/evaluatedAt/releaseInputSha256を保存し、secret/high/critical各0。scan skip/unknown/stale inputはFAIL"',
         "license/NOTICE evidenceは@typescript/typescript-<platform>-<arch>へ正規化し、darwin-arm64/linux-arm64/linux-x64を同一契約として扱う。現在platformの実ファイルSHAを再構築する",
         "READMEの<!-- CLI_COMMAND -->直後のcommandはrepository checkoutで実行可能で、canonical JSON 1行、exit0、H101/S203/S204を実測する。将来bin名は説明と区別する",
-        "secret scanはgeneric assignmentに加えてGitHub PAT/AWS access key/PEM private keyを検出し、通常文のtokenを誤検知しない",
+        "secret scanはtracked pathをruntimeで読む。GitHub PAT prefixはghp_/gho_/ghu_/ghs_/ghr_/github_pat_、AWS access keyはAKIAまたはASIA+英大文字数字16文字のexact 20文字、PEMはPRIVATE/RSA/EC/OPENSSH/ENCRYPTED/DSA PRIVATE KEYの6 BEGIN header、generic assignmentを検出する。未承認prefix、AWS 19/21文字、PUBLIC KEY/CERTIFICATE、通常文tokenはnonmatch",
         "dependency auditは現在実行してstatus=0かつNo known vulnerabilities foundを確認する。nonzero/spawn error/成功exitでも結果不明はfail-closed",
         "CHANGELOG linkはHEAD...HEADや自身のblob linkを禁止し、main commits URLへ解決する",
     ))
@@ -1821,17 +1824,23 @@ def pbi09_registration_errors(body: str, oracle_exists: bool, readme_exists: boo
             "4943916a60da3e578670b2b00cde75f041e152be5a24eb2545528625488f7a98",
             "e5267bbfa72b7d33a05d35f38245f190cd4ca6dae7d605178802deec89101863",
             "fbec797f6de85fa03ae54e7513b5d1884b530b3ce9e5fa0004836efdd7960690",
+            "f40ee09d91284facb93e95d44559d17128f17d0ede02fd131b88ecab6f375299",
+            "b87dee2ccc04785b9ad9f754af1361bdd28f231874f4d19fcb2a457a730d2ec7",
+            "19792186051f5a14ac931c2709291ab546f73035332ad072d174b8afdd702806",
         )
         green = all(value in body for value in (
             "expected_red: null", 'red_status: "CONSUMED_GREEN"',
             'product_commit: "63555bd"',
             'product_commit: "0660ed4"',
+            'product_commit: "7057fac"',
             'signature: "PBI09_GREEN tests=12 pass=12 fail=0 required_titles=12 links=PASS commands=PASS license=PASS notice=ABSENT security=PASS"',
             'release_input_sha256: "d2b07d7382d4aa38f1a20bf71baeb1a8e21485fa1845a14db435599df03e0a25"',
             "PBI-06〜PBI-08 delivery時=87d2ccaa29bd499df2777ed25614fd3e84a457a79ae5cc1d1581059dd7f62760; PBI-09 Green以降=aaaca4013b1553336b859b4fcf2a54eeb625181d7b10c16a735645565683ea43",
             "license counts MIT=72/Apache-2.0=2/BSD-2-Clause=2; root NOTICE absent and distributable obligations=0; secret findings=0; unresolved audit high=0/critical=0; links=PASS; commands=PASS",
             "platformVariants=darwin-arm64,linux-arm64,linux-x64; normalized TypeScript package/NOTICE paths; active platform NOTICE hash reconstruction; releaseInput unchanged",
             "provider fixtures GitHub PAT/AWS/PEM plus generic assignment; current audit status0 and known-clean phrase; exit42 and unknown-success output both rejected",
+            "GitHub=ghp_/gho_/ghu_/ghs_/ghr_/github_pat_; AWS=(AKIA|ASIA)+[A-Z0-9]{16}=20 chars; PEM=PRIVATE/RSA/EC/OPENSSH/ENCRYPTED/DSA PRIVATE KEY",
+            "each positive is written to tracked-secret.txt, git-added, then both security and release modes must exit1 with path+kind; approved nonmatches run both modes exit0",
         )) and all(digest in body for digest in post_hashes)
         if not green: errors.append("PBI09-POST-IMPLEMENTATION-GREEN")
     return errors
@@ -2966,6 +2975,9 @@ def apply_mutation(name: str, state: dict) -> None:
         "drop-pbi09-portable-license", "drop-pbi09-executable-cli",
         "drop-pbi09-provider-secrets", "weaken-pbi09-fail-closed-audit",
         "permit-pbi09-changelog-self-link", "drop-pbi09-qga-fix-hash",
+        "drop-pbi09-aws-asia", "weaken-pbi09-aws-boundary",
+        "drop-pbi09-pem-label", "drop-pbi09-github-prefix",
+        "drop-pbi09-tracked-runtime",
     ):
         key = next(k for k, body in packets.items() if packet_id(body) == "PBI-09")
         if name == "drop-pbi09-readme-ownership":
@@ -2991,13 +3003,23 @@ def apply_mutation(name: str, state: dict) -> None:
         elif name == "drop-pbi09-executable-cli":
             packets[key] = packets[key].replace('    - "READMEの<!-- CLI_COMMAND -->直後のcommandはrepository checkoutで実行可能で、canonical JSON 1行、exit0、H101/S203/S204を実測する。将来bin名は説明と区別する"\n', "", 1)
         elif name == "drop-pbi09-provider-secrets":
-            packets[key] = packets[key].replace('    - "secret scanはgeneric assignmentに加えてGitHub PAT/AWS access key/PEM private keyを検出し、通常文のtokenを誤検知しない"\n', "", 1)
+            packets[key] = packets[key].replace('    - "secret scanはtracked pathをruntimeで読む。GitHub PAT prefixはghp_/gho_/ghu_/ghs_/ghr_/github_pat_、AWS access keyはAKIAまたはASIA+英大文字数字16文字のexact 20文字、PEMはPRIVATE/RSA/EC/OPENSSH/ENCRYPTED/DSA PRIVATE KEYの6 BEGIN header、generic assignmentを検出する。未承認prefix、AWS 19/21文字、PUBLIC KEY/CERTIFICATE、通常文tokenはnonmatch"\n', "", 1)
         elif name == "weaken-pbi09-fail-closed-audit":
             packets[key] = packets[key].replace("nonzero/spawn error/成功exitでも結果不明はfail-closed", "audit unknown accepted", 1)
         elif name == "permit-pbi09-changelog-self-link":
             packets[key] = packets[key].replace("CHANGELOG linkはHEAD...HEADや自身のblob linkを禁止し、main commits URLへ解決する", "CHANGELOG self-link allowed", 1)
         elif name == "drop-pbi09-qga-fix-hash":
             packets[key] = packets[key].replace('      README.md: "a5aee6056bcdde6e5509341917bcc0700c9ae2fe022d4633f7d62936817b4375"\n', "", 1)
+        elif name == "drop-pbi09-aws-asia":
+            packets[key] = packets[key].replace("AKIAまたはASIA", "AKIAのみ", 1)
+        elif name == "weaken-pbi09-aws-boundary":
+            packets[key] = packets[key].replace("exact 20文字", "可変長", 1)
+        elif name == "drop-pbi09-pem-label":
+            packets[key] = packets[key].replace("PRIVATE/RSA/EC/OPENSSH/ENCRYPTED/DSA PRIVATE KEYの6 BEGIN header", "PRIVATE KEYのみ", 1)
+        elif name == "drop-pbi09-github-prefix":
+            packets[key] = packets[key].replace("ghp_/gho_/ghu_/ghs_/ghr_/github_pat_", "ghp_", 1)
+        elif name == "drop-pbi09-tracked-runtime":
+            packets[key] = packets[key].replace("secret scanはtracked pathをruntimeで読む。", "", 1)
         else:
             packets[key] = packets[key].replace('    red_signature: "PBI09_RED missing README.md"\n', "", 1)
     else: raise ValueError(name)

@@ -42,14 +42,14 @@ DELIVERY_HASHES = {
     Path("CONTRIBUTING.md"): "88e49663bcfd061a85380e32a195d9786ba017e9f3b42229e5206256a7be2374",
     Path("CHANGELOG.md"): "09792754cf54a5ac3ec1b29322c9651c3aac686191c553de6449ad1513e89101",
     Path("package.json"): "aaaca4013b1553336b859b4fcf2a54eeb625181d7b10c16a735645565683ea43",
-    Path("scripts/verify-release.mjs"): "23cdce9e433ad4591aac01c9f5003621ab20816ed3c0793bed354f72b4d8404c",
+    Path("scripts/verify-release.mjs"): "f40ee09d91284facb93e95d44559d17128f17d0ede02fd131b88ecab6f375299",
     Path("tests/release/docs.contract.test.mjs"): "8e5eab2024ea9c7aefb6e68553644fd8bf97298474f385bf571a82c8311d9ef8",
     Path("tests/release/license.contract.test.mjs"): "3c944d9c6e2ff3a6588b02757060f3e389b6ad9192aae48a53cf2f385a10c93e",
-    Path("tests/release/security.contract.test.mjs"): "ec603dee69eb254314c21c454ac58aa9af6fc96e8f8104c1d43c3e717eec1fe8",
+    Path("tests/release/security.contract.test.mjs"): "b87dee2ccc04785b9ad9f754af1361bdd28f231874f4d19fcb2a457a730d2ec7",
     Path("tests/release/commands.contract.test.mjs"): "4943916a60da3e578670b2b00cde75f041e152be5a24eb2545528625488f7a98",
     Path("docs/release-evidence/release-input.json"): "4e9869dce79955efb3c0f9e7cb8b10115fd8b40c60996e8f3e9190568809bed1",
     Path("docs/release-evidence/dependency-license-scan.json"): "e5267bbfa72b7d33a05d35f38245f190cd4ca6dae7d605178802deec89101863",
-    Path("docs/release-evidence/security-scan.json"): "fbec797f6de85fa03ae54e7513b5d1884b530b3ce9e5fa0004836efdd7960690",
+    Path("docs/release-evidence/security-scan.json"): "19792186051f5a14ac931c2709291ab546f73035332ad072d174b8afdd702806",
     Path(".github/workflows/release-contract.yml"): "29bb21410eb4336faca56dd77ce3eacce3d4a71c2624b31521506ba3223c3b63",
 }
 APACHE_SHA256 = "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
@@ -92,7 +92,14 @@ def evidence_errors() -> list[str]:
     ]
     if notice.get("normalizedInstalledPaths") != expected_paths or notice.get("platformVariants") != ["darwin-arm64", "linux-arm64", "linux-x64"] or notice.get("uniqueSha256") != [NOTICE_SHA256] or notice.get("distributableRetentionObligations") != 0 or notice.get("rootNoticeExpected") is not False: errors.append("notice-scope")
     if (ROOT / "NOTICE").exists(): errors.append("unnecessary-root-notice")
-    if security.get("secretScan", {}).get("findings") != 0 or security.get("secretScan", {}).get("patterns") != ["generic-assignment", "github-pat", "aws-access-key", "pem-private-key"] or security.get("dependencyAudit", {}).get("unresolvedHigh") != 0 or security.get("dependencyAudit", {}).get("unresolvedCritical") != 0: errors.append("security-findings")
+    expected_secret_patterns = {
+        "awsAccessKeyExactLength": 20,
+        "awsAccessKeyPrefixes": ["AKIA", "ASIA"],
+        "genericAssignment": True,
+        "githubPatPrefixes": ["ghp_", "gho_", "ghu_", "ghs_", "ghr_", "github_pat_"],
+        "pemPrivateKeyHeaders": ["PRIVATE KEY", "RSA PRIVATE KEY", "EC PRIVATE KEY", "OPENSSH PRIVATE KEY", "ENCRYPTED PRIVATE KEY", "DSA PRIVATE KEY"],
+    }
+    if security.get("secretScan", {}).get("findings") != 0 or security.get("secretScan", {}).get("patterns") != expected_secret_patterns or security.get("dependencyAudit", {}).get("unresolvedHigh") != 0 or security.get("dependencyAudit", {}).get("unresolvedCritical") != 0: errors.append("security-findings")
     if security.get("secretScan", {}).get("command") != "git grep -nEI <secret-patterns> -- tracked files" or security.get("dependencyAudit", {}).get("command") != "mise x node@24.19.0 -- corepack pnpm audit --audit-level high": errors.append("security-commands")
     for value in (licenses.get("evaluatedAt"), security.get("evaluatedAt")):
         if not isinstance(value, str) or not re.fullmatch(r"2026-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[+-][0-9]{2}:[0-9]{2}", value): errors.append("evaluated-at")
@@ -124,7 +131,7 @@ def package_errors() -> list[str]:
     expected = {mode: f"node scripts/verify-release.mjs {mode.split(':', 1)[1] if ':' in mode else mode}" for mode in ("verify:docs", "verify:license", "verify:security", "verify:artifacts", "verify:release")}
     if any(scripts.get(name) != command for name, command in expected.items()): return ["package-scripts"]
     source = (ROOT / "scripts/verify-release.mjs").read_text()
-    if not all(term in source for term in ("docs", "license", "security", "artifacts", "release", "unknown mode", "process.exitCode", "normalizeLicenseInventory", "normalizeNoticePath", "detectSecretKinds", "verifyAudit", "dependency audit result unknown")): return ["release-script"]
+    if not all(term in source for term in ("docs", "license", "security", "artifacts", "release", "unknown mode", "process.exitCode", "normalizeLicenseInventory", "normalizeNoticePath", "detectSecretKinds", "verifyAudit", "dependency audit result unknown", "AKIA|ASIA", "ENCRYPTED|DSA", "github_pat_")): return ["release-script"]
     return []
 
 def main() -> int:

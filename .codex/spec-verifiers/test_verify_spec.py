@@ -259,6 +259,11 @@ EXPECTED = {
     "weaken-pbi09-fail-closed-audit": "PBI09-RELEASE-CONTRACT",
     "permit-pbi09-changelog-self-link": "PBI09-RELEASE-CONTRACT",
     "drop-pbi09-qga-fix-hash": "PBI09-POST-IMPLEMENTATION-GREEN",
+    "drop-pbi09-aws-asia": "PBI09-RELEASE-CONTRACT",
+    "weaken-pbi09-aws-boundary": "PBI09-RELEASE-CONTRACT",
+    "drop-pbi09-pem-label": "PBI09-RELEASE-CONTRACT",
+    "drop-pbi09-github-prefix": "PBI09-RELEASE-CONTRACT",
+    "drop-pbi09-tracked-runtime": "PBI09-RELEASE-CONTRACT",
 }
 
 class SpecVerifierTest(unittest.TestCase):
