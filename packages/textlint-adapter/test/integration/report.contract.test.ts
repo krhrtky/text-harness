@@ -107,3 +107,27 @@ test("INT-ORDER-02 same primary keys use full payload tie-breakers without dedup
     "a:A:0.2:", "a:A:0.2:A", "a:A:0.2:A", "a:A:0.2:B", "a:A:0.8:A", "a:B:0.2:A", "b:A:0.2:A",
   ]);
 });
+
+test("INT-ORDER-03 Semantic statuses are an explicit lexical tie-breaker without deduplication", () => {
+  const common = {
+    ruleId: "S203" as const,
+    range: { start: 1, end: 2 },
+    evidence: ["a"],
+    reason: "A",
+    confidence: 0.2,
+  };
+  const statusTies = [
+    { ...common, status: "violation" as const },
+    { ...common, status: "no_violation" as const },
+    { ...common, status: "uncertain" as const },
+    { ...common, status: "violation" as const },
+  ];
+  const forward = buildValidationReport([], statusTies);
+  const reversed = buildValidationReport([], [...statusTies].reverse());
+  assert.deepEqual(reversed, forward);
+  assert.equal(JSON.stringify(reversed), JSON.stringify(forward));
+  assert.deepEqual(forward.semanticNotices.map(({ status }) => status), [
+    "no_violation", "uncertain", "violation", "violation",
+  ]);
+  assert.equal(forward.semanticNotices.length, statusTies.length);
+});

@@ -27,19 +27,25 @@ test("INT-CLI-01 mixed pass fixture writes one report and exits zero", (context)
   const lintB = { ...payload.findings[0], message: "B" };
   const semanticA = { ...payload.semanticFindings[1], evidence: ["需要が増えた"], reason: "A", confidence: 0.7 };
   const semanticB = { ...payload.semanticFindings[1], evidence: ["価格が上がった"], reason: "B", confidence: 0.8 };
+  const statusTies = ["violation", "no_violation", "uncertain", "violation"]
+    .map((status) => ({ ...payload.semanticFindings[1], status }));
   const directory = mkdtempSync(join(tmpdir(), "text-harness-pbi08-order-"));
   context.after(() => rmSync(directory, { recursive: true, force: true }));
   const forwardPath = join(directory, "forward.json");
   const reversePath = join(directory, "reverse.json");
-  writeFileSync(forwardPath, JSON.stringify({ ...payload, findings: [lintB, lintA, lintA], semanticFindings: [semanticB, semanticA, semanticA] }));
-  writeFileSync(reversePath, JSON.stringify({ ...payload, findings: [lintA, lintA, lintB], semanticFindings: [semanticA, semanticA, semanticB] }));
+  writeFileSync(forwardPath, JSON.stringify({ ...payload, findings: [lintB, lintA, lintA], semanticFindings: [semanticB, semanticA, semanticA, ...statusTies] }));
+  writeFileSync(reversePath, JSON.stringify({ ...payload, findings: [lintA, lintA, lintB], semanticFindings: [...statusTies].reverse().concat(semanticA, semanticA, semanticB) }));
   const forward = runPath(forwardPath);
   const reverse = runPath(reversePath);
   assert.equal(forward.status, 0);
   assert.equal(reverse.status, 0);
   assert.equal(reverse.stdout, forward.stdout);
   assert.equal(JSON.parse(forward.stdout).lintMessages.length, 3);
-  assert.equal(JSON.parse(forward.stdout).semanticNotices.length, 3);
+  const forwardReport = JSON.parse(forward.stdout);
+  assert.equal(forwardReport.semanticNotices.length, 7);
+  assert.deepEqual(forwardReport.semanticNotices
+    .filter(({ reason }: { reason: string }) => reason === "causeとindependentの両labelが成立する")
+    .map(({ status }: { status: string }) => status), ["no_violation", "uncertain", "violation", "violation"]);
 });
 
 test("INT-CLI-02 mixed fail fixture exits one solely for D error", () => {
