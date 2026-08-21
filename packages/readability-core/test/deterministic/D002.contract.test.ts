@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { analyze, analyzeD002, ConfigurationError } from "../../src/index.ts";
 
 const decomposedGa = "か\u3099";
+const fixtures = JSON.parse(readFileSync(new URL("./fixtures/D002.json", import.meta.url)).toString());
 const config = (severity?: "error" | "warning") => ({
   rules: { D002: severity === undefined
     ? { ruleId: "D002" as const, normalization: "NFC" as const }
@@ -46,9 +48,14 @@ test("D002-B01 emoji-prefixed UTF-16 half-open range reconstructs the combining 
 });
 
 test("D002-B03 multi-mark combining sequence reports exact source range", () => {
-  const input = `${decomposedGa}\u0301`;
+  {
+    const input = `${decomposedGa}\u0301`;
+    assert.equal(fixtures.multiMark.input, input);
+  }
+  const input = fixtures.multiMark.input;
   const [finding] = analyze(input, config());
   assert.deepEqual(finding?.range, { start: 0, end: 3 });
+  assert.deepEqual(finding?.range, fixtures.multiMark.expectedRange);
   assert.equal(input.slice(finding!.range.start, finding!.range.end), input);
 });
 
@@ -91,6 +98,7 @@ test("D002-D01 identical input and config are deterministic", () => {
 });
 
 test("D002-N03 Markdown code spans and blocks are excluded", () => {
-  const input = `本文。\n\n\`${decomposedGa}\`\n\n\`\`\`text\n${decomposedGa}\n\`\`\`\n\n    ${decomposedGa}`;
+  const input = fixtures.codeExclusion.codeOnly;
+  assert.equal(input.includes(decomposedGa), true);
   assert.deepEqual(analyze(input, config()), []);
 });
