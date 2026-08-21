@@ -908,8 +908,14 @@ def pbi06b_registration_errors(body: str, oracle_exists: bool, source_exists: bo
         'range_contract: "B01/F01 reconstruct minimal source combining sequence with UTF-16 code-unit offsets"',
         'falsification_contract: "F01 and M01 reject code-point, whole-document, and normalized-output range substitutes"',
         'unchanged_contract: "verify_pbi06a unchanged hashes for config/types/package/lock all pass"',
-        'minimum_tests: 11', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 10',
-        'signature: "PBI06B_GREEN tests>=11 pass=tests fail=0 required_titles=10"',
+        'qga_fix_expected_red:', 'phase: "PRE_FIX_IMPLEMENTATION"',
+        'stdout: "PBI06B_RED missing_required_title D002-B03 multi-mark combining sequence reports exact source range"',
+        'qga_fix_green_transition:',
+        'substantive_contract: "N03 Markdown code exclusion body and B03 multi-mark input/range/slice assertions are present and executable"',
+        'implementation_contract: "COMBINING_SEQUENCE retains one-or-more mark trailing plus"',
+        'minimum_tests: 12', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 12',
+        'signature: "PBI06B_GREEN tests>=12 pass=tests fail=0 required_titles=12"',
+        'da_commit: "4ae9955"',
         'initial_da_green: "tests 11; pass 11; fail 0; required_titles 10; DA commit 96a8843"',
     ))
     if not green:

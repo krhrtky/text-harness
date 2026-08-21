@@ -5,7 +5,7 @@
   "active_pbi": "PBI-06B",
   "gate_type": "DELIVERY",
   "strategy_id": "delivery-pbi06b-multimark-qga-fix-v2",
-  "iteration": 38,
+  "iteration": 39,
   "task_packet_ref": ".codex/task-packets/PBI-06B-d002.md",
   "phase_history": [
     {
@@ -1042,6 +1042,24 @@
       ],
       "resume_point": ".codex/task-packets/PBI-06B-d002.md",
       "timestamp": "2026-08-21T21:45:00+09:00"
+    },
+    {
+      "phase": "DA",
+      "status": "QGA_FIX_GREEN",
+      "agent": "/root/delivery",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-06B",
+      "decision": "The missing-B03 QGA-fix RED was consumed after multi-mark complete range, N03 code exclusion, and trailing-plus source contracts became executable",
+      "evidence": [
+        "QGA-fix RED history retained: PBI06B_RED missing_required_title D002-B03 multi-mark combining sequence reports exact source range; exit 1; stderr empty; reproduced twice",
+        "DA fix commit 4ae9955",
+        "python3 .codex/spec-verifiers/verify_pbi06b.py => PBI06B_GREEN tests=12 pass=12 fail=0 required_titles=12",
+        "B03 asserts U+304B U+3099 U+0301 source range [0,3) and complete slice reconstruction",
+        "N03 title/body and COMBINING_SEQUENCE trailing plus remain substantive",
+        "N03/B03 title, body, range, and trailing-plus counterexamples remain rejected"
+      ],
+      "resume_point": ".codex/task-packets/PBI-06B-d002.md",
+      "timestamp": "2026-08-21T22:00:00+09:00"
     }
   ],
   "blocker_history": [
@@ -1119,5 +1137,5 @@
     }
   ],
   "created_at": "2026-08-21T09:39:07+09:00",
-  "updated_at": "2026-08-21T21:45:00+09:00"
+  "updated_at": "2026-08-21T22:00:00+09:00"
 }
