@@ -1,0 +1,23 @@
+{
+  "input": "需要が増えた。価格が上がった。",
+  "findings": [
+    {
+      "ruleId": "D004",
+      "category": "deterministic",
+      "range": { "start": 7, "end": 9 },
+      "severity": "error",
+      "message": "禁止語「価格」が含まれています。"
+    }
+  ],
+  "semanticFindings": [
+    {
+      "ruleId": "S203",
+      "status": "violation",
+      "range": { "start": 0, "end": 15 },
+      "evidence": ["需要が増えた。価格が上がった。"],
+      "reason": "causeとindependentの両labelが同程度に成立する",
+      "confidence": 0.82,
+      "suggestedAction": "二文の関係を接続表現で明示する"
+    }
+  ]
+}

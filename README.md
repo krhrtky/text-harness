@@ -97,14 +97,14 @@ CLIはcanonicalなJSON reportをstdoutへ1行だけ出力します。live model�
 | H | H108 | 文末labelの連続 |
 | H | H112 | 段落のUTF-16長 |
 | H | H113 | 段落内の文数 |
-| S | S201 | 主語と述語の対応 |
-| S | S202 | 修飾関係 |
-| S | S203 | 文間関係 |
-| S | S204 | 指示対象 |
-| S | S205 | 論理的一貫性 |
-| S | S206 | 前提の明示性 |
-| S | S207 | 曖昧性 |
-| S | S208 | 読者解釈の分岐 |
+| S | S201 | 中心主張の特定しやすさ |
+| S | S202 | 一文に含まれる独立判断の量 |
+| S | S203 | 文間の論理関係 |
+| S | S204 | 指示表現の参照対象 |
+| S | S205 | 情報提示順序の前提依存 |
+| S | S206 | 主張・理由・例・例外の階層 |
+| S | S207 | 文脈に対する抽象度 |
+| S | S208 | 中心結論を提示する位置 |
 
 ## 出力と終了コード
 
@@ -118,6 +118,11 @@ CLIはcanonicalなJSON reportをstdoutへ1行だけ出力します。live model�
 | 5 | setup/install/smokeまたは設定保護の失敗 |
 
 Semanticの`violation`、`no_violation`、`uncertain`はnoticeです。Semantic findingはhard errorにならず、autofixやrewriteを行いません。
+
+## 実行例
+
+全 D/H rule、`readability-review` Skill の全 S rule、統合reportの実行例は
+[`example/README.md`](example/README.md)を参照してください。
 
 ## 制約
 
