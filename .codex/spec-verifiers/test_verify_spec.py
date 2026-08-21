@@ -25,6 +25,7 @@ PBI04_SPEC = importlib.util.spec_from_file_location("verify_pbi04", PBI04_VERIFI
 assert PBI04_SPEC and PBI04_SPEC.loader
 verify_pbi04 = importlib.util.module_from_spec(PBI04_SPEC)
 PBI04_SPEC.loader.exec_module(verify_pbi04)
+PBI05_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi05.py"
 
 EXPECTED = {
     "drop-h113-falsification": "H113-FALSIFICATION",
@@ -61,6 +62,9 @@ EXPECTED = {
     "pbi04-evaluated-at-conflict": "PBI04-EVALUATED-AT-CONTRACT",
     "pbi04-toolchain-missing": "PBI04-TOOLCHAIN-CONTRACT",
     "pbi04-toolchain-drift": "PBI04-TOOLCHAIN-CONTRACT",
+    "drop-pbi05-analyze-ownership": "PBI05-OWNERSHIP",
+    "drop-pbi05-no-match-guard": "PBI05-ACCEPTANCE-ORACLE",
+    "drop-pbi05-required-title": "PBI05-ACCEPTANCE-ORACLE",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -306,5 +310,15 @@ packages:
         self.assertEqual(tests, passed)
         self.assertEqual(0, failed)
         self.assertEqual(12, titles)
+
+    def test_pbi05_registered_red_matches_repository_state(self) -> None:
+        state = verify_spec.read_state()
+        packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-05")
+        self.assertEqual([], verify_spec.pbi05_registration_errors(packet, PBI05_VERIFIER.is_file(), False))
+        first = subprocess.run(["python3", str(PBI05_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        second = subprocess.run(["python3", str(PBI05_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        expected = (1, "PBI05_RED missing packages/readability-core/src/rules/H107.ts\n", "")
+        self.assertEqual(expected, (first.returncode, first.stdout, first.stderr))
+        self.assertEqual(expected, (second.returncode, second.stdout, second.stderr))
 
 if __name__ == "__main__": unittest.main()

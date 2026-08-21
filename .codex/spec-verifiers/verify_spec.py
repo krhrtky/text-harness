@@ -26,6 +26,7 @@ MUTATIONS = (
     "drop-pbi04-known-fail", "permit-pbi04-runtime", "drop-pbi04-fallback-title",
     "pbi04-empty-evidence-entry", "pbi04-string-evidence",
     "pbi04-evaluated-at-conflict", "pbi04-toolchain-missing", "pbi04-toolchain-drift",
+    "drop-pbi05-analyze-ownership", "drop-pbi05-no-match-guard", "drop-pbi05-required-title",
 )
 
 def read_state() -> dict:
@@ -332,6 +333,45 @@ def pbi04_transition_errors(body: str, oracle_exists: bool, artifact_exists: boo
         errors.append("PBI04-POST-IMPLEMENTATION-GREEN")
     return errors
 
+
+def pbi05_registration_errors(body: str, oracle_exists: bool, implementation_exists: bool) -> list[str]:
+    ownership = all(value in body for value in (
+        'owned_paths: ["packages/readability-core/src/rules/H107.ts", "packages/readability-core/src/rules/H108.ts", "packages/readability-core/test/heuristic/H107.contract.test.ts", "packages/readability-core/test/heuristic/H108.contract.test.ts", "packages/readability-core/src/analyze.ts", "packages/readability-core/src/index.ts"]',
+        'packages/readability-core/src/analyze.ts: "PBI-02/PBI-03/PBI-04 ownership履歴を維持し、H107/H108 dispatchだけ追加する"',
+        'packages/readability-core/src/index.ts: "PBI-02/PBI-03/PBI-04 ownership履歴を維持し、H107/H108 exportだけ追加する"',
+    ))
+    dependency = all(value in body for value in (
+        '"packages/readability-core/package.json", "pnpm-lock.yaml"',
+        'sentence-splitter@5.0.1と@textlint/markdown-to-ast@15.8.0の既存exact runtime dependenciesを変更しない',
+    ))
+    acceptance = all(value in body for value in (
+        'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi05.py"',
+        'test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/heuristic/H107.contract.test.ts test/heuristic/H108.contract.test.ts"',
+        'exact_test_files: ["packages/readability-core/test/heuristic/H107.contract.test.ts", "packages/readability-core/test/heuristic/H108.contract.test.ts"]',
+        'minimum_tests: 8', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 8',
+        '"H107-P01 three identical leading labels report actual 3 threshold 2"',
+        '"H108-P01 three identical terminal labels report actual 3 threshold 2"',
+        'green_signature: "PBI05_GREEN tests>=8 pass=tests fail=0 required_titles=8"',
+    ))
+    errors = []
+    if not ownership:
+        errors.append("PBI05-OWNERSHIP")
+    if not dependency:
+        errors.append("PBI05-DEPENDENCY-CONTRACT")
+    if not acceptance or not oracle_exists:
+        errors.append("PBI05-ACCEPTANCE-ORACLE")
+    if not implementation_exists:
+        registered = all(value in body for value in (
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi05.py; exit=1; signature=PBI05_RED missing packages/readability-core/src/rules/H107.ts"',
+            'red_status: "REGISTERED_RED"',
+            'command: "python3 .codex/spec-verifiers/verify_pbi05.py"', 'exit: 1',
+            'stdout: "PBI05_RED missing packages/readability-core/src/rules/H107.ts"',
+            'stderr: "<empty>"', 'measured_runs: 2',
+        ))
+        if not registered:
+            errors.append("PBI05-PRE-IMPLEMENTATION-RED")
+    return errors
+
 def verify(state: dict) -> list[str]:
     m, t, packets, workflow = state["matrix"], state["text"], state["packets"], state["workflow"]
     errors: list[str] = []
@@ -446,6 +486,13 @@ def verify(state: dict) -> list[str]:
                 (ROOT / "docs/decision-evidence/analyzer-qualification.json").is_file(),
             ):
                 need(False, error)
+        if pid == "PBI-05":
+            for error in pbi05_registration_errors(
+                body,
+                (ROOT / ".codex/spec-verifiers/verify_pbi05.py").is_file(),
+                (ROOT / "packages/readability-core/src/rules/H107.ts").is_file(),
+            ):
+                need(False, error)
         need(not any(x in body for x in ("TBD", "placeholder", "実装開始時に")), f"PACKET-PLACEHOLDER-{name}")
 
     for gap in range(8, 18):
@@ -500,7 +547,18 @@ def verify(state: dict) -> list[str]:
             for item in workflow.get("phase_history", [])
         )
     )
-    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started, "WORKFLOW-GATE-TRANSITION")
+    pbi05_delivery_started = (
+        workflow.get("current_phase") == "DA"
+        and workflow.get("gate_type") == "DELIVERY"
+        and workflow.get("active_pbi") == "PBI-05"
+        and workflow.get("task_packet_ref") == ".codex/task-packets/PBI-05-repetition.md"
+        and any(
+            item.get("phase") == "QGA" and item.get("status") == "APPROVE"
+            and item.get("gate_type") == "DELIVERY" and item.get("active_pbi") == "PBI-04"
+            for item in workflow.get("phase_history", [])
+        )
+    )
+    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started, "WORKFLOW-GATE-TRANSITION")
     return errors
 
 def apply_mutation(name: str, state: dict) -> None:
@@ -593,6 +651,16 @@ def apply_mutation(name: str, state: dict) -> None:
             packets[key] = packets[key].replace('    toolchain_exact: "node=24.19.0; pnpm=11.22.0"\n', "", 1)
         else:
             packets[key] = packets[key].replace("node=24.19.0; pnpm=11.22.0", "node=24.18.0; pnpm=11.22.0", 1)
+    elif name in ("drop-pbi05-analyze-ownership", "drop-pbi05-no-match-guard", "drop-pbi05-required-title"):
+        key = next(k for k, body in packets.items() if packet_id(body) == "PBI-05")
+        if name == "drop-pbi05-analyze-ownership":
+            packets[key] = packets[key].replace(', "packages/readability-core/src/analyze.ts"', "", 1)
+        elif name == "drop-pbi05-no-match-guard":
+            packets[key] = packets[key].replace(" --fail-if-no-match", "", 1)
+        else:
+            packets[key] = packets[key].replace(
+                '"H108-P01 three identical terminal labels report actual 3 threshold 2", ', "", 1
+            )
     else: raise ValueError(name)
 
 def main() -> int:

@@ -2,11 +2,11 @@
   "id": "wf-readability-mvp-20260821",
   "request": "Readability Engineering System要求の実現、setup/upgrade支援、反証必須の完了判定、public GitHub repositoryへのpush",
   "current_phase": "DA",
-  "active_pbi": "PBI-04",
+  "active_pbi": "PBI-05",
   "gate_type": "DELIVERY",
-  "strategy_id": "delivery-pbi04-artifact-schema-v3",
-  "iteration": 19,
-  "task_packet_ref": ".codex/task-packets/PBI-04-analyzer-qualification.md",
+  "strategy_id": "delivery-pbi05-repetition-v1",
+  "iteration": 20,
+  "task_packet_ref": ".codex/task-packets/PBI-05-repetition.md",
   "phase_history": [
     {
       "phase": "SDA",
@@ -525,6 +525,41 @@
       ],
       "resume_point": ".codex/task-packets/PBI-04-analyzer-qualification.md",
       "timestamp": "2026-08-21T16:40:00+09:00"
+    },
+    {
+      "phase": "QGA",
+      "status": "APPROVE",
+      "agent": "/root/spec_qga",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-04",
+      "decision": "PBI-04 DELIVERY approved after strict qualification artifact schema correction",
+      "evidence": [
+        "PBI04_GREEN tests=21 pass=21 fail=0 required_titles=12",
+        "five exact gates and typed non-empty evidence validated",
+        "release age, evaluatedAt, and exact Node/pnpm toolchain mutations rejected",
+        "kuromoji-family runtime dependency absent and internal fallback selected",
+        "spec verifier, unit suite, JSON validation, and clean worktree confirmed"
+      ],
+      "resume_point": ".codex/task-packets/PBI-05-repetition.md",
+      "timestamp": "2026-08-21T16:50:00+09:00"
+    },
+    {
+      "phase": "DA",
+      "status": "READY",
+      "agent": null,
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-05",
+      "task_packet_ref": ".codex/task-packets/PBI-05-repetition.md",
+      "decision": "PBI-05 is the next dependency-valid item; PBI-05P remains blocked on PBI-05 DELIVERY approval",
+      "evidence": [
+        "backlog dependency chain is PBI-04 -> PBI-05 -> PBI-05P -> PBI-05I -> PBI-05J",
+        "python3 .codex/spec-verifiers/verify_pbi05.py => exit 1",
+        "stdout: PBI05_RED missing packages/readability-core/src/rules/H107.ts; stderr empty; reproduced twice",
+        "post-state oracle rejects package filter no-match and requires exact two test files, at least 8 tests, all pass, fail 0, and eight boundary/falsification/range titles",
+        "PBI-04 internal leadingSurfaceLabel and terminalMorphologyLabel contracts are reused without dependency changes"
+      ],
+      "resume_point": ".codex/task-packets/PBI-05-repetition.md",
+      "timestamp": "2026-08-21T16:55:00+09:00"
     }
   ],
   "blocker_history": [
@@ -602,5 +637,5 @@
     }
   ],
   "created_at": "2026-08-21T09:39:07+09:00",
-  "updated_at": "2026-08-21T16:40:00+09:00"
+  "updated_at": "2026-08-21T16:55:00+09:00"
 }
