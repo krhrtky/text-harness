@@ -4,6 +4,7 @@ export { selectAnalyzer } from "./analyzer/qualification.ts";
 export { analyzeD001 } from "./rules/D001.ts";
 export { analyzeD002 } from "./rules/D002.ts";
 export { analyzeD003 } from "./rules/D003.ts";
+export { analyzeD004 } from "./rules/D004.ts";
 export { analyzeH101 } from "./rules/H101.ts";
 export { analyzeH102 } from "./rules/H102.ts";
 export { analyzeH103 } from "./rules/H103.ts";
