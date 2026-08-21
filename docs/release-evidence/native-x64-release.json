@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "repository": {
+    "owner": "krhrtky",
+    "name": "text-harness",
+    "visibility": "public",
+    "license": "Apache-2.0",
+    "finalDefaultBranch": "main"
+  },
+  "branches": {
+    "candidate": "codex/release-candidate",
+    "final": "main"
+  },
+  "workflow": {
+    "path": ".github/workflows/release-contract.yml",
+    "name": "Release contract",
+    "event": "push",
+    "branches": ["codex/release-candidate", "main"],
+    "artifactName": "release-attestation"
+  },
+  "attestationRequiredFields": [
+    "schemaVersion",
+    "repository",
+    "workflowId",
+    "runId",
+    "runAttempt",
+    "event",
+    "branch",
+    "headSha",
+    "runnerOs",
+    "runnerArch",
+    "freshCheckout",
+    "installCommand",
+    "releaseCommand",
+    "license",
+    "notice",
+    "security"
+  ]
+}

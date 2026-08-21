@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - codex/release-candidate
+      - main
   pull_request:
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
@@ -37,3 +39,27 @@ jobs:
           pnpm verify:security
           echo "SECURITY=PASS"
       - run: pnpm verify:release
+      - name: Create release attestation
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          workflow_id=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/release-contract.yml" --jq .id)
+          jq -n \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --argjson workflowId "$workflow_id" \
+            --argjson runId "$GITHUB_RUN_ID" \
+            --argjson runAttempt "$GITHUB_RUN_ATTEMPT" \
+            --arg event "$GITHUB_EVENT_NAME" \
+            --arg branch "$GITHUB_REF_NAME" \
+            --arg headSha "$GITHUB_SHA" \
+            --arg runnerOs "$RUNNER_OS" \
+            --arg runnerArch "$RUNNER_ARCH" \
+            '{schemaVersion: 1, repository: $repository, workflowId: $workflowId, runId: $runId, runAttempt: $runAttempt, event: $event, branch: $branch, headSha: $headSha, runnerOs: $runnerOs, runnerArch: $runnerArch, freshCheckout: true, installCommand: "corepack pnpm install --frozen-lockfile", releaseCommand: "pnpm verify:release", license: "PASS", notice: "ABSENT", security: "PASS"}' \
+            > release-attestation.json
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'push'
+        with:
+          name: release-attestation
+          path: release-attestation.json
+          if-no-files-found: error
