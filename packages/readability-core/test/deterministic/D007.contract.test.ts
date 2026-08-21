@@ -72,6 +72,13 @@ test("D007-B03 default warning and explicit error severity are preserved", () =>
   assert.equal(analyze("ないわけではない", config(undefined, "warning"))[0]?.severity, "warning");
 });
 
+test("D007-B04 adjacent literal occurrences advance to the previous match end", () => {
+  assert.deepEqual(analyze("aaaa", config(["aa"])).map(({ range }) => range), [
+    { start: 0, end: 2 },
+    { start: 2, end: 4 },
+  ]);
+});
+
 test("D007-C01 patterns validation accepts omission and empty replacement but rejects malformed values", () => {
   assert.doesNotThrow(() => analyze("本文", config()));
   assert.deepEqual(analyze("ないわけではない", config([])), []);
