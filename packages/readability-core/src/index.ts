@@ -6,6 +6,8 @@ export { analyzeH102 } from "./rules/H102.ts";
 export { analyzeH103 } from "./rules/H103.ts";
 export { analyzeH104 } from "./rules/H104.ts";
 export { analyzeH106 } from "./rules/H106.ts";
+export { analyzeH107 } from "./rules/H107.ts";
+export { analyzeH108 } from "./rules/H108.ts";
 export { assertReadabilityConfig, validateReadabilityConfig } from "./config/validate.ts";
 export {
   createDeterministicFinding,
