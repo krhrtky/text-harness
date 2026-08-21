@@ -18,7 +18,7 @@ TESTS = (
     Path("packages/readability-core/test/rules/H102.contract.test.ts"),
     Path("packages/readability-core/test/rules/H106.contract.test.ts"),
 )
-MINIMUM_TESTS = 12
+MINIMUM_TESTS = 21
 REQUIRED_TITLES = (
     "PBI04-Q01 kuromoji 0.1.2 maintainability is FAIL",
     "PBI04-Q02 any non-PASS gate rejects the candidate",

@@ -44,22 +44,37 @@ task_packet:
   acceptance_oracle:
     test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/analyzer/qualification.contract.test.ts test/analyzer/internal-token.contract.test.ts test/rules/H102.contract.test.ts test/rules/H106.contract.test.ts"
     exact_test_files: ["packages/readability-core/test/analyzer/qualification.contract.test.ts", "packages/readability-core/test/analyzer/internal-token.contract.test.ts", "packages/readability-core/test/rules/H102.contract.test.ts", "packages/readability-core/test/rules/H106.contract.test.ts"]
-    minimum_tests: 12
+    minimum_tests: 21
     pass_equals_tests: true
     fail: 0
     required_titles: 12
     required_title_ids: ["PBI04-Q01", "PBI04-Q02", "PBI04-Q03", "PBI04-Q04", "H102-B01", "H102-P01", "H102-F01", "H106-B01", "H106-P01", "H106-F01", "H107-T01", "H108-T01"]
     rejected_runtime_dependencies: ["kuromoji", "kuromojin", "@faanau/kuromoji"]
-    green_signature: "PBI04_GREEN tests>=12 pass=tests fail=0 required_titles=12"
-  expected_red: "python3 .codex/spec-verifiers/verify_pbi04.py; exit=1; signature=PBI04_RED missing docs/decision-evidence/analyzer-qualification.json"
-  red_status: "REGISTERED_RED"
-  expected_red_evidence:
-    phase: "PRE_IMPLEMENTATION"
+    green_signature: "PBI04_GREEN tests>=21 pass=tests fail=0 required_titles=12"
+  expected_red: null
+  red_status: "CONSUMED_GREEN"
+  expected_red_history:
+    registration:
+      phase: "PRE_IMPLEMENTATION"
+      command: "python3 .codex/spec-verifiers/verify_pbi04.py"
+      exit: 1
+      stdout: "PBI04_RED missing docs/decision-evidence/analyzer-qualification.json"
+      stderr: "<empty>"
+      measured_runs: 2
+  green_transition:
+    qualification_artifact: "docs/decision-evidence/analyzer-qualification.json"
+    gate_contract: "five exact gates; maintainability FAIL(RELEASE_AGE_GT_24_MONTHS); other four UNKNOWN with evidence"
+    decision_contract: "ANY_FAIL_OR_UNKNOWN => REJECT; runtime kuromoji-family absent; fallback internal"
+    fallback_contracts: ["H102", "H106", "H107_TOKEN", "H108_TOKEN"]
     command: "python3 .codex/spec-verifiers/verify_pbi04.py"
-    exit: 1
-    stdout: "PBI04_RED missing docs/decision-evidence/analyzer-qualification.json"
-    stderr: "<empty>"
-    measured_runs: 2
+    exit: 0
+    minimum_tests: 21
+    pass_equals_tests: true
+    fail: 0
+    required_titles: 12
+    signature: "PBI04_GREEN tests>=21 pass=tests fail=0 required_titles=12"
+  green_history:
+    initial_da_green: "tests 21; pass 21; fail 0; required_titles 12"
   red_registration_gate: "PBI開始時、依存PBI完了後かつ実装変更前に、実在する失敗test command・exit code・完全一致signatureを登録する"
   engineering_constraints: "docs/requirements/engineering-constraints.md"
   falsification:

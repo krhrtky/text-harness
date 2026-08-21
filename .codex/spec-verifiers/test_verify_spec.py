@@ -232,7 +232,7 @@ packages:
         self.assertEqual(0, failed)
         self.assertEqual(12, titles)
 
-    def test_pbi04_artifact_contract_and_registered_red(self) -> None:
+    def test_pbi04_artifact_red_history_and_green_transition(self) -> None:
         valid = {
             "candidate": {
                 "package": "kuromoji", "version": "0.1.2", "dictionary": "bundled IPADIC",
@@ -259,13 +259,25 @@ packages:
         state = verify_spec.read_state()
         packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-04")
         artifact = ROOT / "docs/decision-evidence/analyzer-qualification.json"
-        self.assertFalse(artifact.exists())
-        self.assertEqual([], verify_spec.pbi04_registration_errors(packet, PBI04_VERIFIER.is_file(), False))
-        for _ in range(2):
-            red = subprocess.run(["python3", str(PBI04_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
-            self.assertEqual(
-                (1, "PBI04_RED missing docs/decision-evidence/analyzer-qualification.json\n", ""),
-                (red.returncode, red.stdout, red.stderr),
-            )
+        pre_implementation = packet.replace(
+            "expected_red: null",
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi04.py; exit=1; signature=PBI04_RED missing docs/decision-evidence/analyzer-qualification.json"',
+            1,
+        ).replace('red_status: "CONSUMED_GREEN"', 'red_status: "REGISTERED_RED"', 1)
+        self.assertEqual([], verify_spec.pbi04_transition_errors(pre_implementation, True, False))
+        self.assertTrue(artifact.is_file())
+        self.assertEqual([], verify_pbi04.validate_artifact(json.loads(artifact.read_text())))
+        self.assertEqual([], verify_spec.pbi04_transition_errors(packet, PBI04_VERIFIER.is_file(), True))
+        green = subprocess.run(["python3", str(PBI04_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        self.assertEqual(0, green.returncode, green.stdout + green.stderr)
+        summary = re.search(
+            r"PBI04_GREEN tests=(\d+) pass=(\d+) fail=(\d+) required_titles=(\d+)", green.stdout
+        )
+        self.assertIsNotNone(summary)
+        tests, passed, failed, titles = (int(value) for value in summary.groups())
+        self.assertGreaterEqual(tests, 21)
+        self.assertEqual(tests, passed)
+        self.assertEqual(0, failed)
+        self.assertEqual(12, titles)
 
 if __name__ == "__main__": unittest.main()
