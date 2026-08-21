@@ -61,6 +61,10 @@ MUTATIONS = (
     "permit-pbi06d-external-dependency",
     "drop-pbi06d-green-falsification",
     "make-pbi06d-tie-reversal-observable",
+    "drop-pbi06e-analyze-ownership", "drop-pbi06e-no-match-guard",
+    "drop-pbi06e-falsification-title", "weaken-pbi06e-range",
+    "reverse-pbi06e-mapping", "permit-pbi06e-regex",
+    "permit-pbi06e-external-dependency",
 )
 
 def read_state() -> dict:
@@ -1133,6 +1137,66 @@ def pbi06d_registration_errors(body: str, oracle_exists: bool, source_exists: bo
         errors.append("PBI06D-POST-IMPLEMENTATION-GREEN")
     return errors
 
+
+def pbi06e_registration_errors(body: str, oracle_exists: bool, source_exists: bool) -> list[str]:
+    ownership = all(value in body for value in (
+        '    - "packages/readability-core/src/rules/D005.ts"',
+        '    - "packages/readability-core/test/deterministic/D005.contract.test.ts"',
+        '    - "packages/readability-core/src/analyze.ts"',
+        '    - "packages/readability-core/src/index.ts"',
+        'packages/readability-core/src/analyze.ts: "既存D001-D004/H dispatchを維持し、validated D005 terminology/severityをanalyzeD005へ渡すcaseだけ追加する"',
+        'packages/readability-core/src/index.ts: "既存public exportsを維持し、analyzeD005 exportだけ追加する"',
+    ))
+    contract = all(value in body for value in (
+        'input_contract: "サーバーを起動 with terminology={サーバー:サーバ}"',
+        'config_contract: "{ruleId:D005, terminology:Readonly<Record<nonpreferred,preferred>>, severity?:error|warning}; empty map/key/value, missing, malformed, unknown fields are rejected by inherited validator"',
+        'mapping_contract: "key=nonpreferred literal and value=preferred message value; left-to-right non-overlap; same start longest key; regex metacharacters literal; separated occurrences map one-to-one"',
+        'oracle_contract: "サーバーを起動 reports exactly one D005 finding for key サーバー and message contains preferred サーバ; preferred-only サーバ, D005:false, and code-only inputs report zero"',
+        'range_contract: "RNG-001 UTF-16 zero-based half-open nonpreferred key; base [0,4); emoji-prefixed 😀サーバー reports [2,6); input.slice reconstructs サーバー"',
+        'severity_contract: "omitted=>error; explicit error|warning preserved exactly"',
+        'external_dependency_contract: "PBI-06 decision INTERNAL/PBI-06E; package manifests and lockfile unchanged"',
+        'mutations: ["D005-M-REVERSE-MAPPING", "D005-M-REGEX", "D005-M-SHORTER-BEFORE-LONGEST", "D005-M-OVERLAP", "D005-M-CODE-POINT", "D005-M-WHOLE-RANGE", "D005-M-INCLUDE-CODE", "D005-M-OMIT-PREFERRED-MESSAGE"]',
+    ))
+    acceptance = all(value in body for value in (
+        'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi06e.py"',
+        'test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/deterministic/D005.contract.test.ts"',
+        'exact_test_file: "packages/readability-core/test/deterministic/D005.contract.test.ts"',
+        'minimum_tests: 13', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 13',
+        '"D005-P01 nonpreferred term reports and names its preferred replacement"',
+        '"D005-N01 preferred terminology does not report"',
+        '"D005-N03 Markdown code spans and blocks are excluded"',
+        '"D005-B01 emoji-prefixed UTF-16 range reconstructs the nonpreferred term"',
+        '"D005-B02 regular-expression metacharacters are matched literally"',
+        '"D005-B03 overlapping nonpreferred terms choose the longest literal match"',
+        '"D005-B04 default error and explicit warning severity are preserved"',
+        '"D005-C01 terminology validation rejects empty and malformed mappings"',
+        '"D005-F01 preferred values cannot be treated as nonpreferred keys"',
+        '"D005-M01 reverse mapping regex overlap range and code mutants fail fixtures"',
+        'no_match_guard: "--fail-if-no-match plus exact test file, collected count, pass=tests, fail=0, and all required titles"',
+        'green_signature: "PBI06E_GREEN tests>=13 pass=tests fail=0 required_titles=13"',
+    ))
+    errors = []
+    if not ownership:
+        errors.append("PBI06E-OWNERSHIP")
+    if not contract:
+        errors.append("PBI06E-RULE-CONTRACT")
+    if not acceptance or not oracle_exists:
+        errors.append("PBI06E-ACCEPTANCE-ORACLE")
+    if not source_exists:
+        registered = all(value in body for value in (
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi06e.py; exit=1; signature=PBI06E_RED missing packages/readability-core/src/rules/D005.ts"',
+            'red_status: "REGISTERED_RED"', 'phase: "PRE_IMPLEMENTATION"',
+            'command: "python3 .codex/spec-verifiers/verify_pbi06e.py"', 'exit: 1',
+            'stdout: "PBI06E_RED missing packages/readability-core/src/rules/D005.ts"',
+            'stderr: "<empty>"', 'measured_runs: 2',
+        ))
+        if not registered:
+            errors.append("PBI06E-PRE-IMPLEMENTATION-RED")
+        return errors
+    if 'expected_red: null' not in body or 'red_status: "CONSUMED_GREEN"' not in body or 'green_transition:' not in body:
+        errors.append("PBI06E-POST-IMPLEMENTATION-GREEN")
+    return errors
+
 def verify(state: dict) -> list[str]:
     m, t, packets, workflow = state["matrix"], state["text"], state["packets"], state["workflow"]
     errors: list[str] = []
@@ -1331,6 +1395,13 @@ def verify(state: dict) -> list[str]:
                 (ROOT / "packages/readability-core/src/rules/D004.ts").is_file(),
             ):
                 need(False, error)
+        if pid == "PBI-06E":
+            for error in pbi06e_registration_errors(
+                body,
+                (ROOT / ".codex/spec-verifiers/verify_pbi06e.py").is_file(),
+                (ROOT / "packages/readability-core/src/rules/D005.ts").is_file(),
+            ):
+                need(False, error)
         need(not any(x in body for x in ("TBD", "placeholder", "実装開始時に")), f"PACKET-PLACEHOLDER-{name}")
 
     for gap in range(8, 18):
@@ -1484,7 +1555,18 @@ def verify(state: dict) -> list[str]:
             for item in workflow.get("phase_history", [])
         )
     )
-    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started or pbi05j_delivery_started or pbi06_delivery_started or pbi06a_delivery_started or pbi06b_delivery_started or pbi06c_delivery_started or pbi06d_delivery_started, "WORKFLOW-GATE-TRANSITION")
+    pbi06e_delivery_started = (
+        workflow.get("current_phase") == "DA"
+        and workflow.get("gate_type") == "DELIVERY"
+        and workflow.get("active_pbi") == "PBI-06E"
+        and workflow.get("task_packet_ref") == ".codex/task-packets/PBI-06E-d005.md"
+        and any(
+            item.get("phase") == "QGA" and item.get("status") == "APPROVE"
+            and item.get("gate_type") == "DELIVERY" and item.get("active_pbi") == "PBI-06D"
+            for item in workflow.get("phase_history", [])
+        )
+    )
+    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started or pbi05j_delivery_started or pbi06_delivery_started or pbi06a_delivery_started or pbi06b_delivery_started or pbi06c_delivery_started or pbi06d_delivery_started or pbi06e_delivery_started, "WORKFLOW-GATE-TRANSITION")
     return errors
 
 def apply_mutation(name: str, state: dict) -> None:
@@ -1863,6 +1945,31 @@ def apply_mutation(name: str, state: dict) -> None:
             )
         else:
             t["dec8"] = t["dec8"].replace("observationally equivalent", "observably different", 1)
+    elif name in (
+        "drop-pbi06e-analyze-ownership", "drop-pbi06e-no-match-guard",
+        "drop-pbi06e-falsification-title", "weaken-pbi06e-range",
+        "reverse-pbi06e-mapping", "permit-pbi06e-regex",
+        "permit-pbi06e-external-dependency",
+    ):
+        key = next(k for k, body in packets.items() if packet_id(body) == "PBI-06E")
+        if name == "drop-pbi06e-analyze-ownership":
+            packets[key] = packets[key].replace('    - "packages/readability-core/src/analyze.ts"\n', "", 1)
+        elif name == "drop-pbi06e-no-match-guard":
+            packets[key] = packets[key].replace(" --fail-if-no-match", "", 1)
+        elif name == "drop-pbi06e-falsification-title":
+            packets[key] = packets[key].replace(', "D005-F01 preferred values cannot be treated as nonpreferred keys"', "", 1)
+        elif name == "weaken-pbi06e-range":
+            packets[key] = packets[key].replace("emoji-prefixed 😀サーバー reports [2,6)", "emoji-prefixed range unspecified", 1)
+        elif name == "reverse-pbi06e-mapping":
+            packets[key] = packets[key].replace("key=nonpreferred literal and value=preferred message value", "key=preferred and value=nonpreferred", 1)
+        elif name == "permit-pbi06e-regex":
+            packets[key] = packets[key].replace("regex metacharacters literal", "regex metacharacters evaluated", 1)
+        else:
+            packets[key] = packets[key].replace(
+                "PBI-06 decision INTERNAL/PBI-06E; package manifests and lockfile unchanged",
+                "external dependency permitted",
+                1,
+            )
     else: raise ValueError(name)
 
 def main() -> int:

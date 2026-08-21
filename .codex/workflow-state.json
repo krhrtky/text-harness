@@ -2,11 +2,11 @@
   "id": "wf-readability-mvp-20260821",
   "request": "Readability Engineering System要求の実現、setup/upgrade支援、反証必須の完了判定、public GitHub repositoryへのpush",
   "current_phase": "DA",
-  "active_pbi": "PBI-06D",
+  "active_pbi": "PBI-06E",
   "gate_type": "DELIVERY",
-  "strategy_id": "delivery-pbi06d-d004-contract-v1",
-  "iteration": 47,
-  "task_packet_ref": ".codex/task-packets/PBI-06D-d004.md",
+  "strategy_id": "delivery-pbi06e-d005-contract-v1",
+  "iteration": 48,
+  "task_packet_ref": ".codex/task-packets/PBI-06E-d005.md",
   "phase_history": [
     {
       "phase": "SDA",
@@ -1309,6 +1309,38 @@
       ],
       "resume_point": ".codex/task-packets/PBI-06D-d004.md",
       "timestamp": "2026-08-22T00:05:00+09:00"
+    },
+    {
+      "phase": "QGA",
+      "status": "APPROVE",
+      "agent": "/root/spec_qga",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-06D",
+      "decision": "PBI-06D satisfies observable literal mapping, lexical boundary, longest-term, range, severity, code exclusion, and mutation contracts after DEC-008 Option A",
+      "evidence": [
+        "DA commit bc2fdb5, Green transition commit 6342d16, and DEC-008 correction commit 530594a",
+        "python3 .codex/spec-verifiers/verify_pbi06d.py => PBI06D_GREEN tests=13 pass=13 fail=0 required_titles=13",
+        "unobservable config-order tie removed; left-to-right non-overlap, longest-at-same-start, and determinism retained",
+        "SPEC_PASS and 109 independent/adversarial mutations pass"
+      ],
+      "resume_point": ".codex/task-packets/PBI-06E-d005.md",
+      "timestamp": "2026-08-22T00:10:00+09:00"
+    },
+    {
+      "phase": "DA",
+      "status": "READY_FOR_IMPLEMENTATION",
+      "agent": null,
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-06E",
+      "task_packet_ref": ".codex/task-packets/PBI-06E-d005.md",
+      "decision": "Implement D005 nonpreferred-to-preferred literal terminology mapping with longest non-overlap precedence, preferred message, exact ranges, severity, and Markdown code exclusion",
+      "evidence": [
+        "python3 .codex/spec-verifiers/verify_pbi06e.py => PBI06E_RED missing packages/readability-core/src/rules/D005.ts; exit 1; stderr empty; reproduced twice",
+        "acceptance rejects filter no-match and requires tests>=13, pass=tests, fail=0, and 13 exact titles",
+        "reverse mapping, regex, shorter-before-longest, overlap, code-point, whole-range, code inclusion, and omitted preferred-message mutations are explicit"
+      ],
+      "resume_point": ".codex/task-packets/PBI-06E-d005.md",
+      "timestamp": "2026-08-22T00:15:00+09:00"
     }
   ],
   "blocker_history": [
@@ -1386,5 +1418,5 @@
     }
   ],
   "created_at": "2026-08-21T09:39:07+09:00",
-  "updated_at": "2026-08-22T00:05:00+09:00"
+  "updated_at": "2026-08-22T00:15:00+09:00"
 }

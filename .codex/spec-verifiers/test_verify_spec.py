@@ -56,6 +56,7 @@ verify_pbi06b = importlib.util.module_from_spec(PBI06B_SPEC)
 PBI06B_SPEC.loader.exec_module(verify_pbi06b)
 PBI06C_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi06c.py"
 PBI06D_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi06d.py"
+PBI06E_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi06e.py"
 
 EXPECTED = {
     "drop-h113-falsification": "H113-FALSIFICATION",
@@ -167,6 +168,13 @@ EXPECTED = {
     "permit-pbi06d-external-dependency": "PBI06D-RULE-CONTRACT",
     "drop-pbi06d-green-falsification": "PBI06D-POST-IMPLEMENTATION-GREEN",
     "make-pbi06d-tie-reversal-observable": "D004-TIE-OBSERVABILITY",
+    "drop-pbi06e-analyze-ownership": "PBI06E-OWNERSHIP",
+    "drop-pbi06e-no-match-guard": "PBI06E-ACCEPTANCE-ORACLE",
+    "drop-pbi06e-falsification-title": "PBI06E-ACCEPTANCE-ORACLE",
+    "weaken-pbi06e-range": "PBI06E-RULE-CONTRACT",
+    "reverse-pbi06e-mapping": "PBI06E-RULE-CONTRACT",
+    "permit-pbi06e-regex": "PBI06E-RULE-CONTRACT",
+    "permit-pbi06e-external-dependency": "PBI06E-RULE-CONTRACT",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -786,5 +794,14 @@ test("D002-B03 multi-mark combining sequence reports exact source range", () => 
         self.assertEqual(tests, passed)
         self.assertEqual(0, failed)
         self.assertEqual(13, titles)
+
+    def test_pbi06e_registered_red_is_exact_and_reproducible(self) -> None:
+        state = verify_spec.read_state()
+        packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-06E")
+        self.assertEqual([], verify_spec.pbi06e_registration_errors(packet, PBI06E_VERIFIER.is_file(), False))
+        expected = (1, "PBI06E_RED missing packages/readability-core/src/rules/D005.ts\n", "")
+        for _ in range(2):
+            result = subprocess.run(["python3", str(PBI06E_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+            self.assertEqual(expected, (result.returncode, result.stdout, result.stderr))
 
 if __name__ == "__main__": unittest.main()
