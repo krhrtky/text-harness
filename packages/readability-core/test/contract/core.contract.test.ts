@@ -5,7 +5,10 @@ import test from "node:test";
 import {
   ConfigurationError,
   ContractValidationError,
+  DETERMINISTIC_RULE_IDS,
+  HEURISTIC_RULE_IDS,
   InputValidationError,
+  SEMANTIC_RULE_IDS,
   analyze,
   createDeterministicFinding,
   createHeuristicFinding,
@@ -180,12 +183,87 @@ test("unknown fields, mismatched IDs, empty required values, and invalid enums f
     { rules: { H101: { ruleId: "H101", threshold: 1.5 } } },
     { rules: { H101: { ruleId: "H101", severity: "error" } } },
     { rules: { H999: false } },
+    { rules: { H999: { ruleId: "H999", threshold: 1 } } },
+    { rules: { D999: { ruleId: "D999", severity: "error" } } },
     { rules: null },
     { rules: {}, exclude: { codeBlocks: true, unknown: false } },
   ];
   for (const config of invalidConfigs) {
     assert.throws(() => validateReadabilityConfig(config), ConfigurationError);
   }
+});
+
+test("unknown object rule IDs are configuration errors with exit code 2", () => {
+  const invalidConfigs = [
+    { rules: { H999: { ruleId: "H999", threshold: 1 } } },
+    { rules: { D999: { ruleId: "D999", severity: "error" } } },
+  ];
+  for (const config of invalidConfigs) {
+    try {
+      validateReadabilityConfig(config);
+      assert.fail("unknown object rule ID must be rejected");
+    } catch (error) {
+      assert.equal(error instanceof ConfigurationError, true);
+      assert.equal((error as ConfigurationError).exitCode, 2);
+    }
+  }
+});
+
+test("all deterministic default severities match the public contract", () => {
+  const rules = {
+    D001: { ruleId: "D001", style: "consistent" },
+    D002: { ruleId: "D002", normalization: "NFC" },
+    D003: { ruleId: "D003" },
+    D004: { ruleId: "D004", forbiddenTerms: ["必ず"] },
+    D005: { ruleId: "D005", terminology: { サーバー: "サーバ" } },
+    D006: { ruleId: "D006", maxConsecutive: 2 },
+    D007: { ruleId: "D007" },
+    D008: { ruleId: "D008" },
+  } as const;
+  const expected = {
+    D001: "error",
+    D002: "error",
+    D003: "error",
+    D004: "error",
+    D005: "error",
+    D006: "warning",
+    D007: "warning",
+    D008: "warning",
+  } as const;
+  const validated = validateReadabilityConfig({ rules });
+  const actual = Object.fromEntries(Object.keys(expected).map((id) => [id, validated.rules[id]?.severity]));
+  assert.deepEqual(actual, expected);
+});
+
+test("all heuristic defaults match threshold and warning contracts", () => {
+  const expected = {
+    H101: 100,
+    H102: 4,
+    H103: 4,
+    H104: 2,
+    H106: 50,
+    H107: 2,
+    H108: 2,
+    H112: 500,
+    H113: 8,
+  } as const;
+  const rules = Object.fromEntries(Object.keys(expected).map((ruleId) => [ruleId, { ruleId }]));
+  const validated = validateReadabilityConfig({ rules });
+  const actual = Object.fromEntries(Object.keys(expected).map((id) => [id, {
+    threshold: validated.rules[id]?.threshold,
+    severity: validated.rules[id]?.severity,
+  }]));
+  const expectedWithSeverity = Object.fromEntries(Object.entries(expected).map(([id, threshold]) => [id, {
+    threshold,
+    severity: "warning",
+  }]));
+  assert.deepEqual(actual, expectedWithSeverity);
+});
+
+test("D H and S stable public ID sets are exact", () => {
+  assert.deepEqual(DETERMINISTIC_RULE_IDS, ["D001", "D002", "D003", "D004", "D005", "D006", "D007", "D008"]);
+  assert.deepEqual(HEURISTIC_RULE_IDS, ["H101", "H102", "H103", "H104", "H106", "H107", "H108", "H112", "H113"]);
+  assert.deepEqual(SEMANTIC_RULE_IDS, ["S201", "S202", "S203", "S204", "S205", "S206", "S207", "S208"]);
 });
 
 test("range validation rejects empty, reversed, fractional, and out-of-input mutations", () => {
