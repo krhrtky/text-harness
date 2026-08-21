@@ -18,8 +18,8 @@ task_packet:
   owned_paths: ["docs/release-evidence/publication.md", "docs/release-evidence/native-x64-release.json", ".github/workflows/release-contract.yml", "scripts/verify-public.mjs", "tests/release/publication.contract.test.mjs", "package.json"]
   acceptance_command: "python3 .codex/spec-verifiers/verify_pbi10.py --stage candidate"
   final_acceptance_command: "python3 .codex/spec-verifiers/verify_pbi10.py --stage final"
-  expected_red: "python3 .codex/spec-verifiers/verify_pbi10.py --stage candidate; exit=1; signature=PBI10_RED missing docs/release-evidence/publication.md"
-  red_status: "REGISTERED_RED"
+  expected_red: null
+  red_status: "EXTERNAL_GREEN_REQUIRED"
   expected_red_history:
     registration:
       phase: "PRE_IMPLEMENTATION"
@@ -66,8 +66,23 @@ task_packet:
     observed_result: "native_x64=PASS, external attestation exact, candidate verifier Green before this ledger commit"
     status: "SUPERSEDED_PRE_FINAL_EVIDENCE"
     reason: "このspec-only ledger commitがcandidate tipを進めるため、d09a2b5 runはfinal candidate evidenceとして再利用不可"
-  next_candidate_contract: "このledger commitを含む新candidate tipをcodex/release-candidateへpushし、そのexact SHAの新しいcompleted successful run/artifactを取得する。以後repository commit禁止。d09a2b5/run32488263297はverify_pbi10でsuperseded-candidateとして拒否する"
-  candidate_green_signature: "PBI10_GREEN stage=candidate candidate_sha=<40hex> native_x64=PASS run_url=https://github.com/krhrtky/text-harness/actions/runs/<id> artifact_url=https://api.github.com/repos/krhrtky/text-harness/actions/artifacts/<id>/zip"
+  next_candidate_contract: "このRED lifecycle spec commitを含む新candidate tipをcodex/release-candidateへpushし、そのexact SHAの新しいcompleted successful run/artifactを取得する。以後repository commit禁止。d09a2b5/run32488263297とc9f6b5c/run32488789586はverify_pbi10でsuperseded-candidateとして拒否する"
+  red_lifecycle:
+    static_state: "EXTERNAL_GREEN_REQUIRED"
+    meaning: "initial repository REDはexpected_red_historyへ消費済み。現在はrepository commitでGreenを記録せず、exact remote candidateに対するauthenticated external gateの成功を要求する条件状態"
+    effective_success: "verify_pbi10 --stage candidateがcandidate tipと同一headShaの最新successful run/artifactを全検証した実行時だけCONSUMED_GREEN_EXTERNAL"
+    effective_failure: "artifact欠落、superseded/old run、failed/skipped/cancelled、branch/SHA/runner/marker drift、authentication failureはREDかRELEASE REQUEST_CHANGES"
+    persistence: "repo内red_statusはEXTERNAL_GREEN_REQUIREDのままでよい。CONSUMED_GREEN_EXTERNALをcommitしないためcandidate SHAは変化せず自己参照しない"
+    release_readiness: "REGISTERED_REDまたはnon-null expected_redはRELEASE readiness不可。EXTERNAL_GREEN_REQUIRED + effective CONSUMED_GREEN_EXTERNAL evidenceだけが独立RELEASE QGAへ進める"
+  lifecycle_spec_candidate_history:
+    candidate_sha: "c9f6b5c1ae72fc7db7736f19d3d493e4a45befee"
+    workflow_run_id: 32488789586
+    run_url: "https://github.com/krhrtky/text-harness/actions/runs/32488789586"
+    artifact_url: "https://api.github.com/repos/krhrtky/text-harness/actions/artifacts/9448905291/zip"
+    observed_result: "CONSUMED_GREEN_EXTERNAL before lifecycle spec commit"
+    status: "SUPERSEDED_PRE_FINAL_EVIDENCE"
+    reason: "このRED lifecycle spec commitがtipを進めるため、新SHA/runが必要"
+  candidate_green_signature: "PBI10_GREEN stage=candidate candidate_sha=<40hex> native_x64=PASS run_url=https://github.com/krhrtky/text-harness/actions/runs/<id> artifact_url=https://api.github.com/repos/krhrtky/text-harness/actions/artifacts/<id>/zip red_status=CONSUMED_GREEN_EXTERNAL"
   final_contract: "独立RELEASE QGA APPROVEはworkflow state/task evidenceで先行確認しrepositoryへ自己参照記録しない。--stage finalはauthenticated APIでcandidate tip=main tipかつdefault_branch=mainを要求"
   mutations: ["PUB-M-PUSH-MAIN-BEFORE-QGA", "PUB-M-CANDIDATE-SHA-DRIFT", "PUB-M-RUN-SHA-DRIFT", "PUB-M-OLD-SUCCESS-RUN", "PUB-M-BRANCH-DRIFT", "PUB-M-ARM64-AS-X64", "PUB-M-MISSING-ARTIFACT", "PUB-M-ARTIFACT-RUN-ID-DRIFT", "PUB-M-ATTESTATION-TAMPER", "PUB-M-SKIPPED-CI", "PUB-M-UNFROZEN-INSTALL", "PUB-M-RELEASE-FAIL", "PUB-M-MISSING-LICENSE-NOTICE-SECURITY", "PUB-M-REPOSITORY-DYNAMIC-EVIDENCE", "PUB-M-POST-ATTESTATION-COMMIT", "PUB-M-QGA-SKIP", "PUB-M-MAIN-DIFFERENT-SHA", "PUB-M-DEFAULT-BRANCH-UNCONFIRMED", "PUB-M-WORKFLOW-MISSING-MAIN-TRIGGER", "PUB-M-FAILED-CANDIDATE-PROMOTION"]
   engineering_constraints: "docs/requirements/engineering-constraints.md"

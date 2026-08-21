@@ -3,6 +3,7 @@
 from __future__ import annotations
 import argparse, io, json, subprocess, zipfile
 from pathlib import Path
+from typing import Literal
 
 ROOT = Path(__file__).resolve().parents[2]
 PUBLICATION = Path("docs/release-evidence/publication.md")
@@ -12,7 +13,14 @@ CANDIDATE_BRANCH = "codex/release-candidate"
 FINAL_BRANCH = "main"
 WORKFLOW_PATH = ".github/workflows/release-contract.yml"
 ARTIFACT_NAME = "release-attestation"
-SUPERSEDED_CANDIDATES = {"d09a2b51cf6b490c3e172edc5dd4e5b145b861c9": 32488263297}
+SUPERSEDED_CANDIDATES = {
+    "d09a2b51cf6b490c3e172edc5dd4e5b145b861c9": 32488263297,
+    "c9f6b5c1ae72fc7db7736f19d3d493e4a45befee": 32488789586,
+}
+StaticRedStatus = Literal["EXTERNAL_GREEN_REQUIRED"]
+EffectiveGreenStatus = Literal["CONSUMED_GREEN_EXTERNAL"]
+STATIC_RED_STATUS: StaticRedStatus = "EXTERNAL_GREEN_REQUIRED"
+EFFECTIVE_GREEN_STATUS: EffectiveGreenStatus = "CONSUMED_GREEN_EXTERNAL"
 
 STATIC_CONTRACT = {
     "schemaVersion": 1,
@@ -95,6 +103,6 @@ def main() -> int:
     except (json.JSONDecodeError, KeyError, OSError, RuntimeError, zipfile.BadZipFile) as error: print(f"PBI10_FAIL authenticated-github-api {error}"); return 1
     errors = remote_errors(repository, sha, workflow, run, jobs, artifact, attestation, args.stage, main_sha)
     if errors: print("PBI10_FAIL " + ",".join(errors)); return 1
-    print(f"PBI10_GREEN stage={args.stage} candidate_sha={sha} native_x64=PASS run_url={run['html_url']} artifact_url={artifact['archive_download_url']}"); return 0
+    print(f"PBI10_GREEN stage={args.stage} candidate_sha={sha} native_x64=PASS run_url={run['html_url']} artifact_url={artifact['archive_download_url']} red_status={EFFECTIVE_GREEN_STATUS}"); return 0
 
 if __name__ == "__main__": raise SystemExit(main())

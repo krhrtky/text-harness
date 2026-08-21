@@ -126,6 +126,8 @@ MUTATIONS = (
     "store-pbi10-dynamic-evidence", "allow-pbi10-post-attestation-commit",
     "drop-pbi10-main-workflow-trigger",
     "reuse-pbi10-superseded-run",
+    "retain-pbi10-registered-red", "reintroduce-pbi10-expected-red",
+    "bypass-pbi10-external-green",
 )
 
 def read_state() -> dict:
@@ -1878,19 +1880,28 @@ def pbi10_native_x64_errors(body: str, oracle_exists: bool, publication_exists: 
         "PBI-10 product commit d09a2b5 authorized workflow SHA-256 82e70f96995853ba8278d87d716744046a42eeba8a60110b17ce783bbec4867b",
         'candidate_sha: "d09a2b51cf6b490c3e172edc5dd4e5b145b861c9"',
         "workflow_run_id: 32488263297", 'status: "SUPERSEDED_PRE_FINAL_EVIDENCE"',
-        "このledger commitを含む新candidate tipをcodex/release-candidateへpushし、そのexact SHAの新しいcompleted successful run/artifactを取得する。以後repository commit禁止",
+        'candidate_sha: "c9f6b5c1ae72fc7db7736f19d3d493e4a45befee"', "workflow_run_id: 32488789586",
+        "このRED lifecycle spec commitを含む新candidate tipをcodex/release-candidateへpushし、そのexact SHAの新しいcompleted successful run/artifactを取得する。以後repository commit禁止",
         "user承認済みowner=krhrtky/repository=text-harness/visibility=public/license=Apache-2.0/final default branch=main",
     )
     errors = [] if oracle_exists and all(value in body for value in required) else ["PBI10-NATIVE-X64-GATE"]
-    if not publication_exists:
-        registered = all(value in body for value in (
-            'expected_red: "python3 .codex/spec-verifiers/verify_pbi10.py --stage candidate; exit=1; signature=PBI10_RED missing docs/release-evidence/publication.md"',
-            'red_status: "REGISTERED_RED"', 'phase: "PRE_IMPLEMENTATION"',
-            'command: "python3 .codex/spec-verifiers/verify_pbi10.py --stage candidate"',
-            'exit: 1', 'stdout: "PBI10_RED missing docs/release-evidence/publication.md"',
-            'stderr: "<empty>"', 'measured_runs: 2',
-        ))
-        if not registered: errors.append("PBI10-PRE-IMPLEMENTATION-RED")
+    history = all(value in body for value in (
+        'phase: "PRE_IMPLEMENTATION"',
+        'command: "python3 .codex/spec-verifiers/verify_pbi10.py --stage candidate"',
+        'exit: 1', 'stdout: "PBI10_RED missing docs/release-evidence/publication.md"',
+        'stderr: "<empty>"', 'measured_runs: 2',
+    ))
+    lifecycle = all(value in body for value in (
+        "expected_red: null", 'red_status: "EXTERNAL_GREEN_REQUIRED"',
+        'static_state: "EXTERNAL_GREEN_REQUIRED"',
+        "initial repository REDはexpected_red_historyへ消費済み",
+        "実行時だけCONSUMED_GREEN_EXTERNAL",
+        "repo内red_statusはEXTERNAL_GREEN_REQUIREDのままでよい",
+        "REGISTERED_REDまたはnon-null expected_redはRELEASE readiness不可",
+        "red_status=CONSUMED_GREEN_EXTERNAL",
+    ))
+    if not history: errors.append("PBI10-INITIAL-RED-HISTORY")
+    if not lifecycle: errors.append("PBI10-RED-LIFECYCLE")
     return errors
 
 def verify(state: dict) -> list[str]:
@@ -3115,7 +3126,15 @@ def apply_mutation(name: str, state: dict) -> None:
         elif name == "drop-pbi10-main-workflow-trigger":
             packets[key] = packets[key].replace("push branchesはcodex/release-candidateとmainのexact 2 branch", "push branchesはcodex/release-candidateのみ", 1)
         else:
-            packets[key] = packets[key].replace('status: "SUPERSEDED_PRE_FINAL_EVIDENCE"', 'status: "REUSABLE_FINAL_EVIDENCE"', 1)
+            packets[key] = packets[key].replace('candidate_sha: "c9f6b5c1ae72fc7db7736f19d3d493e4a45befee"', 'candidate_sha: "d09a2b51cf6b490c3e172edc5dd4e5b145b861c9"', 1)
+    elif name in ("retain-pbi10-registered-red", "reintroduce-pbi10-expected-red", "bypass-pbi10-external-green"):
+        key = next(k for k, body in packets.items() if packet_id(body) == "PBI-10")
+        if name == "retain-pbi10-registered-red":
+            packets[key] = packets[key].replace('red_status: "EXTERNAL_GREEN_REQUIRED"', 'red_status: "REGISTERED_RED"', 1)
+        elif name == "reintroduce-pbi10-expected-red":
+            packets[key] = packets[key].replace('expected_red: null', 'expected_red: "python3 .codex/spec-verifiers/verify_pbi10.py --stage candidate"', 1)
+        else:
+            packets[key] = packets[key].replace("実行時だけCONSUMED_GREEN_EXTERNAL", "repository static contractだけでCONSUMED_GREEN_EXTERNAL", 1)
     else: raise ValueError(name)
 
 def main() -> int:

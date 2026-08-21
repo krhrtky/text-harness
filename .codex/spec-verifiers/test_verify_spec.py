@@ -275,6 +275,9 @@ EXPECTED = {
     "allow-pbi10-post-attestation-commit": "PBI10-NATIVE-X64-GATE",
     "drop-pbi10-main-workflow-trigger": "PBI10-NATIVE-X64-GATE",
     "reuse-pbi10-superseded-run": "PBI10-NATIVE-X64-GATE",
+    "retain-pbi10-registered-red": "PBI10-RED-LIFECYCLE",
+    "reintroduce-pbi10-expected-red": "PBI10-RED-LIFECYCLE",
+    "bypass-pbi10-external-green": "PBI10-RED-LIFECYCLE",
 }
 
 class SpecVerifierTest(unittest.TestCase):

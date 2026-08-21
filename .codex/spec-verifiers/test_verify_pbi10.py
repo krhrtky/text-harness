@@ -36,12 +36,16 @@ class Pbi10VerifierTest(unittest.TestCase):
             self.assertNotEqual([], verify_pbi10.remote_errors(repository, SHA, workflow, run, jobs, artifact, attestation, "candidate"))
 
     def test_ledger_commit_supersedes_the_pre_final_candidate_run(self) -> None:
-        repository, workflow, run, jobs, artifact, attestation = remote_fixture()
-        superseded_sha, superseded_run = next(iter(verify_pbi10.SUPERSEDED_CANDIDATES.items()))
-        run["id"] = superseded_run; run["head_sha"] = superseded_sha
-        artifact["workflow_run"]["id"] = superseded_run
-        attestation["runId"] = superseded_run; attestation["headSha"] = superseded_sha
-        self.assertIn("superseded-candidate", verify_pbi10.remote_errors(repository, superseded_sha, workflow, run, jobs, artifact, attestation, "candidate"))
+        for superseded_sha, superseded_run in verify_pbi10.SUPERSEDED_CANDIDATES.items():
+            repository, workflow, run, jobs, artifact, attestation = remote_fixture()
+            run["id"] = superseded_run; run["head_sha"] = superseded_sha
+            artifact["workflow_run"]["id"] = superseded_run
+            attestation["runId"] = superseded_run; attestation["headSha"] = superseded_sha
+            self.assertIn("superseded-candidate", verify_pbi10.remote_errors(repository, superseded_sha, workflow, run, jobs, artifact, attestation, "candidate"))
+
+    def test_external_success_has_a_non_committed_effective_green_state(self) -> None:
+        self.assertEqual("EXTERNAL_GREEN_REQUIRED", verify_pbi10.STATIC_RED_STATUS)
+        self.assertEqual("CONSUMED_GREEN_EXTERNAL", verify_pbi10.EFFECTIVE_GREEN_STATUS)
 
     def test_final_requires_main_tip_equal_candidate_and_default_main(self) -> None:
         repository, workflow, run, jobs, artifact, attestation = remote_fixture(); repository["default_branch"] = "main"

@@ -4,8 +4,8 @@
   "current_phase": "DA",
   "active_pbi": "PBI-10",
   "gate_type": "RELEASE",
-  "strategy_id": "release-pbi10-candidate-ledger-v3",
-  "iteration": 72,
+  "strategy_id": "release-pbi10-external-red-lifecycle-v4",
+  "iteration": 73,
   "task_packet_ref": ".codex/task-packets/PBI-10-publication.md",
   "phase_history": [
     {
@@ -1965,6 +1965,26 @@
       ],
       "resume_point": ".codex/task-packets/PBI-10-publication.md",
       "timestamp": "2026-08-22T04:40:00+09:00"
+    },
+    {
+      "phase": "SDA",
+      "status": "EXTERNAL_GREEN_REQUIRED",
+      "agent": "/root/spec_finalize",
+      "gate_type": "RELEASE",
+      "active_pbi": "PBI-10",
+      "task_packet_ref": ".codex/task-packets/PBI-10-publication.md",
+      "decision": "PBI-10のinitial repository REDは履歴へ消費し、repository stateはEXTERNAL_GREEN_REQUIRED、exact candidate SHAのauthenticated external attestation成功時だけeffective CONSUMED_GREEN_EXTERNALとする",
+      "evidence": [
+        "expected_red=null and red_status=EXTERNAL_GREEN_REQUIRED; REGISTERED_REDまたはnon-null expected_redはrelease readinessを拒否する",
+        "initial missing publication RED (exit1, PBI10_RED missing docs/release-evidence/publication.md) の2回実測はexpected_red_historyに保持する",
+        "candidate c9f6b5c1ae72fc7db7736f19d3d493e4a45befee / run 32488789586 / artifact 9448905291 was externally Green before this lifecycle spec commit and is now superseded",
+        "verify_pbi10 --stage candidateはremote candidate tipとexact headShaのcompleted successful push run/artifact、Linux X64、fresh frozen install、release/license/NOTICE/securityを全検証した場合だけred_status=CONSUMED_GREEN_EXTERNALを返す",
+        "missing, old, failed, skipped, cancelled, branch/SHA drift, artifact drift, authentication failure, static-only bypassはREDまたはRELEASE REQUEST_CHANGES",
+        "repository red_status remains EXTERNAL_GREEN_REQUIRED after external success; committing CONSUMED_GREEN_EXTERNAL is forbidden because it would advance the attested SHA",
+        "next action: push this lifecycle-spec-inclusive exact candidate SHA, obtain a new completed successful run/artifact, then add no repository commit before independent RELEASE QGA"
+      ],
+      "resume_point": ".codex/task-packets/PBI-10-publication.md",
+      "timestamp": "2026-08-22T05:00:00+09:00"
     }
   ],
   "blocker_history": [
