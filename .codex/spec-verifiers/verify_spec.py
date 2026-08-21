@@ -86,6 +86,8 @@ MUTATIONS = (
     "drop-pbi07-uncertain", "make-pbi07-counterexample-violation",
     "drop-pbi07-confidence-bound", "permit-pbi07-secret-ci",
     "permit-pbi07-live-model-ci", "drop-pbi07-s204-eval-title",
+    "drop-pbi07-green-falsification", "drop-pbi07-green-eval",
+    "drop-pbi07-green-hash",
 )
 
 def read_state() -> dict:
@@ -1566,8 +1568,27 @@ def pbi07_registration_errors(body: str, oracle_exists: bool, skill_exists: bool
         'phase: "PRE_IMPLEMENTATION"', 'stdout: "PBI07_RED missing skills/readability-review/SKILL.md"',
         'stderr: "<empty>"', 'measured_runs: 2', 'green_transition:',
         'command: "python3 .codex/spec-verifiers/verify_pbi07.py"', 'exit: 0',
+        'skill_root: "skills/readability-review"',
+        'schema_file: "skills/readability-review/schema/semantic-finding.schema.json"',
+        'rule_files: 8', 'fixture_files: 8', 'fixture_cases: 32',
+        'eval_files: ["skills/readability-review/evals/S203.json", "skills/readability-review/evals/S204.json"]',
+        'eval_rules: 2', 'workflow_file: ".github/workflows/semantic-contract.yml"',
+        'semantic_contract: "exact S201-S208 meanings; P/N/A/C statuses violation/no_violation/uncertain/no_violation; in-input range; non-empty evidence/reason; confidence 0..1; no severity/autofix/rewrite"',
+        'eval_contract: "S203 relationLabels and S204 antecedentCandidates saved four-state results; credentialRequired=false; expected status equals observed status"',
+        'ci_contract: "pull_request, contents:read, Node24.19.0 exact four tests, saved artifacts only, no secrets/API/network/live model"',
+        'falsification_contract: "meaning swap, uncertain removal, counterexample violation, outside range, evidence removal, confidence outside, severity addition, eval removal/drift, secret/live CI, title removal, and false no-match mutants are rejected"',
+        'package.json: "87d2ccaa29bd499df2777ed25614fd3e84a457a79ae5cc1d1581059dd7f62760"',
+        'pnpm-lock.yaml: "f5cc3eea2d7a5c7e04810e44f6d31798094437e54bdfa519112788bdb0f773ba"',
+        'pnpm-workspace.yaml: "d115dc6c83ba283a7d17146ad456056f3f70b003edb8c312a52880b48b034001"',
+        'packages/readability-core/package.json: "996ac24d4b0af2137c09c7ee84934fbd3db368c6db45347325441331685e9f55"',
+        'packages/readability-core/src/config/validate.ts: "feae0845be487cd3d502abf0ba54a6721abaec5e907a4ddf9e8930ae6c3a80d4"',
+        'packages/readability-core/src/types/rules.ts: "3b6681dc4632b806a734fa34156434e933d49494de46e65c42f65f3a6ce360de"',
+        'packages/readability-core/src/types/findings.ts: "760fb0b3045423a9900f554e33529a81fb2d98548f873b269991fc14697b9a26"',
+        'packages/readability-core/src/types/range.ts: "f77039d0cc681c2fd0564da9e245c92961c21273cfa573a496cd9f0aec973de5"',
+        'packages/readability-core/src/types/errors.ts: "0d4f56962f75bc214964afa4aadd9de8e7c9627cf7bdb09f19892b6670cc2701"',
         'minimum_tests: 14', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 14',
         'signature: "PBI07_GREEN tests>=14 pass=tests fail=0 required_titles=14 fixture_cases=32 eval_rules=2"',
+        'da_commit: "23f5bb8"',
     ))
     if not green: errors.append("PBI07-POST-IMPLEMENTATION-GREEN")
     return errors
@@ -2547,6 +2568,8 @@ def apply_mutation(name: str, state: dict) -> None:
         "drop-pbi07-uncertain", "make-pbi07-counterexample-violation",
         "drop-pbi07-confidence-bound", "permit-pbi07-secret-ci",
         "permit-pbi07-live-model-ci", "drop-pbi07-s204-eval-title",
+        "drop-pbi07-green-falsification", "drop-pbi07-green-eval",
+        "drop-pbi07-green-hash",
     ):
         key = next(k for k, body in packets.items() if packet_id(body) == "PBI-07")
         if name == "drop-pbi07-skill-ownership":
@@ -2567,8 +2590,26 @@ def apply_mutation(name: str, state: dict) -> None:
             packets[key] = packets[key].replace("no secrets/API key/network/live model command", "secrets/API key allowed", 1)
         elif name == "permit-pbi07-live-model-ci":
             packets[key] = packets[key].replace("saved S203 eval", "live model S203 eval", 1)
-        else:
+        elif name == "drop-pbi07-s204-eval-title":
             packets[key] = packets[key].replace(', "SEM-EVAL-S204 saved four-state antecedent eval is credential-free and exact"', "", 1)
+        elif name == "drop-pbi07-green-falsification":
+            packets[key] = packets[key].replace(
+                '    falsification_contract: "meaning swap, uncertain removal, counterexample violation, outside range, evidence removal, confidence outside, severity addition, eval removal/drift, secret/live CI, title removal, and false no-match mutants are rejected"\n',
+                "",
+                1,
+            )
+        elif name == "drop-pbi07-green-eval":
+            packets[key] = packets[key].replace(
+                '    eval_contract: "S203 relationLabels and S204 antecedentCandidates saved four-state results; credentialRequired=false; expected status equals observed status"\n',
+                "",
+                1,
+            )
+        else:
+            packets[key] = packets[key].replace(
+                '      pnpm-workspace.yaml: "d115dc6c83ba283a7d17146ad456056f3f70b003edb8c312a52880b48b034001"\n',
+                "",
+                1,
+            )
     else: raise ValueError(name)
 
 def main() -> int:

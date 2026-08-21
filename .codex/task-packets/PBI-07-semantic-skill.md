@@ -76,8 +76,8 @@ task_packet:
     required_title_text: ["SEM-SCHEMA-01 valid SemanticFinding schema accepts all statuses", "SEM-SCHEMA-02 invalid rule status range evidence confidence and forbidden fields are rejected", "SEM-SKILL-01 repository-native skill and exact S201-S208 rule files are present", "SEM-S201-01 positive no_violation uncertain and counterexample oracles pass", "SEM-S202-01 positive no_violation uncertain and counterexample oracles pass", "SEM-S203-01 positive no_violation uncertain and counterexample oracles pass", "SEM-S204-01 positive no_violation uncertain and counterexample oracles pass", "SEM-S205-01 positive no_violation uncertain and counterexample oracles pass", "SEM-S206-01 positive no_violation uncertain and counterexample oracles pass", "SEM-S207-01 positive no_violation uncertain and counterexample oracles pass", "SEM-S208-01 positive no_violation uncertain and counterexample oracles pass", "SEM-EVAL-S203 saved four-state relation eval is credential-free and exact", "SEM-EVAL-S204 saved four-state antecedent eval is credential-free and exact", "SEM-CI-01 required semantic contract CI is credential-free deterministic and offline"]
     no_match_guard: "exact four test files, collected count, pass=tests, fail=0, all required titles, exact 8 rule files, exact 32 fixture cases, and S203/S204 eval artifacts"
     green_signature: "PBI07_GREEN tests>=14 pass=tests fail=0 required_titles=14 fixture_cases=32 eval_rules=2"
-  expected_red: "python3 .codex/spec-verifiers/verify_pbi07.py; exit=1; signature=PBI07_RED missing skills/readability-review/SKILL.md"
-  red_status: "REGISTERED_RED"
+  expected_red: null
+  red_status: "CONSUMED_GREEN"
   expected_red_history:
     registration:
       phase: "PRE_IMPLEMENTATION"
@@ -86,6 +86,37 @@ task_packet:
       stdout: "PBI07_RED missing skills/readability-review/SKILL.md"
       stderr: "<empty>"
       measured_runs: 2
+  green_transition:
+    command: "python3 .codex/spec-verifiers/verify_pbi07.py"
+    exit: 0
+    skill_root: "skills/readability-review"
+    schema_file: "skills/readability-review/schema/semantic-finding.schema.json"
+    rule_files: 8
+    fixture_files: 8
+    fixture_cases: 32
+    eval_files: ["skills/readability-review/evals/S203.json", "skills/readability-review/evals/S204.json"]
+    eval_rules: 2
+    workflow_file: ".github/workflows/semantic-contract.yml"
+    semantic_contract: "exact S201-S208 meanings; P/N/A/C statuses violation/no_violation/uncertain/no_violation; in-input range; non-empty evidence/reason; confidence 0..1; no severity/autofix/rewrite"
+    eval_contract: "S203 relationLabels and S204 antecedentCandidates saved four-state results; credentialRequired=false; expected status equals observed status"
+    ci_contract: "pull_request, contents:read, Node24.19.0 exact four tests, saved artifacts only, no secrets/API/network/live model"
+    falsification_contract: "meaning swap, uncertain removal, counterexample violation, outside range, evidence removal, confidence outside, severity addition, eval removal/drift, secret/live CI, title removal, and false no-match mutants are rejected"
+    unchanged_path_hashes:
+      package.json: "87d2ccaa29bd499df2777ed25614fd3e84a457a79ae5cc1d1581059dd7f62760"
+      pnpm-lock.yaml: "f5cc3eea2d7a5c7e04810e44f6d31798094437e54bdfa519112788bdb0f773ba"
+      pnpm-workspace.yaml: "d115dc6c83ba283a7d17146ad456056f3f70b003edb8c312a52880b48b034001"
+      packages/readability-core/package.json: "996ac24d4b0af2137c09c7ee84934fbd3db368c6db45347325441331685e9f55"
+      packages/readability-core/src/config/validate.ts: "feae0845be487cd3d502abf0ba54a6721abaec5e907a4ddf9e8930ae6c3a80d4"
+      packages/readability-core/src/types/rules.ts: "3b6681dc4632b806a734fa34156434e933d49494de46e65c42f65f3a6ce360de"
+      packages/readability-core/src/types/findings.ts: "760fb0b3045423a9900f554e33529a81fb2d98548f873b269991fc14697b9a26"
+      packages/readability-core/src/types/range.ts: "f77039d0cc681c2fd0564da9e245c92961c21273cfa573a496cd9f0aec973de5"
+      packages/readability-core/src/types/errors.ts: "0d4f56962f75bc214964afa4aadd9de8e7c9627cf7bdb09f19892b6670cc2701"
+    minimum_tests: 14
+    pass_equals_tests: true
+    fail: 0
+    required_titles: 14
+    signature: "PBI07_GREEN tests>=14 pass=tests fail=0 required_titles=14 fixture_cases=32 eval_rules=2"
+    da_commit: "23f5bb8"
   red_registration_gate: "PBI開始時、依存PBI完了後かつ実装変更前に、実在する失敗test command・exit code・完全一致signatureを登録する"
   acceptance: ["AC-S201-01〜AC-S208-01", "S201〜S208-P01/N01/A01/C01", "schema invalid mutation reject", "S203/S204 saved eval", "credential-free required CI"]
   engineering_constraints: "docs/requirements/engineering-constraints.md"
