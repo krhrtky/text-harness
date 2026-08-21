@@ -1,0 +1,17 @@
+# Task packet: PBI-08
+```yaml
+task_packet:
+  source_links: ["docs/requirements/normative-contract-matrix.json"]
+  authority_boundary: "scope、public ID、閾値、責務変更はSDAと独立QGAへ戻す"
+  forbidden_paths: ["docs/requirements/normative-contract-matrix.json"]
+  invariants: ["normative contract matrixのstable ID・意味・閾値・責務を変更しない"]
+  active_pbi: "PBI-08"
+  depends_on: "PBI-07"
+  outcome: "S203/S204保存済みevalがpositive/no_violation/uncertain/counterexampleを反証"
+  owned_paths: ["tests/semantic/S203*", "tests/semantic/S204*", "tests/semantic/evidence/**"]
+  acceptance_command: "pnpm --filter readability-review test -- semantic/S20{3,4}.contract.test.ts"
+  expected_red: null
+  red_registration_gate: "PBI開始時、依存PBI完了後かつ実装変更前に、実在する失敗test command・exit code・完全一致signatureを登録する"
+  acceptance: ["AC-SEM-01", "AC-SEM-02", "AC-SEM-03", "S203-P01/N01/A01/C01", "S204-P01/N01/A01/C01"]
+  engineering_constraints: "docs/requirements/engineering-constraints.md"
+```

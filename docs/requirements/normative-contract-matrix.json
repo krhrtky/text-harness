@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "source": "Readability Engineering System original requirements",
+  "sourceSha256": "3c307432f4a3f315d5ba184174da31f512421202697c7efabad9cabdb3baa466",
+  "sourceLines": { "rules": "306-376", "semanticDetails": "562-736", "agents": "979-996", "acceptanceExamples": "1026-1082" },
+  "range": {
+    "contractId": "RNG-001",
+    "unit": "UTF-16 code unit",
+    "interval": "[start,end)",
+    "origin": 0,
+    "oracle": "input.slice(start,end)",
+    "decisionRef": "DEC-002"
+  },
+  "heuristicRules": {
+    "H101": { "meaning": "一文の長さ", "threshold": 100, "operator": ">" },
+    "H102": { "meaning": "節数", "threshold": 4, "operator": ">", "operationalMetric": "一文の述語group数", "decisionRef": "DEC-006" },
+    "H103": { "meaning": "一文の読点数", "threshold": 4, "operator": ">" },
+    "H104": { "meaning": "一文の整合した括弧最大nest", "threshold": 2, "operator": ">" },
+    "H106": { "meaning": "指示表現密度", "threshold": 50, "operator": ">", "decisionRef": "DEC-006" },
+    "H107": { "meaning": "同一文頭labelの連続文数", "threshold": 2, "operator": ">", "equivalent": "3文以上" },
+    "H108": { "meaning": "同一文末labelの連続文数", "threshold": 2, "operator": ">", "equivalent": "3文以上" },
+    "H112": { "meaning": "段落可視textのUTF-16長", "threshold": 500, "operator": ">" },
+    "H113": { "meaning": "段落可視textの文数", "threshold": 8, "operator": ">" }
+  },
+  "deterministicRules": {
+    "D001": { "meaning": "文体混在", "defaultSeverity": "error", "operationalConfig": ["style", "severity"], "fixtures": ["P01", "N01", "B01", "F01"], "decisionRef": "deterministic-rules.md" },
+    "D002": { "meaning": "Unicode 正規化", "defaultSeverity": "error", "operationalConfig": ["normalization", "severity"], "fixtures": ["P01", "N01", "B01", "F01"], "decisionRef": "deterministic-rules.md" },
+    "D003": { "meaning": "括弧不整合", "defaultSeverity": "error", "operationalConfig": ["pairs", "severity"], "fixtures": ["P01", "N01", "B01", "F01"], "defaultPairs": ["（）", "「」", "『』", "【】", "[]"], "decisionRef": "DEC-007" },
+    "D004": { "meaning": "禁止語", "defaultSeverity": "error", "operationalConfig": ["forbiddenTerms", "severity"], "fixtures": ["P01", "N01", "B01", "F01"], "decisionRef": "deterministic-rules.md" },
+    "D005": { "meaning": "用語表記不統一", "defaultSeverity": "error", "operationalConfig": ["terminology", "severity"], "fixtures": ["P01", "N01", "B01", "F01"], "decisionRef": "deterministic-rules.md" },
+    "D006": { "meaning": "同一語連続", "defaultSeverity": "warning", "operationalConfig": ["maxConsecutive", "severity"], "fixtures": ["P01", "N01", "B01", "F01"], "decisionRef": "deterministic-rules.md" },
+    "D007": { "meaning": "固定的な二重否定", "defaultSeverity": "warning", "operationalConfig": ["patterns", "severity"], "fixtures": ["P01", "N01", "B01", "F01"], "decisionRef": "deterministic-rules.md" },
+    "D008": { "meaning": "固定的な冗長表現", "defaultSeverity": "warning", "operationalConfig": ["replacements", "severity"], "fixtures": ["P01", "N01", "B01", "F01"], "decisionRef": "deterministic-rules.md" }
+  },
+  "postMvpHeuristicRules": {
+    "H105": { "meaning": "名詞化密度", "initialThreshold": "要調整" },
+    "H109": { "meaning": "接続表現反復", "initialThreshold": "3回" },
+    "H110": { "meaning": "修飾距離", "initialThreshold": "実験値" },
+    "H111": { "meaning": "「の」の過密", "initialThreshold": "要調整" }
+  },
+  "semanticRules": {
+    "S201": { "meaning": "中心主張が特定しにくい", "fixtures": ["P01", "N01", "A01", "C01"] },
+    "S202": { "meaning": "独立した判断が一文に過剰に含まれる", "fixtures": ["P01", "N01", "A01", "C01"] },
+    "S203": { "meaning": "文間の論理関係が不明確", "fixtures": ["P01", "N01", "A01", "C01"], "requiredEval": true },
+    "S204": { "meaning": "指示表現の参照対象が曖昧", "fixtures": ["P01", "N01", "A01", "C01"], "requiredEval": true },
+    "S205": { "meaning": "情報提示の順序に前提依存の問題がある", "fixtures": ["P01", "N01", "A01", "C01"] },
+    "S206": { "meaning": "主張・理由・例・例外の階層が不明確", "fixtures": ["P01", "N01", "A01", "C01"] },
+    "S207": { "meaning": "文脈に対して抽象度が不適切", "fixtures": ["P01", "N01", "A01", "C01"] },
+    "S208": { "meaning": "中心結論の提示が不必要に遅れている", "fixtures": ["P01", "N01", "A01", "C01"] }
+  },
+  "sourceAcceptanceCriteria": {
+    "H101-AC01": "設定上限以下はfinding 0件",
+    "H101-AC02": "設定上限超過はH101を返す",
+    "H101-AC03": "findingにactualとthresholdを含む",
+    "H101-AC04": "autofixを提供しない",
+    "H101-AC05": "code blockを対象外にできる",
+    "H101-AC06": "同じ入力と設定で同じ結果",
+    "S204-AC01": "指示表現の存在だけではviolationを返さない",
+    "S204-AC02": "antecedent候補を複数抽出できる",
+    "S204-AC03": "複数候補が成立する場合だけviolation候補",
+    "S204-AC04": "候補が一意ならno_violation",
+    "S204-AC05": "判断不能ならuncertain",
+    "S204-AC06": "findingにevidenceを含む"
+  },
+  "operations": {
+    "entrypoint": "scripts/text-harness-setup",
+    "commands": ["--check", "--install", "--upgrade --from <git-ref>"],
+    "previousBaseline": "tests/fixtures/upgrade/v0.0.0-baseline/",
+    "userConfigHash": "SHA-256",
+    "fastestCommand": "pnpm test:smoke",
+    "exitCodes": [0, 2, 3, 4, 5],
+    "decisionRef": "readability-mvp.md#11"
+  },
+  "agentsResponsibilities": {
+    "A01": "requirementsを実装前に読む",
+    "A02": "public rule IDを変更しない",
+    "A03": "D/HとSの責務を混ぜない",
+    "A04": "Semantic Ruleをtextlint hard errorにしない",
+    "A05": "pure functionとadapterを分離する",
+    "A06": "既存textlint ruleを再利用する",
+    "A07": "testを実装と同時に追加する",
+    "A08": "semantic autofixを勝手に追加しない"
+  }
+}

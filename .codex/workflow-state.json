@@ -1,0 +1,313 @@
+{
+  "id": "wf-readability-mvp-20260821",
+  "request": "Readability Engineering System要求の実現、setup/upgrade支援、反証必須の完了判定、public GitHub repositoryへのpush",
+  "current_phase": "DA",
+  "active_pbi": "PBI-01",
+  "gate_type": "DELIVERY",
+  "strategy_id": "delivery-pbi01-setup-v1",
+  "iteration": 7,
+  "task_packet_ref": ".codex/task-packets/PBI-01-setup.md",
+  "phase_history": [
+    {
+      "phase": "SDA",
+      "status": "PAUSED_FOR_DECISION",
+      "agent": "/root/spec_design",
+      "evidence": [
+        "docs/requirements/readability-mvp.md",
+        "docs/decisions/DEC-001-mvp-scope.md",
+        "docs/backlog/readability-mvp-pbis.md"
+      ],
+      "timestamp": "2026-08-21T09:39:07+09:00"
+    },
+    {
+      "phase": "SDA",
+      "status": "PARTIAL_DECISION_RECORDED",
+      "agent": "/root/spec_design",
+      "decision": "D001〜D008 are mandatory in MVP with per-rule qualification and four fixture classes",
+      "evidence": [
+        "docs/requirements/readability-mvp.md",
+        "docs/decisions/DEC-001-mvp-scope.md",
+        "docs/backlog/readability-mvp-pbis.md"
+      ],
+      "timestamp": "2026-08-21T09:49:31+09:00"
+    },
+    {
+      "phase": "SDA",
+      "status": "SPECIFICATION_CANDIDATE_READY",
+      "agent": "/root/spec_consolidation",
+      "decision": "H112/H113 are mandatory in MVP; DEC-002 through DEC-006 objective recommendations are integrated with falsification contracts",
+      "evidence": [
+        "docs/research/h112-h113-markdown-contract.md",
+        "docs/decision-evidence/DEC-002-006-objective-evidence.md",
+        "docs/requirements/readability-mvp.md",
+        "docs/decisions/DEC-001-mvp-scope.md",
+        "docs/decisions/DEC-002-range-contract.md",
+        "docs/decisions/DEC-003-toolchain.md",
+        "docs/decisions/DEC-004-semantic-eval-gate.md",
+        "docs/decisions/DEC-005-public-repository.md",
+        "docs/decisions/DEC-006-h-metric-contract.md",
+        "docs/backlog/readability-mvp-pbis.md",
+        ".codex/task-packets/PBI-05P-paragraph-contract.md",
+        ".codex/task-packets/PBI-05I-h112.md",
+        ".codex/task-packets/PBI-05J-h113.md"
+      ],
+      "timestamp": "2026-08-21T11:20:00+09:00"
+    },
+    {
+      "phase": "SDA",
+      "status": "ANALYZER_RISK_RESOLVED_BY_DECISION_RULE",
+      "agent": "/root/spec_consolidation",
+      "decision": "Analyzer candidates require five PASS results; any FAIL or UNKNOWN rejects the dependency and mandates internal fallback. kuromoji 0.1.2 is currently rejected by the release-age maintainability gate.",
+      "evidence": [
+        "docs/decisions/DEC-006-h-metric-contract.md",
+        "docs/requirements/readability-mvp.md",
+        ".codex/task-packets/PBI-04-analyzer-qualification.md"
+      ],
+      "timestamp": "2026-08-21T11:45:00+09:00"
+    },
+    {
+      "phase": "SDA",
+      "status": "READY_FOR_QGA_SPECIFICATION",
+      "agent": "/root/spec_consolidation",
+      "decision": "DEC-005 accepted as krhrtky/text-harness, public, Apache-2.0, main, Copyright 2026 krhrtky, conditional NOTICE; all human specification blockers resolved",
+      "evidence": [
+        "docs/decisions/DEC-005-public-repository.md",
+        "docs/requirements/readability-mvp.md",
+        "docs/requirements/input-validation.md"
+      ],
+      "timestamp": "2026-08-21T12:05:00+09:00"
+    },
+    {
+      "phase": "QGA",
+      "status": "READY",
+      "agent": null,
+      "gate_type": "SPECIFICATION",
+      "evidence": [
+        "docs/requirements/readability-mvp.md",
+        "docs/decisions/DEC-001-mvp-scope.md",
+        "docs/decisions/DEC-002-range-contract.md",
+        "docs/decisions/DEC-003-toolchain.md",
+        "docs/decisions/DEC-004-semantic-eval-gate.md",
+        "docs/decisions/DEC-005-public-repository.md",
+        "docs/decisions/DEC-006-h-metric-contract.md",
+        "docs/backlog/readability-mvp-pbis.md"
+      ],
+      "timestamp": "2026-08-21T12:05:00+09:00"
+    },
+    {
+      "phase": "QGA",
+      "status": "SPEC_GAP",
+      "agent": "/root/spec_qga",
+      "decision": "Executable verifier, threshold boundaries, D/S per-rule contracts, setup/upgrade CLI, complete task packets, AGENTS trace, and unborn HEAD preflight were incomplete",
+      "timestamp": "2026-08-21T12:20:00+09:00"
+    },
+    {
+      "phase": "SDA",
+      "status": "SPEC_GAP_RESOLVED",
+      "agent": "/root/spec_finalize",
+      "evidence": [
+        ".codex/spec-verifiers/verify_spec.py",
+        "docs/requirements/deterministic-rules.md",
+        "docs/requirements/semantic-rules.md",
+        "docs/requirements/engineering-constraints.md",
+        "docs/requirements/readability-mvp.md",
+        "docs/backlog/readability-mvp-pbis.md",
+        ".codex/task-packets/"
+      ],
+      "decision": "All eight QGA gaps resolved; normal verifier passes and five required in-memory mutations fail with stable signatures",
+      "timestamp": "2026-08-21T12:35:00+09:00"
+    },
+    {
+      "phase": "QGA",
+      "status": "READY",
+      "agent": null,
+      "gate_type": "SPECIFICATION",
+      "evidence": [
+        ".codex/spec-verifiers/verify_spec.py",
+        "docs/requirements/readability-mvp.md",
+        "docs/requirements/deterministic-rules.md",
+        "docs/requirements/semantic-rules.md",
+        "docs/requirements/engineering-constraints.md",
+        "docs/backlog/readability-mvp-pbis.md",
+        ".codex/task-packets/"
+      ],
+      "timestamp": "2026-08-21T12:35:00+09:00"
+    },
+    {
+      "phase": "QGA",
+      "status": "SPEC_GAP",
+      "agent": "/root/spec_qga",
+      "decision": "Incremental specification additions drifted from original H102 and Semantic stable meanings; expected REDs and verifier coverage were not baseline-reproducible",
+      "timestamp": "2026-08-21T12:50:00+09:00"
+    },
+    {
+      "phase": "SDA",
+      "status": "NORMATIVE_MATRIX_RECONCILED",
+      "agent": "/root/spec_finalize",
+      "decision": "Strategy replaced by SHA-backed original-requirement matrix and bidirectional matrix/spec/packet verification; 12 independent/adversarial mutations are executable",
+      "evidence": [
+        "docs/requirements/normative-contract-matrix.json",
+        ".codex/spec-verifiers/verify_spec.py",
+        ".codex/spec-verifiers/test_verify_spec.py",
+        "docs/requirements/semantic-rules.md",
+        "docs/requirements/deterministic-rules.md",
+        "docs/requirements/engineering-constraints.md",
+        "docs/decisions/DEC-007-bracket-pairs.md",
+        ".codex/task-packets/"
+      ],
+      "timestamp": "2026-08-21T13:15:00+09:00"
+    },
+    {
+      "phase": "QGA",
+      "status": "SPEC_GAP",
+      "agent": "/root/spec_qga",
+      "decision": "RNG-001 matrix fields were not bidirectionally checked against both MVP normative section and accepted DEC-002",
+      "timestamp": "2026-08-21T13:25:00+09:00"
+    },
+    {
+      "phase": "SDA",
+      "status": "RANGE_CONTRACT_RECONCILED",
+      "agent": "/root/spec_finalize",
+      "decision": "RNG-001 JSON contract is parsed by stable contract ID and compared field-by-field across matrix, MVP, and accepted DEC-002; MVP-only and DEC002-only drift mutations are rejected",
+      "evidence": [
+        "docs/requirements/normative-contract-matrix.json#RNG-001",
+        "docs/requirements/readability-mvp.md#51-位置表現",
+        "docs/decisions/DEC-002-range-contract.md",
+        ".codex/spec-verifiers/verify_spec.py",
+        ".codex/spec-verifiers/test_verify_spec.py"
+      ],
+      "timestamp": "2026-08-21T13:35:00+09:00"
+    },
+    {
+      "phase": "QGA",
+      "status": "APPROVE",
+      "agent": "/root/spec_qga",
+      "gate_type": "SPECIFICATION",
+      "decision": "Independent QGA approved the normative contract matrix, bidirectional RNG-001 trace, complete packet ledger, and executable falsification evidence",
+      "evidence": [
+        "SPEC_PASS",
+        "spec verifier unittest: 4 tests OK",
+        "14/14 independent and adversarial mutations rejected",
+        "RNG-001 matrix/MVP/DEC-002 field equality",
+        "PBI-01 expected RED: test -x scripts/text-harness-setup => exit 1, empty stdout/stderr"
+      ],
+      "resume_point": ".codex/task-packets/PBI-01-setup.md",
+      "timestamp": "2026-08-21T13:45:00+09:00"
+    },
+    {
+      "phase": "DA",
+      "status": "READY",
+      "agent": null,
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-01",
+      "task_packet_ref": ".codex/task-packets/PBI-01-setup.md",
+      "resume_point": ".codex/task-packets/PBI-01-setup.md",
+      "evidence": [
+        "Independent SPECIFICATION QGA APPROVE",
+        "PBI-01 expected RED reproduced"
+      ],
+      "timestamp": "2026-08-21T13:45:00+09:00"
+    },
+    {
+      "phase": "QGA",
+      "status": "READY",
+      "agent": null,
+      "gate_type": "SPECIFICATION",
+      "evidence": [
+        "SPEC_PASS",
+        "spec verifier unittest: 4 tests OK / 14 mutations rejected",
+        "drift-mvp-range => RANGE-MVP-MATRIX,RANGE-MVP-DEC002",
+        "drift-dec002-range => RANGE-DEC002-MATRIX,RANGE-MVP-DEC002"
+      ],
+      "timestamp": "2026-08-21T13:35:00+09:00"
+    },
+    {
+      "phase": "QGA",
+      "status": "READY",
+      "agent": null,
+      "gate_type": "SPECIFICATION",
+      "evidence": [
+        "SPEC_PASS",
+        "spec verifier unittest: 3 tests OK / 12 mutations rejected",
+        "trace: D=8 MVP_H=9 S=8 AGENTS=8 PACKETS=30"
+      ],
+      "timestamp": "2026-08-21T13:15:00+09:00"
+    }
+  ],
+  "blocker_history": [
+    {
+      "id": "BLOCKER-SPEC-001",
+      "kind": "scope_and_authority_decision",
+      "summary": "D001〜D008のMVP必須scopeは決定済み。H112/H113、range/toolchain/eval/public repository metadata/H metric contractが未決定",
+      "requires": [
+        "DEC-001 H112/H113 scope",
+        "DEC-002 range unit",
+        "DEC-003 toolchain",
+        "DEC-004 Semantic eval gate",
+        "DEC-005 GitHub owner/repository/license/default branch",
+        "DEC-006 H metric contract"
+      ],
+      "safe_resume_point": ".codex/task-packets/PBI-00-spec-decision.md",
+      "timestamp": "2026-08-21T09:39:07+09:00"
+    },
+    {
+      "id": "BLOCKER-SPEC-001-RESOLUTION",
+      "kind": "scope_and_technical_contract_resolved",
+      "summary": "H112/H113 scope and DEC-002/003/004 technical contracts resolved as specification candidates; DEC-006 metric contract traced to fixtures and mutations",
+      "resolved": [
+        "DEC-001 H112/H113 scope",
+        "DEC-002 range unit",
+        "DEC-003 toolchain",
+        "DEC-004 Semantic eval gate",
+        "DEC-006 H metric definitions"
+      ],
+      "timestamp": "2026-08-21T11:20:00+09:00"
+    },
+    {
+      "id": "BLOCKER-SPEC-002",
+      "kind": "minimal_human_legal_and_publication_approval",
+      "status": "RESOLVED",
+      "summary": "Repository publication and license authority approved by user",
+      "requires": [],
+      "resolution": "DEC-005 accepted: krhrtky/text-harness, public, Apache-2.0, main, Copyright 2026 krhrtky, NOTICE only when scan finds a retention obligation",
+      "resolved_at": "2026-08-21T12:05:00+09:00",
+      "safe_resume_point": ".codex/task-packets/PBI-00-spec-decision.md",
+      "timestamp": "2026-08-21T11:20:00+09:00"
+    },
+    {
+      "id": "BLOCKER-SPEC-003",
+      "kind": "qga_specification_contract_gaps",
+      "status": "RESOLVED",
+      "summary": "QGA SPEC_GAP covering eight executable-contract and traceability findings",
+      "requires": [],
+      "resolution": "Repository-native verifier, exact thresholds/boundaries, D/S contracts, setup/upgrade CLI, all task packets, AGENTS trace, and unborn HEAD preflight added",
+      "resolved_at": "2026-08-21T12:35:00+09:00",
+      "safe_resume_point": ".codex/task-packets/PBI-00-spec-decision.md",
+      "timestamp": "2026-08-21T12:20:00+09:00"
+    },
+    {
+      "id": "BLOCKER-SPEC-004",
+      "kind": "source_contract_drift_and_false_reds",
+      "status": "RESOLVED",
+      "summary": "Original stable meanings/thresholds drifted and package-free SPEC phase could not reproduce pnpm expected RED claims",
+      "requires": [],
+      "resolution": "SHA-backed normative matrix, exact semantic ID mapping, H102 >4, DEC-007, 2 measured REDs plus 28 gated nulls, and bidirectional mutation tests",
+      "resolved_at": "2026-08-21T13:15:00+09:00",
+      "safe_resume_point": ".codex/task-packets/PBI-00-spec-decision.md",
+      "timestamp": "2026-08-21T12:50:00+09:00"
+    },
+    {
+      "id": "BLOCKER-SPEC-005",
+      "kind": "range_bidirectional_trace_gap",
+      "status": "RESOLVED",
+      "summary": "Matrix range values were not structurally compared with MVP and DEC-002 independently",
+      "requires": [],
+      "resolution": "RNG-001 JSON field comparison and two independent drift mutations added; DEC-002 marked ACCEPTED",
+      "resolved_at": "2026-08-21T13:35:00+09:00",
+      "safe_resume_point": ".codex/task-packets/PBI-00-spec-decision.md",
+      "timestamp": "2026-08-21T13:25:00+09:00"
+    }
+  ],
+  "created_at": "2026-08-21T09:39:07+09:00",
+  "updated_at": "2026-08-21T13:45:00+09:00"
+}
