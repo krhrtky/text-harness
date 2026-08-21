@@ -628,23 +628,33 @@ packages:
         state = verify_spec.read_state()
         packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-06B")
         pre_implementation = packet.replace(
-            'expected_red: "python3 .codex/spec-verifiers/verify_pbi06b.py; exit=1; signature=PBI06B_RED missing packages/readability-core/test/deterministic/fixtures/D002.json"',
+            "expected_red: null",
             'expected_red: "python3 .codex/spec-verifiers/verify_pbi06b.py; exit=1; signature=PBI06B_RED missing packages/readability-core/src/rules/D002.ts"',
             1,
-        ).replace('red_status: "REGISTERED_RED_QGA_FIX_2"', 'red_status: "REGISTERED_RED"', 1)
+        ).replace('red_status: "CONSUMED_GREEN"', 'red_status: "REGISTERED_RED"', 1)
         self.assertEqual([], verify_spec.pbi06b_registration_errors(pre_implementation, True, False))
         pre_qga_fix = packet.replace(
-            'expected_red: "python3 .codex/spec-verifiers/verify_pbi06b.py; exit=1; signature=PBI06B_RED missing packages/readability-core/test/deterministic/fixtures/D002.json"',
+            "expected_red: null",
             'expected_red: "python3 .codex/spec-verifiers/verify_pbi06b.py; exit=1; signature=PBI06B_RED missing_required_title D002-B03 multi-mark combining sequence reports exact source range"',
             1,
-        ).replace('red_status: "REGISTERED_RED_QGA_FIX_2"', 'red_status: "REGISTERED_RED_QGA_FIX"', 1)
+        ).replace('red_status: "CONSUMED_GREEN"', 'red_status: "REGISTERED_RED_QGA_FIX"', 1)
         self.assertEqual([], verify_spec.pbi06b_registration_errors(pre_qga_fix, True, True))
+        pre_qga_fix_2 = packet.replace(
+            "expected_red: null",
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi06b.py; exit=1; signature=PBI06B_RED missing packages/readability-core/test/deterministic/fixtures/D002.json"',
+            1,
+        ).replace('red_status: "CONSUMED_GREEN"', 'red_status: "REGISTERED_RED_QGA_FIX_2"', 1)
+        self.assertEqual([], verify_spec.pbi06b_registration_errors(pre_qga_fix_2, True, True))
         self.assertEqual([], verify_spec.pbi06b_registration_errors(packet, PBI06B_VERIFIER.is_file(), True))
-        first = subprocess.run(["python3", str(PBI06B_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
-        second = subprocess.run(["python3", str(PBI06B_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
-        expected = (1, "PBI06B_RED missing packages/readability-core/test/deterministic/fixtures/D002.json\n", "")
-        self.assertEqual(expected, (first.returncode, first.stdout, first.stderr))
-        self.assertEqual(expected, (second.returncode, second.stdout, second.stderr))
+        green = subprocess.run(["python3", str(PBI06B_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        self.assertEqual(0, green.returncode, green.stdout + green.stderr)
+        summary = re.search(r"PBI06B_GREEN tests=(\d+) pass=(\d+) fail=(\d+) required_titles=(\d+)", green.stdout)
+        self.assertIsNotNone(summary)
+        tests, passed, failed, titles = (int(value) for value in summary.groups())
+        self.assertGreaterEqual(tests, 12)
+        self.assertEqual(tests, passed)
+        self.assertEqual(0, failed)
+        self.assertEqual(12, titles)
         probe_errors, _ = verify_pbi06b.run_behavioral_probe()
         self.assertEqual([], probe_errors)
         self.assertEqual([], verify_pbi06b.probe_contract_errors({
@@ -656,6 +666,9 @@ packages:
         self.assertIsNone(verify_pbi06b.unchanged_error())
         test_source = (ROOT / verify_pbi06b.TEST).read_text()
         rule_source = (ROOT / verify_pbi06b.SOURCE).read_text()
+        fixture_value = json.loads((ROOT / verify_pbi06b.FIXTURE).read_text())
+        self.assertEqual(verify_pbi06b.CANONICAL_FIXTURE, fixture_value)
+        self.assertEqual([], verify_pbi06b.test_fixture_oracle_errors(test_source))
         future = test_source
         self.assertEqual([], verify_pbi06b.substantive_oracle_errors(future, rule_source))
         self.assertIn("N03-title", verify_pbi06b.substantive_oracle_errors(

@@ -933,6 +933,15 @@ def pbi06b_registration_errors(body: str, oracle_exists: bool, source_exists: bo
         'minimum_tests: 12', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 12',
         'signature: "PBI06B_GREEN tests>=12 pass=tests fail=0 required_titles=12"',
         'da_commit: "4ae9955"',
+        'qga_fix_2_expected_red:',
+        'stdout: "PBI06B_RED missing packages/readability-core/test/deterministic/fixtures/D002.json"',
+        'qga_fix_2_green_transition:',
+        'fixture_contract: "canonical schemaVersion 1 codeExclusion and multiMark values validated exactly"',
+        'independent_probe_contract: "public analyzeD002 direct TS probe proves codeOnly=0, prose exact one [2,4), multiMark exact one [0,3), and exact source slices without reading product test"',
+        'fixture_runner_contract: "N03 and B03 load D002.json and call real analyze; plain input and fabricated finding substitutes rejected"',
+        'minimum_tests: 12', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 12',
+        'signature: "PBI06B_GREEN tests>=12 pass=tests fail=0 required_titles=12"',
+        'da_commit: "33839a8"',
         'initial_da_green: "tests 11; pass 11; fail 0; required_titles 10; DA commit 96a8843"',
     ))
     if not green:
