@@ -80,6 +80,7 @@ MUTATIONS = (
     "drop-pbi06h-falsification-title", "weaken-pbi06h-range",
     "reverse-pbi06h-mapping", "permit-pbi06h-substring-composition",
     "permit-pbi06h-regex", "permit-pbi06h-external-dependency",
+    "drop-pbi06h-green-falsification",
 )
 
 def read_state() -> dict:
@@ -1468,8 +1469,20 @@ def pbi06h_registration_errors(body: str, oracle_exists: bool, source_exists: bo
         'source_file: "packages/readability-core/src/rules/D008.ts"',
         'analyze_registration: "D008 dispatch with validated replacements and severity"',
         'public_export: "analyzeD008"',
+        'fixture_contract: "P01/P02/P03, N01/N02/N03, B01/B02/B03, C01, F01, M01, D01 all executable"',
+        'mapping_contract: "redundant key to replacement message, omitted default, configured replacement including empty, literal left-to-right non-overlap, same-start longest, and separated occurrences executable"',
+        'falsification_contract: "reverse mapping, substring composition, regex, shorter-before-longest, overlap, document-range, code-point, code-inclusion, append-default, and omitted-message mutants are rejected"',
+        'package.json: "87d2ccaa29bd499df2777ed25614fd3e84a457a79ae5cc1d1581059dd7f62760"',
+        'pnpm-lock.yaml: "f5cc3eea2d7a5c7e04810e44f6d31798094437e54bdfa519112788bdb0f773ba"',
+        'packages/readability-core/package.json: "996ac24d4b0af2137c09c7ee84934fbd3db368c6db45347325441331685e9f55"',
+        'packages/readability-core/src/config/validate.ts: "feae0845be487cd3d502abf0ba54a6721abaec5e907a4ddf9e8930ae6c3a80d4"',
+        'packages/readability-core/src/types/rules.ts: "3b6681dc4632b806a734fa34156434e933d49494de46e65c42f65f3a6ce360de"',
+        'packages/readability-core/src/types/findings.ts: "760fb0b3045423a9900f554e33529a81fb2d98548f873b269991fc14697b9a26"',
+        'packages/readability-core/src/types/range.ts: "f77039d0cc681c2fd0564da9e245c92961c21273cfa573a496cd9f0aec973de5"',
+        'packages/readability-core/src/types/errors.ts: "0d4f56962f75bc214964afa4aadd9de8e7c9627cf7bdb09f19892b6670cc2701"',
         'minimum_tests: 13', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 13',
         'signature: "PBI06H_GREEN tests>=13 pass=tests fail=0 required_titles=13"',
+        'da_commit: "14a49ee"',
     ))
     if not green: errors.append("PBI06H-POST-IMPLEMENTATION-GREEN")
     return errors
@@ -2396,6 +2409,7 @@ def apply_mutation(name: str, state: dict) -> None:
         "drop-pbi06h-falsification-title", "weaken-pbi06h-range",
         "reverse-pbi06h-mapping", "permit-pbi06h-substring-composition",
         "permit-pbi06h-regex", "permit-pbi06h-external-dependency",
+        "drop-pbi06h-green-falsification",
     ):
         key = next(k for k, body in packets.items() if packet_id(body) == "PBI-06H")
         if name == "drop-pbi06h-analyze-ownership":
@@ -2412,10 +2426,16 @@ def apply_mutation(name: str, state: dict) -> None:
             packets[key] = packets[key].replace("こと-only", "こと-only may report", 1)
         elif name == "permit-pbi06h-regex":
             packets[key] = packets[key].replace("regex metacharacters literal", "regex metacharacters evaluated", 1)
-        else:
+        elif name == "permit-pbi06h-external-dependency":
             packets[key] = packets[key].replace(
                 "PBI-06 decision INTERNAL/PBI-06H; package manifests and lockfile unchanged",
                 "external dependency permitted",
+                1,
+            )
+        else:
+            packets[key] = packets[key].replace(
+                '    falsification_contract: "reverse mapping, substring composition, regex, shorter-before-longest, overlap, document-range, code-point, code-inclusion, append-default, and omitted-message mutants are rejected"\n',
+                "",
                 1,
             )
     else: raise ValueError(name)
