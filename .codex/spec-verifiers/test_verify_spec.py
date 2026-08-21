@@ -36,6 +36,7 @@ assert PBI05P_SPEC and PBI05P_SPEC.loader
 verify_pbi05p = importlib.util.module_from_spec(PBI05P_SPEC)
 PBI05P_SPEC.loader.exec_module(verify_pbi05p)
 PBI05I_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi05i.py"
+PBI05J_VERIFIER = ROOT / ".codex/spec-verifiers/verify_pbi05j.py"
 
 EXPECTED = {
     "drop-h113-falsification": "H113-FALSIFICATION",
@@ -90,6 +91,11 @@ EXPECTED = {
     "drop-pbi05i-boundary-title": "PBI05I-ACCEPTANCE-ORACLE",
     "drift-pbi05i-threshold": "PBI05I-ACCEPTANCE-ORACLE",
     "drop-pbi05i-mutation-title": "PBI05I-MUTATION-CONTRACT",
+    "drop-pbi05j-analyze-ownership": "PBI05J-OWNERSHIP",
+    "drop-pbi05j-no-match-guard": "PBI05J-ACCEPTANCE-ORACLE",
+    "drop-pbi05j-boundary-title": "PBI05J-ACCEPTANCE-ORACLE",
+    "permit-pbi05j-splitast": "PBI05J-ACCEPTANCE-ORACLE",
+    "drop-pbi05j-splitast-mutation": "PBI05J-MUTATION-CONTRACT",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -429,5 +435,15 @@ packages:
         self.assertEqual(tests, passed)
         self.assertEqual(0, failed)
         self.assertEqual(13, titles)
+
+    def test_pbi05j_registered_red_matches_repository_state(self) -> None:
+        state = verify_spec.read_state()
+        packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-05J")
+        self.assertEqual([], verify_spec.pbi05j_registration_errors(packet, PBI05J_VERIFIER.is_file(), False))
+        first = subprocess.run(["python3", str(PBI05J_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        second = subprocess.run(["python3", str(PBI05J_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        expected = (1, "PBI05J_RED missing packages/readability-core/src/rules/H113.ts\n", "")
+        self.assertEqual(expected, (first.returncode, first.stdout, first.stderr))
+        self.assertEqual(expected, (second.returncode, second.stdout, second.stderr))
 
 if __name__ == "__main__": unittest.main()

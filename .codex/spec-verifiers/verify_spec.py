@@ -33,6 +33,8 @@ MUTATIONS = (
     "drop-pbi05p-f04-title", "placeholder-pbi05p-f04-body", "drop-pbi05p-f04-oracle",
     "drop-pbi05i-analyze-ownership", "drop-pbi05i-no-match-guard",
     "drop-pbi05i-boundary-title", "drift-pbi05i-threshold", "drop-pbi05i-mutation-title",
+    "drop-pbi05j-analyze-ownership", "drop-pbi05j-no-match-guard",
+    "drop-pbi05j-boundary-title", "permit-pbi05j-splitast", "drop-pbi05j-splitast-mutation",
 )
 
 def read_state() -> dict:
@@ -549,6 +551,55 @@ def pbi05i_registration_errors(body: str, oracle_exists: bool, implementation_ex
         errors.append("PBI05I-POST-IMPLEMENTATION-GREEN")
     return errors
 
+
+def pbi05j_registration_errors(body: str, oracle_exists: bool, implementation_exists: bool) -> list[str]:
+    ownership = all(value in body for value in (
+        '"packages/readability-core/src/rules/H113.ts"',
+        '"packages/readability-core/test/rules/H113.contract.test.ts"',
+        '"packages/readability-core/src/analyze.ts"', '"packages/readability-core/src/index.ts"',
+        'packages/readability-core/src/analyze.ts: "PBI-02〜05I ownership履歴を維持し、H113 dispatchだけ追加する"',
+        'packages/readability-core/src/index.ts: "PBI-02〜05I ownership履歴を維持し、H113 exportだけ追加する"',
+    ))
+    acceptance = all(value in body for value in (
+        'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi05j.py"',
+        'test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/rules/H113.contract.test.ts"',
+        'exact_test_file: "packages/readability-core/test/rules/H113.contract.test.ts"',
+        'source_file: "packages/readability-core/src/rules/H113.ts"',
+        'exact_dependencies_unchanged: ["@textlint/markdown-to-ast@15.8.0", "sentence-splitter@5.0.1", "textlint-util-to-string@3.3.4"]',
+        'threshold_contract: "actual > 8; 8 non-match; 9 finding with actual=9 threshold=8"',
+        'sentence_contract: "sentence-splitter@5.0.1 split(projected text) top-level Sentence count; splitAST forbidden"',
+        'range_contract: "RNG-001 Paragraph.range; input.slice(start,end)=Paragraph.raw"',
+        'minimum_tests: 14', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 14',
+        '"H113-B01 eight projected sentences do not report"',
+        '"H113-P01 nine projected sentences report actual 9 threshold 8"',
+        '"H113-F01 projected split counts formatted sentence boundaries that splitAST misses"',
+        '"H113-R01 every finding range slices the exact Paragraph raw text"',
+        '"H113-M01 gte document punctuation splitAST and block substitutes each fail a fixture"',
+        'green_signature: "PBI05J_GREEN tests>=14 pass=tests fail=0 required_titles=14"',
+    ))
+    mutation_contract = all(value in body for value in (
+        '"H113-M-GTE"', '"H113-M-DOC"', '"H113-M-PUNCT"',
+        '"H113-M-SPLIT_AST"', '"H113-M-BLOCK"',
+    ))
+    errors = []
+    if not ownership:
+        errors.append("PBI05J-OWNERSHIP")
+    if not acceptance or not oracle_exists:
+        errors.append("PBI05J-ACCEPTANCE-ORACLE")
+    if not mutation_contract:
+        errors.append("PBI05J-MUTATION-CONTRACT")
+    if not implementation_exists:
+        registered = all(value in body for value in (
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi05j.py; exit=1; signature=PBI05J_RED missing packages/readability-core/src/rules/H113.ts"',
+            'red_status: "REGISTERED_RED"',
+            'command: "python3 .codex/spec-verifiers/verify_pbi05j.py"', 'exit: 1',
+            'stdout: "PBI05J_RED missing packages/readability-core/src/rules/H113.ts"',
+            'stderr: "<empty>"', 'measured_runs: 2',
+        ))
+        if not registered:
+            errors.append("PBI05J-PRE-IMPLEMENTATION-RED")
+    return errors
+
 def verify(state: dict) -> list[str]:
     m, t, packets, workflow = state["matrix"], state["text"], state["packets"], state["workflow"]
     errors: list[str] = []
@@ -697,6 +748,13 @@ def verify(state: dict) -> list[str]:
                 (ROOT / "packages/readability-core/src/rules/H112.ts").is_file(),
             ):
                 need(False, error)
+        if pid == "PBI-05J":
+            for error in pbi05j_registration_errors(
+                body,
+                (ROOT / ".codex/spec-verifiers/verify_pbi05j.py").is_file(),
+                (ROOT / "packages/readability-core/src/rules/H113.ts").is_file(),
+            ):
+                need(False, error)
         need(not any(x in body for x in ("TBD", "placeholder", "実装開始時に")), f"PACKET-PLACEHOLDER-{name}")
 
     for gap in range(8, 18):
@@ -784,7 +842,18 @@ def verify(state: dict) -> list[str]:
             for item in workflow.get("phase_history", [])
         )
     )
-    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started, "WORKFLOW-GATE-TRANSITION")
+    pbi05j_delivery_started = (
+        workflow.get("current_phase") == "DA"
+        and workflow.get("gate_type") == "DELIVERY"
+        and workflow.get("active_pbi") == "PBI-05J"
+        and workflow.get("task_packet_ref") == ".codex/task-packets/PBI-05J-h113.md"
+        and any(
+            item.get("phase") == "QGA" and item.get("status") == "APPROVE"
+            and item.get("gate_type") == "DELIVERY" and item.get("active_pbi") == "PBI-05I"
+            for item in workflow.get("phase_history", [])
+        )
+    )
+    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started or pbi05j_delivery_started, "WORKFLOW-GATE-TRANSITION")
     return errors
 
 def apply_mutation(name: str, state: dict) -> None:
@@ -957,6 +1026,27 @@ def apply_mutation(name: str, state: dict) -> None:
             )
         else:
             packets[key] = packets[key].replace("H112-M-RAW", "REMOVED-M-RAW")
+    elif name in (
+        "drop-pbi05j-analyze-ownership", "drop-pbi05j-no-match-guard",
+        "drop-pbi05j-boundary-title", "permit-pbi05j-splitast", "drop-pbi05j-splitast-mutation",
+    ):
+        key = next(k for k, body in packets.items() if packet_id(body) == "PBI-05J")
+        if name == "drop-pbi05j-analyze-ownership":
+            packets[key] = packets[key].replace('    - "packages/readability-core/src/analyze.ts"\n', "", 1)
+        elif name == "drop-pbi05j-no-match-guard":
+            packets[key] = packets[key].replace(" --fail-if-no-match", "", 1)
+        elif name == "drop-pbi05j-boundary-title":
+            packets[key] = packets[key].replace(
+                '"H113-B01 eight projected sentences do not report", ', "", 1
+            )
+        elif name == "permit-pbi05j-splitast":
+            packets[key] = packets[key].replace(
+                'sentence_contract: "sentence-splitter@5.0.1 split(projected text) top-level Sentence count; splitAST forbidden"',
+                'sentence_contract: "splitAST permitted"',
+                1,
+            )
+        else:
+            packets[key] = packets[key].replace("H113-M-SPLIT_AST", "REMOVED-M-SPLIT_AST")
     else: raise ValueError(name)
 
 def main() -> int:
