@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -35,6 +35,13 @@ function walk(directory) {
   });
 }
 
+function walkInstalled(directory) {
+  return readdirSync(join(root, directory), { withFileTypes: true }).flatMap((entry) => {
+    const path = `${directory}/${entry.name}`;
+    return entry.isDirectory() ? walkInstalled(path) : [path];
+  });
+}
+
 function releaseInput() {
   const paths = ["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ...walk("packages/readability-core"), ...walk("packages/textlint-adapter"), ...walk("skills/readability-review")].sort();
   const entries = Object.fromEntries(paths.map((path) => [path, sha256(read(path))]));
@@ -43,7 +50,8 @@ function releaseInput() {
 }
 
 function verifyEvidenceSubject(artifact, path) {
-  if (artifact.releaseInputSha256 !== releaseInput().releaseInputSha256) fail(`stale evidence: ${path}`);
+  const actual = releaseInput().releaseInputSha256;
+  if (artifact.releaseInputSha256 !== actual) fail(`stale evidence: ${path} expected=${artifact.releaseInputSha256} actual=${actual}`);
   if (!/^2026-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[+-][0-9]{2}:[0-9]{2}$/.test(artifact.evaluatedAt)) fail(`invalid evaluatedAt: ${path}`);
 }
 
@@ -77,9 +85,21 @@ function verifyDocs() {
 
 function installedLicenseInventory() {
   const output = execFileSync("pnpm", ["licenses", "list", "--json"], { cwd: root, encoding: "utf8" });
-  const report = JSON.parse(output);
-  return Object.entries(report).flatMap(([license, packages]) => packages.flatMap((item) => item.versions.map((version) => ({ license, name: item.name, version })))).sort((left, right) =>
-    left.license.localeCompare(right.license) || left.name.localeCompare(right.name) || left.version.localeCompare(right.version));
+  return normalizeLicenseInventory(JSON.parse(output));
+}
+
+export function normalizeLicenseInventory(report) {
+  return Object.entries(report).flatMap(([license, packages]) => packages.flatMap((item) => item.versions.map((version) => ({
+    license,
+    name: item.name.replace(/^@typescript\/typescript-(?:darwin|linux)-(?:arm64|x64)$/, "@typescript/typescript-<platform>-<arch>"),
+    version,
+  })))).sort((left, right) => left.license.localeCompare(right.license) || left.name.localeCompare(right.name) || left.version.localeCompare(right.version));
+}
+
+export function normalizeNoticePath(path) {
+  return path
+    .replace(/@typescript\+typescript-(?:darwin|linux)-(?:arm64|x64)@/g, "@typescript+typescript-<platform>-<arch>@")
+    .replace(/@typescript\/typescript-(?:darwin|linux)-(?:arm64|x64)\//g, "@typescript/typescript-<platform>-<arch>/");
 }
 
 function verifyLicense() {
@@ -93,11 +113,28 @@ function verifyLicense() {
   const counts = Object.fromEntries([...new Set(actual.map(({ license: name }) => name))].sort().map((name) => [name, actual.filter(({ license }) => license === name).length]));
   if (JSON.stringify(artifact.licenseVersionCounts) !== JSON.stringify(counts)) fail("dependency license counts drift");
   if (artifact.command !== "mise x node@24.19.0 -- corepack pnpm licenses list --json" || artifact.lockSha256 !== sha256(read("pnpm-lock.yaml"))) fail("license command or lock drift");
-  const noticePaths = artifact.noticeScan.installedPaths;
-  const expectedNoticePaths = ["node_modules/.pnpm/@typescript+typescript-darwin-arm64@7.0.2/node_modules/@typescript/typescript-darwin-arm64/NOTICE.txt", "node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/NOTICE.txt"];
-  if (JSON.stringify(noticePaths) !== JSON.stringify(expectedNoticePaths) || artifact.noticeScan.uniqueSha256.join(",") !== noticeSha256) fail("NOTICE inventory drift");
-  for (const path of noticePaths) if (sha256(read(path)) !== noticeSha256) fail(`NOTICE hash drift: ${path}`);
+  const noticePaths = walkInstalled("node_modules/.pnpm").filter((path) => path.endsWith("/NOTICE.txt")).sort();
+  const normalizedNoticePaths = noticePaths.map(normalizeNoticePath).sort();
+  if (JSON.stringify(normalizedNoticePaths) !== JSON.stringify(artifact.noticeScan.normalizedInstalledPaths) || artifact.noticeScan.uniqueSha256.join(",") !== noticeSha256) fail("NOTICE inventory drift");
+  const actualNoticeHashes = [...new Set(noticePaths.map((path) => sha256(read(path))))].sort();
+  if (JSON.stringify(actualNoticeHashes) !== JSON.stringify(artifact.noticeScan.uniqueSha256)) fail("NOTICE hash drift");
   if (artifact.noticeScan.distributableRetentionObligations !== 0 || artifact.noticeScan.rootNoticeExpected !== false) fail("NOTICE scope drift");
+}
+
+export function detectSecretKinds(source) {
+  const patterns = [
+    ["GitHub PAT", /(?:gh[pousr]_[A-Za-z0-9]{36,255}|github_pat_[A-Za-z0-9_]{82,255})/],
+    ["AWS access key", /AKIA[A-Z0-9]{16}/],
+    ["PEM private key", /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/],
+    ["generic assignment", /(api[_-]?key|secret|token|password)\s*[:=]\s*["']?[A-Za-z0-9+/=_-]{16,}/i],
+  ];
+  return patterns.filter(([, pattern]) => pattern.test(source)).map(([kind]) => kind);
+}
+
+function verifyAudit() {
+  const audit = spawnSync("pnpm", ["audit", "--audit-level", "high"], { cwd: root, encoding: "utf8" });
+  if (audit.error || audit.status !== 0) fail(`dependency audit failed: exit=${audit.status ?? "spawn"}`);
+  if (!`${audit.stdout}${audit.stderr}`.includes("No known vulnerabilities found")) fail("dependency audit result unknown");
 }
 
 function verifySecurity() {
@@ -106,9 +143,9 @@ function verifySecurity() {
   if (evidence.secretScan.findings !== 0 || evidence.dependencyAudit.unresolvedHigh !== 0 || evidence.dependencyAudit.unresolvedCritical !== 0) fail("security finding recorded");
   if (evidence.secretScan.command !== "git grep -nEI <secret-patterns> -- tracked files" || evidence.dependencyAudit.command !== "mise x node@24.19.0 -- corepack pnpm audit --audit-level high") fail("security command drift");
   const files = execFileSync("git", ["ls-files"], { cwd: root, encoding: "utf8" }).trim().split("\n").filter(Boolean);
-  const pattern = /(api[_-]?key|secret|token|password)\s*[:=]\s*["']?[A-Za-z0-9+/=_-]{16,}/i;
-  const findings = files.filter((path) => pattern.test(read(path).toString("utf8")));
+  const findings = files.flatMap((path) => detectSecretKinds(read(path).toString("utf8")).map((kind) => `${path}:${kind}`));
   if (findings.length !== 0) fail(`tracked secret findings: ${findings.join(",")}`);
+  verifyAudit();
 }
 
 function verifyArtifacts() {
@@ -120,19 +157,21 @@ function verifyArtifacts() {
   }
 }
 
-const mode = process.argv[2];
-if (process.argv.length !== 3 || !allowedModes.has(mode)) {
-  process.stderr.write("RELEASE_VERIFY_ERROR unknown mode\n");
-  process.exitCode = 2;
-} else {
-  try {
-    if (mode === "docs" || mode === "release") verifyDocs();
-    if (mode === "license" || mode === "release") verifyLicense();
-    if (mode === "security" || mode === "release") verifySecurity();
-    if (mode === "artifacts" || mode === "release") verifyArtifacts();
-    process.stdout.write(`RELEASE_VERIFY_PASS mode=${mode}\n`);
-  } catch (error) {
-    process.stderr.write(`RELEASE_VERIFY_ERROR mode=${mode} ${error instanceof Error ? error.message : "unknown error"}\n`);
-    process.exitCode = 1;
+if (process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const mode = process.argv[2];
+  if (process.argv.length !== 3 || !allowedModes.has(mode)) {
+    process.stderr.write("RELEASE_VERIFY_ERROR unknown mode\n");
+    process.exitCode = 2;
+  } else {
+    try {
+      if (mode === "docs" || mode === "release") verifyDocs();
+      if (mode === "license" || mode === "release") verifyLicense();
+      if (mode === "security" || mode === "release") verifySecurity();
+      if (mode === "artifacts" || mode === "release") verifyArtifacts();
+      process.stdout.write(`RELEASE_VERIFY_PASS mode=${mode}\n`);
+    } catch (error) {
+      process.stderr.write(`RELEASE_VERIFY_ERROR mode=${mode} ${error instanceof Error ? error.message : "unknown error"}\n`);
+      process.exitCode = 1;
+    }
   }
 }

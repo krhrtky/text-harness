@@ -52,9 +52,12 @@ rangeはRNG-001に従うUTF-16 code unitのzero-based、half-open `[start, end)`
 
 保存済みのD/H findingsとSemantic findingsを含むJSONを指定します。
 
+<!-- CLI_COMMAND -->
 ```sh
-pnpm --filter @text-harness/textlint-adapter exec text-harness-report --input <path>
+node packages/textlint-adapter/src/cli.ts --input <path>
 ```
+
+packageが配布可能になった後のbin名は`text-harness-report --input <path>`です。現MVP repositoryでは上記のNode commandを使用します。
 
 CLIはcanonicalなJSON reportをstdoutへ1行だけ出力します。live modelは呼び出しません。
 

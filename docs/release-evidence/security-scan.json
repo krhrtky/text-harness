@@ -5,6 +5,7 @@
   "secretScan": {
     "command": "git grep -nEI <secret-patterns> -- tracked files",
     "tool": "git 2.51.0 tracked-file scan",
+    "patterns": ["generic-assignment", "github-pat", "aws-access-key", "pem-private-key"],
     "findings": 0
   },
   "dependencyAudit": {

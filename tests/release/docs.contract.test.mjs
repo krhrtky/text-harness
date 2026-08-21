@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
@@ -13,6 +14,20 @@ test("REL-DOC-01 README has exact install update usage and CLI commands", () => 
   assert.ok(readme.includes("git pull --ff-only origin main && scripts/text-harness-setup --upgrade --from <previous-release-tag>"));
   assert.ok(readme.includes("text-harness-report --input <path>"));
   assert.ok(readme.includes("import { analyze } from \"@text-harness/readability-core\""));
+  const command = readme.match(/<!-- CLI_COMMAND -->\n```sh\n([^\n]+)\n```/)?.[1];
+  assert.ok(command, "executable CLI command marker");
+  const [executable, ...args] = command.split(" ").map((part) => part === "<path>" ? "packages/textlint-adapter/test/fixtures/mixed-pass.json" : part);
+  const result = spawnSync(executable, args, { encoding: "utf8" });
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.equal(result.stderr, "");
+  assert.equal(result.stdout.endsWith("\n"), true);
+  assert.equal(result.stdout.trim().split("\n").length, 1);
+  const report = JSON.parse(result.stdout);
+  assert.equal(result.stdout, `${JSON.stringify(report)}\n`);
+  assert.equal(report.schemaVersion, "1.0.0");
+  assert.equal(report.exitCode, 0);
+  assert.deepEqual(report.lintMessages.map(({ ruleId }) => ruleId), ["H101"]);
+  assert.deepEqual(report.semanticNotices.map(({ ruleId }) => ruleId), ["S203", "S204"]);
 });
 
 test("REL-DOC-02 README enumerates D H S rules exits ranges and limitations", () => {
@@ -32,4 +47,7 @@ test("REL-DOC-03 all documentation links resolve to approved targets", () => {
       }
     }
   }
+  const changelog = read("CHANGELOG.md");
+  assert.equal(changelog.includes("HEAD...HEAD"), false);
+  assert.equal(changelog.includes("blob/main/CHANGELOG.md"), false);
 });

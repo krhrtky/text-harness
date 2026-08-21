@@ -19,9 +19,12 @@ test("REL-CMD-01 package release commands exist and reject unknown modes", () =>
 test("REL-CMD-02 documented setup install and upgrade syntax matches executable usage", (context) => {
   const directory = mkdtempSync(join(tmpdir(), "text-harness-release-setup-"));
   context.after(() => rmSync(directory, { recursive: true, force: true }));
-  const clone = spawnSync("git", ["clone", "--quiet", "--no-hardlinks", root, directory], { encoding: "utf8" });
-  assert.equal(clone.status, 0, clone.stderr);
-  cpSync("README.md", join(directory, "README.md"));
+  const copyOptions = { recursive: true, filter: (source) => !source.split("/").includes("node_modules") };
+  for (const path of [".node-version", "AGENTS.md", "README.md", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "scripts", "tests", "packages"]) cpSync(join(root, path), join(directory, path), copyOptions);
+  for (const command of [["init", "-b", "main"], ["add", "."], ["-c", "user.name=text-harness", "-c", "user.email=text-harness@example.invalid", "commit", "-qm", "fixture baseline"]]) {
+    const result = spawnSync("git", command, { cwd: directory, encoding: "utf8" });
+    assert.equal(result.status, 0, result.stderr);
+  }
   const env = { ...process.env, TEXT_HARNESS_CONFIG_HOME: join(directory, ".test-config") };
   for (const args of [["--check"], ["--install"], ["--upgrade", "--from", "HEAD"]]) {
     const result = spawnSync(join(directory, "scripts/text-harness-setup"), args, { cwd: directory, env, encoding: "utf8" });

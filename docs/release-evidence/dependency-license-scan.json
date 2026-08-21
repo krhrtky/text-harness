@@ -6,7 +6,7 @@
   "lockSha256": "f5cc3eea2d7a5c7e04810e44f6d31798094437e54bdfa519112788bdb0f773ba",
   "licenseVersionCounts": { "Apache-2.0": 2, "BSD-2-Clause": 2, "MIT": 72 },
   "packages": [
-    { "license": "Apache-2.0", "name": "@typescript/typescript-darwin-arm64", "version": "7.0.2" },
+    { "license": "Apache-2.0", "name": "@typescript/typescript-<platform>-<arch>", "version": "7.0.2" },
     { "license": "Apache-2.0", "name": "typescript", "version": "7.0.2" },
     { "license": "BSD-2-Clause", "name": "boundary", "version": "2.0.0" },
     { "license": "BSD-2-Clause", "name": "structured-source", "version": "4.0.0" },
@@ -84,8 +84,9 @@
     { "license": "MIT", "name": "zwitch", "version": "1.0.5" }
   ],
   "noticeScan": {
-    "installedPaths": [
-      "node_modules/.pnpm/@typescript+typescript-darwin-arm64@7.0.2/node_modules/@typescript/typescript-darwin-arm64/NOTICE.txt",
+    "platformVariants": ["darwin-arm64", "linux-arm64", "linux-x64"],
+    "normalizedInstalledPaths": [
+      "node_modules/.pnpm/@typescript+typescript-<platform>-<arch>@7.0.2/node_modules/@typescript/typescript-<platform>-<arch>/NOTICE.txt",
       "node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/NOTICE.txt"
     ],
     "uniqueSha256": ["f5c708b59114507b8b27b48181b6883d106bbca0c1634bbee45b5e344237b66b"],
