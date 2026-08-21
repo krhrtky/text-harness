@@ -184,6 +184,7 @@ EXPECTED = {
     "weaken-pbi06f-token-group": "PBI06F-RULE-CONTRACT",
     "permit-pbi06f-distant-repetition": "PBI06F-RULE-CONTRACT",
     "permit-pbi06f-external-dependency": "PBI06F-RULE-CONTRACT",
+    "drop-pbi06f-green-falsification": "PBI06F-POST-IMPLEMENTATION-GREEN",
 }
 
 class SpecVerifierTest(unittest.TestCase):
@@ -824,13 +825,24 @@ test("D002-B03 multi-mark combining sequence reports exact source range", () => 
         self.assertEqual(0, failed)
         self.assertEqual(13, titles)
 
-    def test_pbi06f_registered_red_is_exact_and_reproducible(self) -> None:
+    def test_pbi06f_red_history_and_green_transition(self) -> None:
         state = verify_spec.read_state()
         packet = next(body for body in state["packets"].values() if verify_spec.packet_id(body) == "PBI-06F")
-        self.assertEqual([], verify_spec.pbi06f_registration_errors(packet, PBI06F_VERIFIER.is_file(), False))
-        expected = (1, "PBI06F_RED missing packages/readability-core/src/rules/D006.ts\n", "")
-        for _ in range(2):
-            result = subprocess.run(["python3", str(PBI06F_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
-            self.assertEqual(expected, (result.returncode, result.stdout, result.stderr))
+        pre_implementation = packet.replace(
+            "expected_red: null",
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi06f.py; exit=1; signature=PBI06F_RED missing packages/readability-core/src/rules/D006.ts"',
+            1,
+        ).replace('red_status: "CONSUMED_GREEN"', 'red_status: "REGISTERED_RED"', 1)
+        self.assertEqual([], verify_spec.pbi06f_registration_errors(pre_implementation, True, False))
+        self.assertEqual([], verify_spec.pbi06f_registration_errors(packet, PBI06F_VERIFIER.is_file(), True))
+        green = subprocess.run(["python3", str(PBI06F_VERIFIER)], cwd=ROOT, text=True, capture_output=True)
+        self.assertEqual(0, green.returncode, green.stdout + green.stderr)
+        summary = re.search(r"PBI06F_GREEN tests=(\d+) pass=(\d+) fail=(\d+) required_titles=(\d+)", green.stdout)
+        self.assertIsNotNone(summary)
+        tests, passed, failed, titles = (int(value) for value in summary.groups())
+        self.assertGreaterEqual(tests, 13)
+        self.assertEqual(tests, passed)
+        self.assertEqual(0, failed)
+        self.assertEqual(13, titles)
 
 if __name__ == "__main__": unittest.main()
