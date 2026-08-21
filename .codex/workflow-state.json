@@ -4,8 +4,8 @@
   "current_phase": "DA",
   "active_pbi": "PBI-06G",
   "gate_type": "DELIVERY",
-  "strategy_id": "delivery-pbi06g-d007-contract-v1",
-  "iteration": 52,
+  "strategy_id": "delivery-pbi06g-green-transition-v1",
+  "iteration": 53,
   "task_packet_ref": ".codex/task-packets/PBI-06G-d007.md",
   "phase_history": [
     {
@@ -1450,6 +1450,25 @@
       ],
       "resume_point": ".codex/task-packets/PBI-06G-d007.md",
       "timestamp": "2026-08-22T00:55:00+09:00"
+    },
+    {
+      "phase": "DA",
+      "status": "PBI_GREEN_REPORTED",
+      "agent": "/root/delivery",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-06G",
+      "task_packet_ref": ".codex/task-packets/PBI-06G-d007.md",
+      "decision": "The missing-D007 RED was consumed after fixed double-negative default and configured literal patterns became executable with corrected ranges",
+      "evidence": [
+        "RED history retained: PBI06G_RED missing packages/readability-core/src/rules/D007.ts; exit 1; stderr empty; reproduced twice",
+        "DA commit 4bacca0",
+        "python3 .codex/spec-verifiers/verify_pbi06g.py => PBI06G_GREEN tests=13 pass=13 fail=0 required_titles=13",
+        "corrected default range [2,10), configured replacement including empty, literal longest matching, non-composition, severity, and Markdown exclusion titles pass",
+        "negative-fragment composition, regex, shorter-before-longest, overlap, document-range, code-point, code-inclusion, and append-default mutations remain required",
+        "PBI-06C-approved config and inherited types/package/lock hashes remain exact"
+      ],
+      "resume_point": ".codex/task-packets/PBI-06G-d007.md",
+      "timestamp": "2026-08-22T01:05:00+09:00"
     }
   ],
   "blocker_history": [
@@ -1527,5 +1546,5 @@
     }
   ],
   "created_at": "2026-08-21T09:39:07+09:00",
-  "updated_at": "2026-08-22T00:55:00+09:00"
+  "updated_at": "2026-08-22T01:05:00+09:00"
 }
