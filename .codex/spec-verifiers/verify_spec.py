@@ -66,6 +66,10 @@ MUTATIONS = (
     "reverse-pbi06e-mapping", "permit-pbi06e-regex",
     "permit-pbi06e-external-dependency",
     "drop-pbi06e-green-falsification",
+    "drop-pbi06f-analyze-ownership", "drop-pbi06f-no-match-guard",
+    "drop-pbi06f-falsification-title", "weaken-pbi06f-range",
+    "weaken-pbi06f-token-group", "permit-pbi06f-distant-repetition",
+    "permit-pbi06f-external-dependency",
 )
 
 def read_state() -> dict:
@@ -1222,6 +1226,79 @@ def pbi06e_registration_errors(body: str, oracle_exists: bool, source_exists: bo
         errors.append("PBI06E-POST-IMPLEMENTATION-GREEN")
     return errors
 
+
+def pbi06f_registration_errors(body: str, oracle_exists: bool, source_exists: bool) -> list[str]:
+    ownership = all(value in body for value in (
+        '    - "packages/readability-core/src/rules/D006.ts"',
+        '    - "packages/readability-core/test/deterministic/D006.contract.test.ts"',
+        '    - "packages/readability-core/src/analyze.ts"',
+        '    - "packages/readability-core/src/index.ts"',
+        'packages/readability-core/src/analyze.ts: "既存D001-D005/H dispatchを維持し、validated D006 maxConsecutive/severityをanalyzeD006へ渡すcaseだけ追加する"',
+        'packages/readability-core/src/index.ts: "既存public exportsを維持し、analyzeD006 exportだけ追加する"',
+    ))
+    contract = all(value in body for value in (
+        'input_contract: "非常に非常に高い with maxConsecutive=1"',
+        'config_contract: "{ruleId:D006,maxConsecutive:1|2,severity?:warning|error}; missing, non-integer, values outside 1|2, unknown fields are rejected by inherited validator"',
+        'token_contract: "Intl.Segmenter ja word-like tokens; longest immediately repeated contiguous token sequence is a group; Unicode whitespace between copies is normalized; punctuation/intervening tokens break the run"',
+        'oracle_contract: "非常に非常に高い reports second 非常に only; maxConsecutive=2 allows two and reports third onward; different/distant/code-only/disabled runs report zero"',
+        'range_contract: "RNG-001 UTF-16 zero-based half-open excessive group; base second 非常に [3,6); emoji prefix and whitespace fixtures reconstruct only excessive group"',
+        'severity_contract: "omitted=>warning; explicit warning|error preserved exactly"',
+        'external_dependency_contract: "PBI-06 decision INTERNAL/PBI-06F; package manifests and lockfile unchanged"',
+        'mutations: ["D006-M-SINGLE-TOKEN", "D006-M-NO-WHITESPACE-NORMALIZATION", "D006-M-DISTANT-REPETITION", "D006-M-GTE", "D006-M-FIRST-RANGE", "D006-M-CODE-POINT", "D006-M-INCLUDE-CODE"]',
+    ))
+    acceptance = all(value in body for value in (
+        'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi06f.py"',
+        'test_command: "mise x node@24.19.0 -- corepack pnpm --filter @text-harness/readability-core --fail-if-no-match exec node --test test/deterministic/D006.contract.test.ts"',
+        'exact_test_file: "packages/readability-core/test/deterministic/D006.contract.test.ts"',
+        'minimum_tests: 13', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 13',
+        '"D006-P01 second adjacent repeated token group reports with maxConsecutive one"',
+        '"D006-P02 whitespace-separated equal token groups remain consecutive"',
+        '"D006-P03 third repeated token group reports with maxConsecutive two"',
+        '"D006-N02 different and distant token groups do not report"',
+        '"D006-N03 disabled D006 and Markdown code repetitions do not report"',
+        '"D006-B01 emoji-prefixed UTF-16 range reconstructs the excessive group"',
+        '"D006-B02 every occurrence beyond the maximum reports independently"',
+        '"D006-B03 default warning and explicit error severity are preserved"',
+        '"D006-C01 maxConsecutive validation accepts one or two and rejects other values"',
+        '"D006-F01 punctuation and intervening words break successive runs"',
+        '"D006-M01 token equality whitespace distance range and code mutants fail fixtures"',
+        'no_match_guard: "--fail-if-no-match plus exact test file, collected count, pass=tests, fail=0, and all required titles"',
+        'green_signature: "PBI06F_GREEN tests>=13 pass=tests fail=0 required_titles=13"',
+    ))
+    errors = []
+    if not ownership:
+        errors.append("PBI06F-OWNERSHIP")
+    if not contract:
+        errors.append("PBI06F-RULE-CONTRACT")
+    if not acceptance or not oracle_exists:
+        errors.append("PBI06F-ACCEPTANCE-ORACLE")
+    if not source_exists:
+        registered = all(value in body for value in (
+            'expected_red: "python3 .codex/spec-verifiers/verify_pbi06f.py; exit=1; signature=PBI06F_RED missing packages/readability-core/src/rules/D006.ts"',
+            'red_status: "REGISTERED_RED"', 'phase: "PRE_IMPLEMENTATION"',
+            'command: "python3 .codex/spec-verifiers/verify_pbi06f.py"', 'exit: 1',
+            'stdout: "PBI06F_RED missing packages/readability-core/src/rules/D006.ts"',
+            'stderr: "<empty>"', 'measured_runs: 2',
+        ))
+        if not registered:
+            errors.append("PBI06F-PRE-IMPLEMENTATION-RED")
+        return errors
+    green = all(value in body for value in (
+        'expected_red: null', 'red_status: "CONSUMED_GREEN"',
+        'phase: "PRE_IMPLEMENTATION"',
+        'stdout: "PBI06F_RED missing packages/readability-core/src/rules/D006.ts"',
+        'stderr: "<empty>"', 'measured_runs: 2',
+        'green_transition:', 'command: "python3 .codex/spec-verifiers/verify_pbi06f.py"', 'exit: 0',
+        'source_file: "packages/readability-core/src/rules/D006.ts"',
+        'analyze_registration: "D006 dispatch with validated maxConsecutive and severity"',
+        'public_export: "analyzeD006"',
+        'minimum_tests: 13', 'pass_equals_tests: true', 'fail: 0', 'required_titles: 13',
+        'signature: "PBI06F_GREEN tests>=13 pass=tests fail=0 required_titles=13"',
+    ))
+    if not green:
+        errors.append("PBI06F-POST-IMPLEMENTATION-GREEN")
+    return errors
+
 def verify(state: dict) -> list[str]:
     m, t, packets, workflow = state["matrix"], state["text"], state["packets"], state["workflow"]
     errors: list[str] = []
@@ -1427,6 +1504,13 @@ def verify(state: dict) -> list[str]:
                 (ROOT / "packages/readability-core/src/rules/D005.ts").is_file(),
             ):
                 need(False, error)
+        if pid == "PBI-06F":
+            for error in pbi06f_registration_errors(
+                body,
+                (ROOT / ".codex/spec-verifiers/verify_pbi06f.py").is_file(),
+                (ROOT / "packages/readability-core/src/rules/D006.ts").is_file(),
+            ):
+                need(False, error)
         need(not any(x in body for x in ("TBD", "placeholder", "実装開始時に")), f"PACKET-PLACEHOLDER-{name}")
 
     for gap in range(8, 18):
@@ -1591,7 +1675,18 @@ def verify(state: dict) -> list[str]:
             for item in workflow.get("phase_history", [])
         )
     )
-    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started or pbi05j_delivery_started or pbi06_delivery_started or pbi06a_delivery_started or pbi06b_delivery_started or pbi06c_delivery_started or pbi06d_delivery_started or pbi06e_delivery_started, "WORKFLOW-GATE-TRANSITION")
+    pbi06f_delivery_started = (
+        workflow.get("current_phase") == "DA"
+        and workflow.get("gate_type") == "DELIVERY"
+        and workflow.get("active_pbi") == "PBI-06F"
+        and workflow.get("task_packet_ref") == ".codex/task-packets/PBI-06F-d006.md"
+        and any(
+            item.get("phase") == "QGA" and item.get("status") == "APPROVE"
+            and item.get("gate_type") == "DELIVERY" and item.get("active_pbi") == "PBI-06E"
+            for item in workflow.get("phase_history", [])
+        )
+    )
+    need(qga_ready or pbi01_delivery_started or pbi02_delivery_started or pbi03_delivery_started or pbi04_delivery_started or pbi05_delivery_started or pbi05p_delivery_started or pbi05i_delivery_started or pbi05j_delivery_started or pbi06_delivery_started or pbi06a_delivery_started or pbi06b_delivery_started or pbi06c_delivery_started or pbi06d_delivery_started or pbi06e_delivery_started or pbi06f_delivery_started, "WORKFLOW-GATE-TRANSITION")
     return errors
 
 def apply_mutation(name: str, state: dict) -> None:
@@ -2000,6 +2095,31 @@ def apply_mutation(name: str, state: dict) -> None:
             packets[key] = packets[key].replace(
                 '    falsification_contract: "reverse mapping, regex, shorter-before-longest, overlap, code-point, whole-range, code-inclusion, and omitted-preferred-message mutants are rejected"\n',
                 "",
+                1,
+            )
+    elif name in (
+        "drop-pbi06f-analyze-ownership", "drop-pbi06f-no-match-guard",
+        "drop-pbi06f-falsification-title", "weaken-pbi06f-range",
+        "weaken-pbi06f-token-group", "permit-pbi06f-distant-repetition",
+        "permit-pbi06f-external-dependency",
+    ):
+        key = next(k for k, body in packets.items() if packet_id(body) == "PBI-06F")
+        if name == "drop-pbi06f-analyze-ownership":
+            packets[key] = packets[key].replace('    - "packages/readability-core/src/analyze.ts"\n', "", 1)
+        elif name == "drop-pbi06f-no-match-guard":
+            packets[key] = packets[key].replace(" --fail-if-no-match", "", 1)
+        elif name == "drop-pbi06f-falsification-title":
+            packets[key] = packets[key].replace(', "D006-F01 punctuation and intervening words break successive runs"', "", 1)
+        elif name == "weaken-pbi06f-range":
+            packets[key] = packets[key].replace("base second 非常に [3,6)", "base range unspecified", 1)
+        elif name == "weaken-pbi06f-token-group":
+            packets[key] = packets[key].replace("longest immediately repeated contiguous token sequence is a group", "single token only is a group", 1)
+        elif name == "permit-pbi06f-distant-repetition":
+            packets[key] = packets[key].replace("different/distant/code-only/disabled runs report zero", "distant repetitions may report", 1)
+        else:
+            packets[key] = packets[key].replace(
+                "PBI-06 decision INTERNAL/PBI-06F; package manifests and lockfile unchanged",
+                "external dependency permitted",
                 1,
             )
     else: raise ValueError(name)

@@ -2,11 +2,11 @@
   "id": "wf-readability-mvp-20260821",
   "request": "Readability Engineering System要求の実現、setup/upgrade支援、反証必須の完了判定、public GitHub repositoryへのpush",
   "current_phase": "DA",
-  "active_pbi": "PBI-06E",
+  "active_pbi": "PBI-06F",
   "gate_type": "DELIVERY",
-  "strategy_id": "delivery-pbi06e-d005-contract-v1",
-  "iteration": 49,
-  "task_packet_ref": ".codex/task-packets/PBI-06E-d005.md",
+  "strategy_id": "delivery-pbi06f-d006-contract-v1",
+  "iteration": 50,
+  "task_packet_ref": ".codex/task-packets/PBI-06F-d006.md",
   "phase_history": [
     {
       "phase": "SDA",
@@ -1360,6 +1360,41 @@
       ],
       "resume_point": ".codex/task-packets/PBI-06E-d005.md",
       "timestamp": "2026-08-22T00:25:00+09:00"
+    },
+    {
+      "phase": "QGA",
+      "status": "APPROVE",
+      "agent": "/root/spec_qga",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-06E",
+      "task_packet_ref": ".codex/task-packets/PBI-06E-d005.md",
+      "decision": "PBI-06E delivery approved after D005 terminology mapping and its transition-aware contract passed independently",
+      "evidence": [
+        "DA commit 8bcd325 and SDA Green transition commit ced60a577e7ac7d897f1d53797b52cdfa5e697ba",
+        "python3 .codex/spec-verifiers/verify_pbi06e.py => PBI06E_GREEN tests=13 pass=13 fail=0 required_titles=13",
+        "nonpreferred-to-preferred direction, preferred message, literal longest matching, exact RNG-001 range, severity, and Markdown exclusion verified",
+        "registered missing-D005 RED history remains retained and CONSUMED_GREEN"
+      ],
+      "resume_point": ".codex/task-packets/PBI-06F-d006.md",
+      "timestamp": "2026-08-22T00:30:00+09:00"
+    },
+    {
+      "phase": "DA",
+      "status": "READY_FOR_IMPLEMENTATION",
+      "agent": "/root/spec_finalize",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-06F",
+      "task_packet_ref": ".codex/task-packets/PBI-06F-d006.md",
+      "decision": "PBI-06F starts with an executable missing-D006 RED and exact successive token-group contract",
+      "evidence": [
+        "python3 .codex/spec-verifiers/verify_pbi06f.py => exit 1; PBI06F_RED missing packages/readability-core/src/rules/D006.ts; stderr empty; reproduced twice",
+        "acceptance requires >=13 tests, pass=tests, fail=0, and 13 exact titles",
+        "Node 24 Intl.Segmenter ja word-like groups, Unicode-whitespace adjacency, punctuation/intervening-token run breaks, maxConsecutive 1|2, and RNG-001 excessive-group range are fixed",
+        "single-token, no-whitespace-normalization, distant-repetition, >= boundary, first-range, code-point, and Markdown-code inclusion mutants are rejected",
+        "D006 remains internal with package manifests and lockfile unchanged"
+      ],
+      "resume_point": ".codex/task-packets/PBI-06F-d006.md",
+      "timestamp": "2026-08-22T00:35:00+09:00"
     }
   ],
   "blocker_history": [
@@ -1437,5 +1472,5 @@
     }
   ],
   "created_at": "2026-08-21T09:39:07+09:00",
-  "updated_at": "2026-08-22T00:25:00+09:00"
+  "updated_at": "2026-08-22T00:35:00+09:00"
 }
