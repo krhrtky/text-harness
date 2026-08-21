@@ -166,6 +166,7 @@ EXPECTED = {
     "permit-pbi06d-regex": "PBI06D-RULE-CONTRACT",
     "permit-pbi06d-external-dependency": "PBI06D-RULE-CONTRACT",
     "drop-pbi06d-green-falsification": "PBI06D-POST-IMPLEMENTATION-GREEN",
+    "make-pbi06d-tie-reversal-observable": "D004-TIE-OBSERVABILITY",
 }
 
 class SpecVerifierTest(unittest.TestCase):

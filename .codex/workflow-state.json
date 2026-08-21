@@ -5,7 +5,7 @@
   "active_pbi": "PBI-06D",
   "gate_type": "DELIVERY",
   "strategy_id": "delivery-pbi06d-d004-contract-v1",
-  "iteration": 46,
+  "iteration": 47,
   "task_packet_ref": ".codex/task-packets/PBI-06D-d004.md",
   "phase_history": [
     {
@@ -1276,6 +1276,39 @@
       ],
       "resume_point": ".codex/task-packets/PBI-06D-d004.md",
       "timestamp": "2026-08-21T23:55:00+09:00"
+    },
+    {
+      "phase": "QGA",
+      "status": "SPEC_GAP",
+      "agent": "/root/spec_qga",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-06D",
+      "decision": "The config-order tie requirement is not observable through the literal-only public API and therefore cannot have an executable fixture or mutation oracle",
+      "evidence": [
+        "distinct same-length literals cannot both match the same source slice",
+        "duplicate equal terms produce identical ruleId, range, severity, and message after order reversal",
+        "longest-at-same-start remains observable through different-length overlapping terms"
+      ],
+      "resume_point": ".codex/task-packets/PBI-06D-d004.md",
+      "timestamp": "2026-08-22T00:00:00+09:00"
+    },
+    {
+      "phase": "SDA",
+      "status": "READY_FOR_QGA",
+      "agent": "/root/spec_finalize",
+      "gate_type": "DELIVERY",
+      "active_pbi": "PBI-06D",
+      "task_packet_ref": ".codex/task-packets/PBI-06D-d004.md",
+      "decision": "DEC-008 accepts Option A: remove the unobservable config-order tie while retaining left-to-right non-overlap, longest-at-same-start, and determinism",
+      "evidence": [
+        "DEC-008 records the accepted option, rejected schema expansion, consequences, and observational-equivalence counterexample",
+        "packet and verifier no longer require a same-length config-order fixture or executable mutation",
+        "D004-M-SHORTER-BEFORE-LONGEST retains the observable longest-term falsification",
+        "tie reversal for duplicate equal terms is explicitly observationally equivalent",
+        "product commit bc2fdb5 remains unchanged and PBI06D_GREEN tests=13 pass=13 fail=0 required_titles=13"
+      ],
+      "resume_point": ".codex/task-packets/PBI-06D-d004.md",
+      "timestamp": "2026-08-22T00:05:00+09:00"
     }
   ],
   "blocker_history": [
@@ -1353,5 +1386,5 @@
     }
   ],
   "created_at": "2026-08-21T09:39:07+09:00",
-  "updated_at": "2026-08-21T23:55:00+09:00"
+  "updated_at": "2026-08-22T00:05:00+09:00"
 }

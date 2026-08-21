@@ -60,6 +60,7 @@ MUTATIONS = (
     "weaken-pbi06d-boundary", "permit-pbi06d-regex",
     "permit-pbi06d-external-dependency",
     "drop-pbi06d-green-falsification",
+    "make-pbi06d-tie-reversal-observable",
 )
 
 def read_state() -> dict:
@@ -74,6 +75,7 @@ def read_state() -> dict:
         "dec6": "docs/decisions/DEC-006-h-metric-contract.md",
         "dec1": "docs/decisions/DEC-001-mvp-scope.md",
         "dec2": "docs/decisions/DEC-002-range-contract.md",
+        "dec8": "docs/decisions/DEC-008-d004-observable-precedence.md",
     }
     packets = {p.name: p.read_text() for p in sorted((ROOT / ".codex/task-packets").glob("*.md"))}
     return {
@@ -1058,13 +1060,14 @@ def pbi06d_registration_errors(body: str, oracle_exists: bool, source_exists: bo
     contract = all(value in body for value in (
         'input_contract: "必ず成功する with forbiddenTerms=[必ず]"',
         'config_contract: "{ruleId:D004, forbiddenTerms:readonly non-empty string[], severity?:error|warning}; empty array/string, missing, malformed, unknown fields are rejected by inherited validator"',
-        'mapping_contract: "literal left-to-right non-overlap; same start longest-first then config order; regex metacharacters remain literal; separated occurrences map one-to-one to findings"',
+        'mapping_contract: "literal left-to-right non-overlap; same start longest-first; regex metacharacters remain literal; separated occurrences map one-to-one to findings"',
+        'observability_contract: "DEC-008 Option A: distinct same-length literals cannot both match one source slice; reversing duplicate equal terms is observationally equivalent, so config-order tie has no normative fixture or mutation"',
         'boundary_contract: "必ず成功する reports 必ず, but 必ずしも reports zero because trailing Hiragana continues the lexical term; same-script Hiragana/Katakana adjacency is non-boundary"',
         'oracle_contract: "必ず成功する reports exactly one D004 finding for 必ず; no configured term, D004:false, and Markdown code-only inputs report zero"',
         'range_contract: "RNG-001 UTF-16 zero-based half-open matched literal; base [0,2); emoji-prefixed 😀必ず reports [2,4); input.slice reconstructs 必ず"',
         'severity_contract: "omitted=>error; explicit error|warning preserved exactly"',
         'external_dependency_contract: "PBI-06 decision INTERNAL/PBI-06D; package manifests and lockfile unchanged"',
-        'mutations: ["D004-M-SUBSTRING", "D004-M-REGEX", "D004-M-FIRST-CONFIG", "D004-M-OVERLAP", "D004-M-CODE-POINT", "D004-M-WHOLE-RANGE", "D004-M-INCLUDE-CODE"]',
+        'mutations: ["D004-M-SUBSTRING", "D004-M-REGEX", "D004-M-SHORTER-BEFORE-LONGEST", "D004-M-OVERLAP", "D004-M-CODE-POINT", "D004-M-WHOLE-RANGE", "D004-M-INCLUDE-CODE"]',
     ))
     acceptance = all(value in body for value in (
         'acceptance_command: "python3 .codex/spec-verifiers/verify_pbi06d.py"',
@@ -1111,8 +1114,9 @@ def pbi06d_registration_errors(body: str, oracle_exists: bool, source_exists: bo
         'analyze_registration: "D004 dispatch with validated forbiddenTerms and severity"',
         'public_export: "analyzeD004"',
         'fixture_contract: "P01/P02, N01/N02/N03, B01/B02/B03/B04, C01, F01, M01, D01 all executable"',
-        'mapping_contract: "literal left-to-right non-overlap, longest-at-same-start, config-order tie, and separated occurrence mapping executable"',
-        'falsification_contract: "substring, regex evaluation, first-config precedence, overlap, code-point, whole-range, and code-inclusion mutants are rejected"',
+        'mapping_contract: "literal left-to-right non-overlap, longest-at-same-start, and separated occurrence mapping executable"',
+        'observability_contract: "same-start same-length duplicate-term order reversal is observationally equivalent and is not an acceptance oracle"',
+        'falsification_contract: "substring, regex evaluation, shorter-before-longest, overlap, code-point, whole-range, and code-inclusion mutants are rejected"',
         'package.json: "87d2ccaa29bd499df2777ed25614fd3e84a457a79ae5cc1d1581059dd7f62760"',
         'pnpm-lock.yaml: "f5cc3eea2d7a5c7e04810e44f6d31798094437e54bdfa519112788bdb0f773ba"',
         'packages/readability-core/package.json: "996ac24d4b0af2137c09c7ee84934fbd3db368c6db45347325441331685e9f55"',
@@ -1167,6 +1171,12 @@ def verify(state: dict) -> list[str]:
     need(m["heuristicRules"]["H107"].get("equivalent") == "3文以上" and "actual > 2" in t["mvp"], "H107-BOUNDARY")
     need(m["heuristicRules"]["H108"].get("equivalent") == "3文以上" and "actual > 2" in t["mvp"], "H108-BOUNDARY")
     need("H113-F01" in t["mvp"] and "H113-M-SPLIT_AST" in t["mvp"], "H113-FALSIFICATION")
+    need(
+        "Option Aを採用する" in t["dec8"]
+        and "observationally equivalent" in t["dec8"]
+        and "同一start・同一lengthのconfig-order tieはnormative contract、fixture、acceptance oracle、実行可能mutationに" in t["dec8"],
+        "D004-TIE-OBSERVABILITY",
+    )
 
     for rid, rule in m["semanticRules"].items():
         need(f"| {rid} / AC-{rid}-01 | {rule['meaning']}" in t["s"], f"{rid}-MEANING")
@@ -1824,6 +1834,7 @@ def apply_mutation(name: str, state: dict) -> None:
         "weaken-pbi06d-boundary", "permit-pbi06d-regex",
         "permit-pbi06d-external-dependency",
         "drop-pbi06d-green-falsification",
+        "make-pbi06d-tie-reversal-observable",
     ):
         key = next(k for k, body in packets.items() if packet_id(body) == "PBI-06D")
         if name == "drop-pbi06d-analyze-ownership":
@@ -1844,12 +1855,14 @@ def apply_mutation(name: str, state: dict) -> None:
                 "external dependency permitted",
                 1,
             )
-        else:
+        elif name == "drop-pbi06d-green-falsification":
             packets[key] = packets[key].replace(
-                '    falsification_contract: "substring, regex evaluation, first-config precedence, overlap, code-point, whole-range, and code-inclusion mutants are rejected"\n',
+                '    falsification_contract: "substring, regex evaluation, shorter-before-longest, overlap, code-point, whole-range, and code-inclusion mutants are rejected"\n',
                 "",
                 1,
             )
+        else:
+            t["dec8"] = t["dec8"].replace("observationally equivalent", "observably different", 1)
     else: raise ValueError(name)
 
 def main() -> int:
