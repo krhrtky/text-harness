@@ -1,0 +1,18 @@
+name: semantic-contract
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+      - name: Validate repository semantic artifacts
+        run: node --test tests/semantic/schema.contract.test.mjs tests/semantic/rules.contract.test.mjs tests/semantic/eval.contract.test.mjs tests/semantic/ci.contract.test.mjs

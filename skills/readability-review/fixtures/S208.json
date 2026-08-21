@@ -1,0 +1,8 @@
+{
+  "ruleId": "S208", "meaning": "中心結論の提示が不必要に遅れている", "cases": [
+    { "fixtureId": "S208-P01", "input": "背景を三点説明する。市場は変化した。費用も変化した。結論は方式Bを採用することだ。", "context": { "documentPurpose": "忙しい承認者向け結論要約" }, "expected": { "ruleId": "S208", "status": "violation", "range": { "start": 0, "end": 41 }, "evidence": ["背景を三点説明する", "結論は方式Bを採用することだ"], "reason": "理解に不要な背景が結論探索を遅らせる", "confidence": 0.9 } },
+    { "fixtureId": "S208-N01", "input": "結論は方式Bを採用することだ。背景として市場と費用が変化した。", "context": { "documentPurpose": "結論要約" }, "expected": { "ruleId": "S208", "status": "no_violation", "range": { "start": 0, "end": 31 }, "evidence": ["結論は方式Bを採用することだ"], "reason": "中心結論が先行している", "confidence": 0.97 } },
+    { "fixtureId": "S208-A01", "input": "背景を説明する。最後に方式Bを採用すると述べる。", "context": {}, "expected": { "ruleId": "S208", "status": "uncertain", "range": { "start": 0, "end": 24 }, "evidence": ["section purposeが未提供"], "reason": "後置が必要か不要か判断できない", "confidence": 0.35 } },
+    { "fixtureId": "S208-C01", "input": "仮説を立てた。実験した。結果を比較した。したがって仮説を棄却する。", "context": { "documentPurpose": "調査過程と結論導出の説明" }, "expected": { "ruleId": "S208", "status": "no_violation", "range": { "start": 0, "end": 33 }, "evidence": ["仮説を立てた", "実験した", "結果を比較した"], "reason": "結論導出自体が目的なcounterexampleである", "confidence": 0.96 } }
+  ]
+}

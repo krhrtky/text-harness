@@ -1,0 +1,8 @@
+{
+  "ruleId": "S205", "meaning": "情報提示の順序に前提依存の問題がある", "cases": [
+    { "fixtureId": "S205-P01", "input": "トークンを送信する。トークンとは認証後に発行される文字列である。", "context": { "targetAudience": "初心者", "documentPurpose": "操作手順" }, "expected": { "ruleId": "S205", "status": "violation", "range": { "start": 0, "end": 32 }, "evidence": ["トークンを送信する", "トークンとは認証後に発行される文字列"], "reason": "操作の理解に必要な用語定義が後置されている", "confidence": 0.9 } },
+    { "fixtureId": "S205-N01", "input": "トークンを送信する。長さは二十文字である。", "context": { "targetAudience": "運用者", "documentPurpose": "操作手順" }, "expected": { "ruleId": "S205", "status": "no_violation", "range": { "start": 0, "end": 21 }, "evidence": ["長さは二十文字"], "reason": "後置された長さは送信操作理解の前提でない", "confidence": 0.9 } },
+    { "fixtureId": "S205-A01", "input": "既定の手順で処理する。手順は社内規程に定義される。", "context": {}, "expected": { "ruleId": "S205", "status": "uncertain", "range": { "start": 0, "end": 25 }, "evidence": ["社内規程と読者知識が未提供"], "reason": "後置定義が理解の前提か判断できない", "confidence": 0.41 } },
+    { "fixtureId": "S205-C01", "input": "概要を示す。詳細な測定条件は付録に示す。", "context": { "documentPurpose": "概要" }, "expected": { "ruleId": "S205", "status": "no_violation", "range": { "start": 0, "end": 20 }, "evidence": ["概要を示す", "詳細な測定条件は付録"], "reason": "任意の詳細を後置するcounterexampleである", "confidence": 0.94 } }
+  ]
+}

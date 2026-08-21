@@ -1,0 +1,11 @@
+{
+  "ruleId": "S203",
+  "credentialRequired": false,
+  "source": "skills/readability-review/fixtures/S203.json",
+  "cases": [
+    { "fixtureId": "S203-P01", "expectedStatus": "violation", "observedStatus": "violation", "relationLabels": ["cause", "independent"] },
+    { "fixtureId": "S203-N01", "expectedStatus": "no_violation", "observedStatus": "no_violation", "relationLabels": ["consequence"] },
+    { "fixtureId": "S203-A01", "expectedStatus": "uncertain", "observedStatus": "uncertain", "relationLabels": ["sequence", "cause"] },
+    { "fixtureId": "S203-C01", "expectedStatus": "no_violation", "observedStatus": "no_violation", "relationLabels": ["cause"] }
+  ]
+}

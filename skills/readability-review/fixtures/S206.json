@@ -1,0 +1,8 @@
+{
+  "ruleId": "S206", "meaning": "主張・理由・例・例外の階層が不明確", "cases": [
+    { "fixtureId": "S206-P01", "input": "採用する。費用を削減できる。例えば月額が下がる。ただし移行期は増える。", "context": { "documentPurpose": "提案" }, "expected": { "ruleId": "S206", "status": "violation", "range": { "start": 0, "end": 35 }, "evidence": ["採用する", "費用を削減できる", "例えば", "ただし"], "reason": "claim reason example exceptionの階層が表現されていない", "confidence": 0.88 } },
+    { "fixtureId": "S206-N01", "input": "採用する。理由は費用削減である。例として月額低下がある。ただし移行期は例外である。", "context": { "documentPurpose": "提案" }, "expected": { "ruleId": "S206", "status": "no_violation", "range": { "start": 0, "end": 41 }, "evidence": ["理由は", "例として", "例外である"], "reason": "各情報の役割と階層が明示されている", "confidence": 0.96 } },
+    { "fixtureId": "S206-A01", "input": "項目A、項目B、項目Cを記載する。", "context": {}, "expected": { "ruleId": "S206", "status": "uncertain", "range": { "start": 0, "end": 17 }, "evidence": ["項目の役割を示すcontextがない"], "reason": "claim/detail/exampleの分類ができない", "confidence": 0.38 } },
+    { "fixtureId": "S206-C01", "input": "対応OSはLinux、macOS、Windowsである。", "context": { "documentPurpose": "対応環境一覧" }, "expected": { "ruleId": "S206", "status": "no_violation", "range": { "start": 0, "end": 28 }, "evidence": ["Linux、macOS、Windows"], "reason": "同じ役割の項目を対等に並べるcounterexampleである", "confidence": 0.96 } }
+  ]
+}

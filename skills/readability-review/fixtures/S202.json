@@ -1,0 +1,8 @@
+{
+  "ruleId": "S202", "meaning": "独立した判断が一文に過剰に含まれる", "cases": [
+    { "fixtureId": "S202-P01", "input": "方式Aを採用すべきであり、予算は増額すべきであり、公開日は延期すべきだ。", "context": { "documentPurpose": "提案" }, "expected": { "ruleId": "S202", "status": "violation", "range": { "start": 0, "end": 36 }, "evidence": ["方式Aを採用すべき", "予算は増額すべき", "公開日は延期すべき"], "reason": "独立した3判断を1文に保つ必要がない", "confidence": 0.91 } },
+    { "fixtureId": "S202-N01", "input": "対象は赤、青、緑の三種類である。", "context": { "documentPurpose": "仕様" }, "expected": { "ruleId": "S202", "status": "no_violation", "range": { "start": 0, "end": 16 }, "evidence": ["赤、青、緑の三種類"], "reason": "複数の独立判断ではなく自然な列挙である", "confidence": 0.94 } },
+    { "fixtureId": "S202-A01", "input": "承認者は署名し、日付を記入し、原本を保管する。", "context": {}, "expected": { "ruleId": "S202", "status": "uncertain", "range": { "start": 0, "end": 23 }, "evidence": ["手順の不可分性を判断するcontextがない"], "reason": "1文で保つ必要性を判断できない", "confidence": 0.45 } },
+    { "fixtureId": "S202-C01", "input": "有効条件は署名があり、日付があり、本人確認済みであることだ。", "context": { "documentPurpose": "定義" }, "expected": { "ruleId": "S202", "status": "no_violation", "range": { "start": 0, "end": 30 }, "evidence": ["有効条件"], "reason": "一体の定義を構成するcounterexampleである", "confidence": 0.95 } }
+  ]
+}

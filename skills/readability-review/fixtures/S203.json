@@ -1,0 +1,8 @@
+{
+  "ruleId": "S203", "meaning": "文間の論理関係が不明確", "cases": [
+    { "fixtureId": "S203-P01", "input": "需要が増えた。価格が上がった。", "context": { "documentPurpose": "分析" }, "expected": { "ruleId": "S203", "status": "violation", "range": { "start": 0, "end": 15 }, "evidence": ["需要が増えた。価格が上がった。"], "reason": "causeとindependentの両labelが同程度に成立する", "confidence": 0.82 } },
+    { "fixtureId": "S203-N01", "input": "需要が増えた。その結果、価格が上がった。", "context": { "documentPurpose": "分析" }, "expected": { "ruleId": "S203", "status": "no_violation", "range": { "start": 0, "end": 20 }, "evidence": ["その結果"], "reason": "consequence labelが明示されている", "confidence": 0.96 } },
+    { "fixtureId": "S203-A01", "input": "処理を停止した。警告が表示された。", "context": {}, "expected": { "ruleId": "S203", "status": "uncertain", "range": { "start": 0, "end": 17 }, "evidence": ["前後関係のcontextが未提供"], "reason": "sequenceとcauseを絞れない", "confidence": 0.43 } },
+    { "fixtureId": "S203-C01", "input": "雨が降った。地面が濡れた。", "context": { "documentPurpose": "因果の例示" }, "expected": { "ruleId": "S203", "status": "no_violation", "range": { "start": 0, "end": 13 }, "evidence": ["雨が降った", "地面が濡れた"], "reason": "接続詞なしでもcauseが一意なcounterexampleである", "confidence": 0.91 } }
+  ]
+}

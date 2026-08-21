@@ -1,0 +1,8 @@
+{
+  "ruleId": "S204", "meaning": "指示表現の参照対象が曖昧", "cases": [
+    { "fixtureId": "S204-P01", "input": "サーバーと監視装置を交換した。これは故障していた。", "context": { "documentPurpose": "障害報告" }, "expected": { "ruleId": "S204", "status": "violation", "range": { "start": 0, "end": 25 }, "evidence": ["サーバー", "監視装置", "これ"], "reason": "これのantecedent候補が2つ成立する", "confidence": 0.9 } },
+    { "fixtureId": "S204-N01", "input": "サーバーを交換した。これは故障していた。", "context": { "documentPurpose": "障害報告" }, "expected": { "ruleId": "S204", "status": "no_violation", "range": { "start": 0, "end": 20 }, "evidence": ["サーバー", "これ"], "reason": "antecedentがサーバーに一意である", "confidence": 0.95 } },
+    { "fixtureId": "S204-A01", "input": "図の二つの箱を比べる。こちらが高速である。", "context": {}, "expected": { "ruleId": "S204", "status": "uncertain", "range": { "start": 0, "end": 21 }, "evidence": ["参照先となる図が未提供"], "reason": "外部図表がなくantecedentを判断できない", "confidence": 0.35 } },
+    { "fixtureId": "S204-C01", "input": "唯一の申請書を確認した。これは署名済みだった。", "context": { "documentPurpose": "申請確認" }, "expected": { "ruleId": "S204", "status": "no_violation", "range": { "start": 0, "end": 23 }, "evidence": ["唯一の申請書", "これ"], "reason": "指示語があっても候補が1つなcounterexampleである", "confidence": 0.97 } }
+  ]
+}

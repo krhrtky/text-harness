@@ -1,0 +1,10 @@
+{
+  "ruleId": "S201",
+  "meaning": "中心主張が特定しにくい",
+  "cases": [
+    { "fixtureId": "S201-P01", "input": "速度を優先すべきだ。品質を優先すべきだ。費用を優先すべきだ。", "context": { "documentPurpose": "意思決定" }, "expected": { "ruleId": "S201", "status": "violation", "range": { "start": 0, "end": 30 }, "evidence": ["速度を優先すべきだ", "品質を優先すべきだ", "費用を優先すべきだ"], "reason": "同程度の主張が並び中心命題を1つに絞れない", "confidence": 0.9, "suggestedAction": "中心主張を1つ明示する" } },
+    { "fixtureId": "S201-N01", "input": "中心方針は品質を優先することである。速度と費用はその制約として扱う。", "context": { "documentPurpose": "意思決定" }, "expected": { "ruleId": "S201", "status": "no_violation", "range": { "start": 0, "end": 34 }, "evidence": ["中心方針は品質を優先する"], "reason": "中心主張と制約が区別されている", "confidence": 0.93 } },
+    { "fixtureId": "S201-A01", "input": "速度、品質、費用について説明する。", "context": {}, "expected": { "ruleId": "S201", "status": "uncertain", "range": { "start": 0, "end": 17 }, "evidence": ["段落目的が未提供"], "reason": "中心命題を要する文書か判断できない", "confidence": 0.4 } },
+    { "fixtureId": "S201-C01", "input": "用語Aは速度を表す。用語Bは品質を表す。", "context": { "documentPurpose": "用語集" }, "expected": { "ruleId": "S201", "status": "no_violation", "range": { "start": 0, "end": 20 }, "evidence": ["用語集は同列の定義が目的"], "reason": "明示的結論を要しないcounterexampleである", "confidence": 0.96 } }
+  ]
+}

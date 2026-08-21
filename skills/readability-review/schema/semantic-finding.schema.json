@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://text-harness.local/schema/semantic-finding.schema.json",
+  "title": "SemanticFinding",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["ruleId", "status", "range", "evidence", "reason", "confidence"],
+  "properties": {
+    "ruleId": { "type": "string", "enum": ["S201", "S202", "S203", "S204", "S205", "S206", "S207", "S208"] },
+    "status": { "type": "string", "enum": ["violation", "no_violation", "uncertain"] },
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "type": "integer", "minimum": 0 },
+        "end": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "evidence": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "reason": { "type": "string", "minLength": 1 },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "suggestedAction": { "type": "string", "minLength": 1 }
+  }
+}

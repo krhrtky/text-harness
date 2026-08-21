@@ -1,0 +1,11 @@
+{
+  "ruleId": "S204",
+  "credentialRequired": false,
+  "source": "skills/readability-review/fixtures/S204.json",
+  "cases": [
+    { "fixtureId": "S204-P01", "expectedStatus": "violation", "observedStatus": "violation", "antecedentCandidates": ["サーバー", "監視装置"] },
+    { "fixtureId": "S204-N01", "expectedStatus": "no_violation", "observedStatus": "no_violation", "antecedentCandidates": ["サーバー"] },
+    { "fixtureId": "S204-A01", "expectedStatus": "uncertain", "observedStatus": "uncertain", "antecedentCandidates": ["外部図表の箱1", "外部図表の箱2"] },
+    { "fixtureId": "S204-C01", "expectedStatus": "no_violation", "observedStatus": "no_violation", "antecedentCandidates": ["唯一の申請書"] }
+  ]
+}

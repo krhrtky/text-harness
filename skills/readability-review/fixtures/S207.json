@@ -1,0 +1,8 @@
+{
+  "ruleId": "S207", "meaning": "文脈に対して抽象度が不適切", "cases": [
+    { "fixtureId": "S207-P01", "input": "ボタンを押す初心者向け手順で、操作対象を適切に抽象化する。", "context": { "targetAudience": "初心者", "documentPurpose": "操作手順" }, "expected": { "ruleId": "S207", "status": "violation", "range": { "start": 0, "end": 29 }, "evidence": ["操作対象を適切に抽象化する"], "reason": "初心者の操作に必要な具体的対象が示されない", "confidence": 0.86 } },
+    { "fixtureId": "S207-N01", "input": "初心者は設定画面の保存ボタンを押す。", "context": { "targetAudience": "初心者", "documentPurpose": "操作手順" }, "expected": { "ruleId": "S207", "status": "no_violation", "range": { "start": 0, "end": 18 }, "evidence": ["設定画面の保存ボタン"], "reason": "audienceとpurposeに必要な具体性がある", "confidence": 0.97 } },
+    { "fixtureId": "S207-A01", "input": "この処理は依存関係を抽象化する。", "context": {}, "expected": { "ruleId": "S207", "status": "uncertain", "range": { "start": 0, "end": 16 }, "evidence": ["targetAudienceとdocumentPurposeが未提供"], "reason": "必要な抽象度を決められない", "confidence": 0.3 } },
+    { "fixtureId": "S207-C01", "input": "境界で依存関係を抽象化する。", "context": { "targetAudience": "ソフトウェアアーキテクト", "documentPurpose": "設計概要" }, "expected": { "ruleId": "S207", "status": "no_violation", "range": { "start": 0, "end": 14 }, "evidence": ["依存関係を抽象化する"], "reason": "専門家向け設計概要に適合するcounterexampleである", "confidence": 0.95 } }
+  ]
+}
