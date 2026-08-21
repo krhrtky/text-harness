@@ -6,6 +6,7 @@ import { analyzeH104 } from "./rules/H104.ts";
 import { analyzeH106 } from "./rules/H106.ts";
 import { analyzeH107 } from "./rules/H107.ts";
 import { analyzeH108 } from "./rules/H108.ts";
+import { analyzeH112 } from "./rules/H112.ts";
 import { sortFindings, type Finding } from "./types/findings.ts";
 import { assertInputText } from "./types/range.ts";
 import { type ReadabilityConfig, type ValidatedReadabilityConfig } from "./types/rules.ts";
@@ -25,6 +26,7 @@ export function analyze(input: unknown, config: ReadabilityConfig | ValidatedRea
       case "H106": return threshold === undefined ? [] : analyzeH106(input, threshold, excludeCodeBlocks);
       case "H107": return threshold === undefined ? [] : analyzeH107(input, threshold, excludeCodeBlocks);
       case "H108": return threshold === undefined ? [] : analyzeH108(input, threshold, excludeCodeBlocks);
+      case "H112": return threshold === undefined ? [] : analyzeH112(input, threshold);
       default: return [];
     }
   });
