@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -68,5 +68,57 @@ test("INT-CLI-03 invalid Semantic severity exits two without partial stdout", ()
   const usage = spawnSync(process.execPath, [cli], { encoding: "utf8" });
   assert.equal(usage.status, 2);
   assert.equal(usage.stdout, "");
-  assert.equal(usage.stderr, "TEXT_HARNESS_INPUT_ERROR: expected --input <path>\n");
+  assert.equal(usage.stderr, "TEXT_HARNESS_INPUT_ERROR: expected --input <path> or --analyze <path>\n");
+});
+
+test("INT-CLI-04 analyze mode runs installed D H guardrails with the user config", (context) => {
+  const directory = mkdtempSync(join(tmpdir(), "text-harness-cli-analyze-"));
+  context.after(() => rmSync(directory, { recursive: true, force: true }));
+  const configHome = join(directory, "config");
+  const sourcePath = join(directory, "input.md");
+  mkdirSync(configHome);
+  writeFileSync(join(configHome, "config.json"), JSON.stringify({
+    rules: {
+      D003: { ruleId: "D003" },
+      H101: { ruleId: "H101", threshold: 5 },
+    },
+  }));
+  writeFileSync(sourcePath, "（長い文章です。]");
+
+  const result = spawnSync(process.execPath, [cli, "--analyze", sourcePath], {
+    encoding: "utf8",
+    env: { ...process.env, TEXT_HARNESS_CONFIG_HOME: configHome },
+  });
+
+  assert.equal(result.status, 1, result.stderr);
+  assert.equal(result.stderr, "");
+  const report = JSON.parse(result.stdout);
+  assert.deepEqual(report.lintMessages.map(({ ruleId }: { ruleId: string }) => ruleId), ["H101", "D003"]);
+  assert.deepEqual(report.semanticNotices, []);
+});
+
+test("INT-CLI-05 analyze mode rejects a missing or invalid user config", (context) => {
+  const directory = mkdtempSync(join(tmpdir(), "text-harness-cli-config-"));
+  context.after(() => rmSync(directory, { recursive: true, force: true }));
+  const sourcePath = join(directory, "input.md");
+  writeFileSync(sourcePath, "本文");
+
+  const missing = spawnSync(process.execPath, [cli, "--analyze", sourcePath], {
+    encoding: "utf8",
+    env: { ...process.env, TEXT_HARNESS_CONFIG_HOME: join(directory, "missing") },
+  });
+  assert.equal(missing.status, 2);
+  assert.equal(missing.stdout, "");
+  assert.match(missing.stderr, /^TEXT_HARNESS_INPUT_ERROR: /);
+
+  const configHome = join(directory, "invalid");
+  mkdirSync(configHome);
+  writeFileSync(join(configHome, "config.json"), '{"rules":{"UNKNOWN":{}}}');
+  const invalid = spawnSync(process.execPath, [cli, "--analyze", sourcePath], {
+    encoding: "utf8",
+    env: { ...process.env, TEXT_HARNESS_CONFIG_HOME: configHome },
+  });
+  assert.equal(invalid.status, 2);
+  assert.equal(invalid.stdout, "");
+  assert.match(invalid.stderr, /^TEXT_HARNESS_INPUT_ERROR: /);
 });

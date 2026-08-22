@@ -24,7 +24,7 @@ async function load(relative) {
 test("SEM-SKILL-01 repository-native skill and exact S201-S208 rule files are present", async () => {
   const skill = await readFile(new URL("SKILL.md", root), "utf8");
   assert.match(skill, /^---\nname: readability-review\n/m);
-  for (const token of ["SemanticFinding", "violation", "no_violation", "uncertain", "counterexample", "semantic autofix禁止", "hard errorにしない", "S201", "S208"]) assert.ok(skill.includes(token), token);
+  for (const token of ["SemanticFinding", "violation", "no_violation", "uncertain", "counterexample", "semantic autofix禁止", "hard errorにしない", "S201", "S208", "command -v text-harness-report", "--analyze", "D/H", "Semantic 判定より先"]) assert.ok(skill.includes(token), token);
   assert.deepEqual((await readdir(new URL("rules/", root))).sort(), Object.keys(meanings).map((rule) => `${rule}.md`));
   assert.deepEqual((await readdir(new URL("fixtures/", root))).sort(), Object.keys(meanings).map((rule) => `${rule}.json`));
 });
